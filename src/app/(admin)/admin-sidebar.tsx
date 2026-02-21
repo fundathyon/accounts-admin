@@ -12,6 +12,7 @@ import {
   Webhook,
   Puzzle,
   Key,
+  LogIn,
   LogOut,
   Loader2,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ const navItems = [
   { id: 'roles_policies', path: '/roles-policies', icon: Shield, label: 'Roles y Políticas' },
   { id: 'webhooks', path: '/webhooks', icon: Webhook, label: 'Webhooks' },
   { id: 'api_keys', path: '/api-keys', icon: Key, label: 'API Keys' },
+  { id: 'oauth_providers', path: '/oauth-providers', icon: LogIn, label: 'Proveedores OAuth' },
   { id: 'behaviors', path: '/behaviors', icon: Puzzle, label: 'Behaviors' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configuración' },
 ];
@@ -80,7 +82,7 @@ export function AdminSidebar() {
           const pathMatch = item.path === '/' ? (pathname === '/' || pathname === '') : (pathname === item.path || pathname?.startsWith(item.path + '/'));
           const active = pathMatch || usersActive;
 
-          const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies'].includes(item.id);
+          const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'oauth_providers'].includes(item.id);
 
           return (
             <Link key={item.id} href={href}>
