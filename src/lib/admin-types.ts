@@ -103,3 +103,34 @@ export interface Policy {
   created_at: string;
   updated_at: string;
 }
+
+export interface APIKeyListItem {
+  id: string;
+  name: string;
+  description?: string;
+  app_id: string;
+  key_id: string;
+  publishable_key: string;
+  is_active: boolean;
+  environment: string;
+  last_used_at?: string;
+  revoked_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OAuthConfig {
+  id: string;
+  app_id: string;
+  provider: string;
+  name?: string;
+  client_id: string;
+  callback_key: string;
+  callback_uri: string;
+  scopes?: string;
+  enabled: boolean;
+  redirect_uri_web: string;
+  redirect_uri_android?: string;
+  redirect_uri_ios?: string;
+  redirect_uri_desktop?: string;
+}
