@@ -1,0 +1,25 @@
+name: Deploy Webhook
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment to deploy to (development, staging, production)'
+        required: true
+        type: string
+      deploy_webhook:
+        description: 'Deploy webhook URL (injected by caller)'
+        required: true
+        type: string
+
+jobs:
+  deploy-webhook:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      DEPLOY_WEBHOOK: ${{ inputs.deploy_webhook }}
+
+    steps:
+      - name: 🚀 Trigger deploy webhook
+        run: curl -s "${DEPLOY_WEBHOOK}" || echo "⚠️ Webhook failed or not set"
+

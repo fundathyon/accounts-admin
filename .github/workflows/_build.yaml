@@ -1,0 +1,128 @@
+name: Build and Push Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment to deploy to (development, staging, production)'
+        required: true
+        type: string
+      latest_tag:
+        description: 'Latest tag suffix (e.g., latest-dev, latest-staging, latest)'
+        required: false
+        type: string
+        default: 'latest'
+      registry_url:
+        description: 'Docker registry URL (injected by caller)'
+        required: true
+        type: string
+      registry_name:
+        description: 'Registry/org name (injected by caller)'
+        required: true
+        type: string
+      repo_name:
+        description: 'Image repo name (injected by caller)'
+        required: true
+        type: string
+    secrets:
+      registry_username:
+        description: 'Registry username (injected by caller)'
+        required: true
+      registry_password:
+        description: 'Registry password (injected by caller)'
+        required: true
+    outputs:
+      commit_sha:
+        description: 'Short commit SHA'
+        value: ${{ jobs.build-and-push.outputs.commit_sha }}
+      new_tag:
+        description: 'New version tag'
+        value: ${{ jobs.build-and-push.outputs.new_tag }}
+      branch:
+        description: 'Branch name'
+        value: ${{ jobs.build-and-push.outputs.branch }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      REGISTRY_URL: ${{ inputs.registry_url }}
+      REGISTRY_NAME: ${{ inputs.registry_name }}
+      REPO_NAME: ${{ inputs.repo_name }}
+      REGISTRY_USERNAME: ${{ secrets.registry_username }}
+      REGISTRY_PASSWORD: ${{ secrets.registry_password }}
+
+    steps:
+      - name: 🧾 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Get branch name
+        id: branch
+        run: echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+
+      - name: 🧪 Debug env
+        run: |
+          echo "REGISTRY_URL=${REGISTRY_URL}"
+          echo "REGISTRY_NAME=${REGISTRY_NAME}"
+          echo "REPO_NAME=${REPO_NAME}"
+          echo "Environment: ${{ inputs.environment }}"
+
+      - name: 🧠 Get latest version from registry
+        id: get_version
+        run: |
+          echo "🔍 Consulting registry for latest tags..."
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          IMAGE_NAME="${REGISTRY_NAME}/${REPO_NAME}"
+
+          ALL_DATA=$(curl -s -u "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
+            ${REGISTRY_URL}/v2/${IMAGE_NAME}/tags/list || echo "")
+
+          ALL_TAGS=$(echo "$ALL_DATA" | jq -r '.tags[]?' 2>/dev/null || true)
+          TAGS=$(echo "$ALL_TAGS" | grep "${BRANCH}-" || true)
+
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+
+          if [[ -z "$TAGS" ]]; then
+            BASE_VERSION="v0.0.1"
+          else
+            CLEAN_TAGS=$(echo "$TAGS" | sed -E "s/-${BRANCH}-[a-f0-9]+$//")
+            LAST_VERSION=$(echo "$CLEAN_TAGS" | sort -V | tail -n1)
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$(echo $LAST_VERSION | sed 's/v//')"
+            PATCH=$((PATCH + 1))
+            BASE_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          fi
+
+          NEW_VERSION="${BASE_VERSION}-${BRANCH}-${COMMIT_SHA}"
+          echo "new_tag=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ New tag: $NEW_VERSION"
+
+      - name: 🔐 Docker login
+        run: echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_URL}" -u "${REGISTRY_USERNAME}" --password-stdin
+
+      - name: 🛠️ Build and push Docker image
+        run: |
+          VERSION="${{ steps.get_version.outputs.new_tag }}"
+          IMAGE="${REGISTRY_URL}/${REGISTRY_NAME}/${REPO_NAME}"
+          LATEST_TAG="${{ inputs.latest_tag }}"
+          echo "🚧 Building image: $IMAGE"
+          docker build -f "docker_images/app/Dockerfile.app" \
+            -t $IMAGE:${LATEST_TAG} \
+            -t $IMAGE:${VERSION} .
+
+          echo "📤 Pushing tags..."
+          docker push $IMAGE:${LATEST_TAG}
+          docker push $IMAGE:${VERSION}
+
+      - name: 🧾 Save outputs
+        id: save
+        run: |
+          echo "commit_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "new_tag=${{ steps.get_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ steps.branch.outputs.branch }}" >> $GITHUB_OUTPUT
+
+    outputs:
+      commit_sha: ${{ steps.save.outputs.commit_sha }}
+      new_tag: ${{ steps.save.outputs.new_tag }}
+      branch: ${{ steps.save.outputs.branch }}
+

@@ -1,0 +1,84 @@
+# Dev pipeline: build API + Admin on push to dev.
+# Variables (Settings > Environments > development-ce > Variables):
+#   ADMIN_REPO_NAME: nombre de la imagen del admin (ej: accounts-admin). Si está vacío, no se compila el admin.
+name: Dev Docker Hub Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    environment: development
+    outputs:
+      registry_url: ${{ steps.vars.outputs.registry_url }}
+      registry_name: ${{ steps.vars.outputs.registry_name }}
+      repo_name: ${{ steps.vars.outputs.repo_name }}
+      admin_repo_name: ${{ steps.vars.outputs.admin_repo_name }}
+      deploy_webhook: ${{ steps.vars.outputs.deploy_webhook }}
+      notify_webhook: ${{ steps.vars.outputs.notify_webhook }}
+      project_type: ${{ steps.vars.outputs.project_type }}
+      docs_base_url: ${{ steps.vars.outputs.docs_base_url }}
+    steps:
+      - id: vars
+        run: |
+          echo "registry_url=${{ vars.REGISTRY_URL }}" >> $GITHUB_OUTPUT
+          echo "registry_name=${{ vars.REGISTRY_NAME }}" >> $GITHUB_OUTPUT
+          echo "repo_name=${{ vars.REPO_NAME }}" >> $GITHUB_OUTPUT
+          echo "admin_repo_name=${{ vars.ADMIN_REPO_NAME }}" >> $GITHUB_OUTPUT
+          echo "deploy_webhook=${{ vars.DEPLOY_WEBHOOK }}" >> $GITHUB_OUTPUT
+          echo "notify_webhook=${{ vars.NOTIFY_WEBHOOK }}" >> $GITHUB_OUTPUT
+          echo "project_type=${{ vars.PROJECT_TYPE }}" >> $GITHUB_OUTPUT
+          echo "docs_base_url=${{ vars.DOCS_BASE_URL }}" >> $GITHUB_OUTPUT
+
+  build:
+    uses: ./.github/workflows/_build.yaml
+    needs: bootstrap
+    with:
+      environment: development
+      latest_tag: latest
+      registry_url: ${{ needs.bootstrap.outputs.registry_url }}
+      registry_name: ${{ needs.bootstrap.outputs.registry_name }}
+      repo_name: ${{ needs.bootstrap.outputs.repo_name }}
+    secrets:
+      registry_username: ${{ secrets.REGISTRY_USERNAME }}
+      registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+
+  # notify-success:
+  #   uses: ./.github/workflows/_notify.yaml
+  #   needs: [bootstrap, build, deploy]
+  #   if: success()
+  #   with:
+  #     environment: development-ce
+  #     status: success
+  #     new_tag: ${{ needs.build.outputs.new_tag }}
+  #     commit_sha: ${{ needs.build.outputs.commit_sha }}
+  #     branch: ${{ needs.build.outputs.branch }}
+  #     actor: ${{ github.actor }}
+  #     repository: ${{ github.repository }}
+  #     run_id: ${{ github.run_id }}
+  #     pr_url: ${{ github.event_name == 'pull_request' && github.event.pull_request.html_url || '' }}
+  #     notify_webhook: ${{ needs.bootstrap.outputs.notify_webhook }}
+  #     repo_name: ${{ needs.bootstrap.outputs.repo_name }}
+  #     project_type: ${{ needs.bootstrap.outputs.project_type }}
+  #     docs_base_url: ${{ needs.bootstrap.outputs.docs_base_url }}
+
+  # notify-failure:
+  #   uses: ./.github/workflows/_notify.yaml
+  #   needs: [bootstrap, build, deploy]
+  #   if: failure()
+  #   with:
+  #     environment: development-ce
+  #     status: failure
+  #     new_tag: ${{ needs.build.outputs.new_tag || 'N/A' }}
+  #     commit_sha: ${{ needs.build.outputs.commit_sha || github.sha }}
+  #     branch: ${{ needs.build.outputs.branch || github.ref_name }}
+  #     actor: ${{ github.actor }}
+  #     repository: ${{ github.repository }}
+  #     run_id: ${{ github.run_id }}
+  #     notify_webhook: ${{ needs.bootstrap.outputs.notify_webhook }}
+  #     repo_name: ${{ needs.bootstrap.outputs.repo_name }}
+  #     project_type: ${{ needs.bootstrap.outputs.project_type }}
+  #     docs_base_url: ${{ needs.bootstrap.outputs.docs_base_url }}

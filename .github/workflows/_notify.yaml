@@ -1,0 +1,159 @@
+name: Notify Deploy Status
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment name (development, staging, production)'
+        required: true
+        type: string
+      notify_webhook:
+        description: 'Notify webhook base URL (injected by caller)'
+        required: true
+        type: string
+      repo_name:
+        description: 'Repository/service name (injected by caller)'
+        required: true
+        type: string
+      project_type:
+        description: 'Project type (e.g. api) (injected by caller)'
+        required: false
+        type: string
+        default: 'api'
+      docs_base_url:
+        description: 'Docs base URL (injected by caller)'
+        required: false
+        type: string
+        default: 'https://docs.konectus.io'
+      status:
+        description: 'Deploy status (success or failure)'
+        required: true
+        type: string
+      new_tag:
+        description: 'New version tag'
+        required: false
+        type: string
+        default: 'N/A'
+      commit_sha:
+        description: 'Commit SHA'
+        required: false
+        type: string
+        default: ''
+      branch:
+        description: 'Branch name'
+        required: false
+        type: string
+        default: ''
+      actor:
+        description: 'User who triggered the workflow'
+        required: true
+        type: string
+      repository:
+        description: 'Repository name (owner/repo)'
+        required: true
+        type: string
+      run_id:
+        description: 'GitHub Actions run ID'
+        required: true
+        type: string
+      pr_url:
+        description: 'Pull request URL (optional)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  notify-success:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    if: ${{ inputs.status == 'success' }}
+    env:
+      NOTIFY_WEBHOOK: ${{ inputs.notify_webhook }}
+      REPO_NAME: ${{ inputs.repo_name }}
+      PROJECT_TYPE: ${{ inputs.project_type }}
+      DOCS_BASE_URL: ${{ inputs.docs_base_url }}
+
+    steps:
+      - name: 📣 Notify deploy success
+        run: |
+          BRANCH="${{ inputs.branch }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+
+          # Construir URLs
+          GITHUB_URL="https://github.com/${{ inputs.repository }}"
+          DOCS_URL="${DOCS_BASE_URL}/${REPO_NAME}"
+          
+          # PR URL (si existe)
+          PR_URL="${{ inputs.pr_url }}"
+          if [[ -z "$PR_URL" ]]; then
+            PR_URL="${GITHUB_URL}/commits/${BRANCH}"
+          fi
+
+          echo "📣 Sending deploy success notification..."
+          echo "   Endpoint: ${NOTIFY_WEBHOOK}/success"
+          echo "   Service: ${REPO_NAME}"
+          echo "   Version: ${{ inputs.new_tag }}"
+          echo "   Environment: ${ENVIRONMENT}"
+          echo "   Triggered by: ${{ inputs.actor }}"
+
+          # Construir JSON payload
+          JSON_PAYLOAD='{
+            "service": "'"${REPO_NAME}"'",
+            "version": "'"${{ inputs.new_tag }}"'",
+            "commit": "'"${{ inputs.commit_sha }}"'",
+            "branch": "'"${BRANCH}"'",
+            "environment": "'"${ENVIRONMENT}"'",
+            "triggered_by": "'"${{ inputs.actor }}"'",
+            "type_project": "'"${PROJECT_TYPE}"'",
+            "github_url": "'"${GITHUB_URL}"'",
+            "documentation_url": "'"${DOCS_URL}"'",
+            "pull_request_url": "'"${PR_URL}"'"
+          }'
+
+          curl -s -X POST "${NOTIFY_WEBHOOK}/success" \
+            -H "Content-Type: application/json" \
+            -d "${JSON_PAYLOAD}" && echo "✅ Success notification sent" || echo "⚠️ Notify webhook failed or not set"
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    if: ${{ inputs.status == 'failure' }}
+    env:
+      NOTIFY_WEBHOOK: ${{ inputs.notify_webhook }}
+      REPO_NAME: ${{ inputs.repo_name }}
+      PROJECT_TYPE: ${{ inputs.project_type }}
+
+    steps:
+      - name: 🚨 Notify deploy failure
+        run: |
+          BRANCH="${{ inputs.branch }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+          COMMIT_SHA="${{ inputs.commit_sha }}"
+          VERSION="${{ inputs.new_tag }}"
+
+          # Construir URLs
+          GITHUB_URL="https://github.com/${{ inputs.repository }}"
+          LOGS_URL="https://github.com/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}"
+
+          echo "🚨 Sending deploy failure notification..."
+          echo "   Endpoint: ${NOTIFY_WEBHOOK}/failure"
+          echo "   Service: ${REPO_NAME}"
+          echo "   Environment: ${ENVIRONMENT}"
+          echo "   Logs: ${LOGS_URL}"
+
+          curl -s -X POST "${NOTIFY_WEBHOOK}/failure" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "service": "'"${REPO_NAME}"'",
+              "version": "'"${VERSION}"'",
+              "commit": "'"${COMMIT_SHA:0:7}"'",
+              "branch": "'"${BRANCH}"'",
+              "environment": "'"${ENVIRONMENT}"'",
+              "triggered_by": "'"${{ inputs.actor }}"'",
+              "type_project": "'"${PROJECT_TYPE}"'",
+              "github_url": "'"${GITHUB_URL}"'",
+              "error_message": "El pipeline de CI/CD ha fallado. Revisa los logs para más detalles.",
+              "failed_step": "build-and-push o deploy-webhook",
+              "logs_url": "'"${LOGS_URL}"'"
+            }' && echo "✅ Failure notification sent" || echo "⚠️ Notify webhook failed or not set"
+
