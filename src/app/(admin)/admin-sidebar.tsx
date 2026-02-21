@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Layers,
@@ -11,6 +12,8 @@ import {
   Webhook,
   Puzzle,
   Key,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
 import { cn, BASE_PATH } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +36,24 @@ const navItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const { savedSecretKey } = useAdmin();
+  const router = useRouter();
+  const { savedSecretKey, apiUrl } = useAdmin();
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  const handleLogout = async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    try {
+      await fetch(apiUrl('/api/admin/logout'), { method: 'POST', credentials: 'include' });
+    } catch {
+      /* continue to redirect even if request fails */
+    } finally {
+      const loginPath = `${BASE_PATH}/login`.replace(/\/+/g, '/') || '/login';
+      router.push(loginPath);
+      router.refresh();
+      setLogoutLoading(false);
+    }
+  };
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col z-20 shrink-0">
@@ -60,7 +80,7 @@ export function AdminSidebar() {
           const pathMatch = item.path === '/' ? (pathname === '/' || pathname === '') : (pathname === item.path || pathname?.startsWith(item.path + '/'));
           const active = pathMatch || usersActive;
 
-          const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'api_keys'].includes(item.id);
+          const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies'].includes(item.id);
 
           return (
             <Link key={item.id} href={href}>
@@ -80,6 +100,17 @@ export function AdminSidebar() {
           );
         })}
       </nav>
+      <div className="p-4 border-t border-border">
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={logoutLoading}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-normal cursor-pointer transition-colors hover:bg-muted/50 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {logoutLoading ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <LogOut className="w-4 h-4 shrink-0" />}
+          <span>{logoutLoading ? 'Cerrando sesión…' : 'Cerrar sesión'}</span>
+        </button>
+      </div>
     </aside>
   );
 }
