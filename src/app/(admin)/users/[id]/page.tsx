@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Shield, Mail, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { BASE_PATH } from '@/lib/utils';
@@ -160,7 +160,11 @@ export default function UserDetailPage() {
                       >
                         {lm.entity_type}
                       </Badge>
-                      {lm.is_verify && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                      {lm.is_verify ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-400" />
+                      )}
                     </div>
                     <dl className="space-y-1 text-xs">
                       <div className="flex gap-2">
