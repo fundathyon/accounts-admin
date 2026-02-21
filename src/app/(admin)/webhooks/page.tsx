@@ -15,6 +15,11 @@ import {
   ChevronRight,
   CheckCircle2,
   Loader2,
+  FileJson,
+  FormInput,
+  Send,
+  Power,
+  PowerOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -40,7 +45,13 @@ function truncateKey(key: string) {
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
 
+const COMMON_EVENTS: WebhookEvent[] = [
+  { code: 'accounts.user.signup', description: 'Se dispara cuando un usuario se registra', category: 'Comunes' },
+  { code: 'accounts.user.deleted', description: 'Se dispara cuando se elimina un usuario', category: 'Comunes' },
+];
+
 const categoryColor: Record<string, string> = {
+  Comunes: 'text-cyan-400 bg-cyan-500/10',
   User: 'text-indigo-400 bg-indigo-500/10',
   Auth: 'text-sky-400 bg-sky-500/10',
   Session: 'text-purple-400 bg-purple-500/10',
@@ -73,6 +84,44 @@ export default function WebhooksPage() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isWebhookSubmitting, setIsWebhookSubmitting] = useState(false);
   const [expandedWebhook, setExpandedWebhook] = useState<string | null>(null);
+  const [webhookEditMode, setWebhookEditMode] = useState<'form' | 'json'>('form');
+  const [webhookJsonRaw, setWebhookJsonRaw] = useState('');
+  const [togglingWebhookId, setTogglingWebhookId] = useState<string | null>(null);
+
+  const buildWebhookPayload = () => ({
+    name: webhookForm.name,
+    description: webhookForm.description,
+    url: webhookForm.url,
+    secret: webhookForm.secret,
+    retries: webhookForm.retries,
+    active: webhookForm.active,
+    events: Array.from(selectedEvents),
+  });
+
+  const switchToJsonMode = () => {
+    const payload = buildWebhookPayload();
+    setWebhookJsonRaw(JSON.stringify(payload, null, 2));
+    setWebhookEditMode('json');
+  };
+
+  const switchToFormMode = () => {
+    try {
+      const parsed = JSON.parse(webhookJsonRaw) as Record<string, unknown>;
+      setWebhookForm({
+        name: String(parsed.name ?? ''),
+        description: String(parsed.description ?? ''),
+        url: String(parsed.url ?? ''),
+        secret: String(parsed.secret ?? ''),
+        retries: Math.max(0, Math.min(10, Number(parsed.retries ?? 3))),
+        active: Boolean(parsed.active ?? true),
+      });
+      const evs = Array.isArray(parsed.events) ? parsed.events.filter((e): e is string => typeof e === 'string') : [];
+      setSelectedEvents(new Set(evs));
+      setWebhookEditMode('form');
+    } catch {
+      showNotification('JSON inválido. Corrige el formato.', 'error');
+    }
+  };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -118,16 +167,32 @@ export default function WebhooksPage() {
 
   const handleCreateWebhook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedEvents.size === 0) {
-      showNotification('Debes seleccionar al menos un evento', 'error');
-      return;
+    let payload: Record<string, unknown>;
+    if (webhookEditMode === 'json') {
+      try {
+        payload = JSON.parse(webhookJsonRaw) as Record<string, unknown>;
+      } catch {
+        showNotification('JSON inválido. Corrige el formato antes de enviar.', 'error');
+        return;
+      }
+      const events = Array.isArray(payload.events) ? payload.events : [];
+      if (events.length === 0) {
+        showNotification('Debes incluir al menos un evento en el array "events"', 'error');
+        return;
+      }
+    } else {
+      if (selectedEvents.size === 0) {
+        showNotification('Debes seleccionar al menos un evento', 'error');
+        return;
+      }
+      payload = buildWebhookPayload();
     }
     setIsWebhookSubmitting(true);
     try {
       const res = await fetch(apiUrl('/api/webhooks'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Secret-API-Key': savedSecretKey },
-        body: JSON.stringify({ ...webhookForm, events: Array.from(selectedEvents) }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -135,6 +200,8 @@ export default function WebhooksPage() {
         setIsWebhookModalOpen(false);
         setWebhookForm({ name: '', description: '', url: '', secret: '', retries: 3, active: true });
         setSelectedEvents(new Set());
+        setWebhookEditMode('form');
+        setWebhookJsonRaw('');
         fetchWebhooks();
       } else showNotification(data.error?.message || 'Error al crear webhook', 'error');
     } catch {
@@ -156,12 +223,35 @@ export default function WebhooksPage() {
     setExpandedCategories(next);
   };
 
-  const selectAllInCategory = (category: string) => {
-    const events = eventsByCategory[category] || [];
+  const selectAllInCategory = (category: string, events?: WebhookEvent[]) => {
+    const list = events ?? eventsByCategory[category] ?? [];
     const next = new Set(selectedEvents);
-    const allSelected = events.every((e: WebhookEvent) => next.has(e.code));
-    events.forEach((e: WebhookEvent) => (allSelected ? next.delete(e.code) : next.add(e.code)));
+    const allSelected = list.every((e: WebhookEvent) => next.has(e.code));
+    list.forEach((e: WebhookEvent) => (allSelected ? next.delete(e.code) : next.add(e.code)));
     setSelectedEvents(next);
+  };
+
+  const handleToggleActive = async (wh: WebhookItem) => {
+    if (!savedSecretKey) return;
+    setTogglingWebhookId(wh.id);
+    try {
+      const res = await fetch(apiUrl(`/api/webhooks/${wh.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Secret-API-Key': savedSecretKey },
+        body: JSON.stringify({ active: !wh.active }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(wh.active ? 'Webhook desactivado' : 'Webhook activado', 'success');
+        fetchWebhooks();
+      } else {
+        showNotification(data.error?.message || 'Error al actualizar webhook', 'error');
+      }
+    } catch {
+      showNotification('Error de conexión', 'error');
+    } finally {
+      setTogglingWebhookId(null);
+    }
   };
 
   return (
@@ -270,35 +360,60 @@ export default function WebhooksPage() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden border-t border-border"
                         >
-                          <div className="px-6 py-5 grid grid-cols-2 gap-6">
-                            <div>
-                              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Detalles</h4>
-                              <div className="space-y-2 text-sm">
-                                {wh.description && <p className="text-foreground">{wh.description}</p>}
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Lock className="w-3.5 h-3.5" />
-                                  <span className="font-mono text-xs">{wh.secret.slice(0, 6)}{'•'.repeat(8)}</span>
-                                  <span className="text-muted-foreground text-xs">secret hash</span>
+                          <div className="px-6 py-5 space-y-5">
+                            <div className="grid grid-cols-2 gap-6">
+                              <div>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Detalles</h4>
+                                <div className="space-y-2 text-sm">
+                                  {wh.description && <p className="text-foreground">{wh.description}</p>}
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Lock className="w-3.5 h-3.5" />
+                                    <span className="font-mono text-xs">{wh.secret.slice(0, 6)}{'•'.repeat(8)}</span>
+                                    <span className="text-muted-foreground text-xs">secret hash</span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground font-mono">ID: {wh.id}</div>
                                 </div>
-                                <div className="text-xs text-muted-foreground font-mono">ID: {wh.id}</div>
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                                  Eventos suscritos ({wh.events.length})
+                                </h4>
+                                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                                  {wh.events.map((ev) => {
+                                    const cat = ev.split('.')[1] || '';
+                                    const colorKey = Object.keys(categoryColor).find((k) => k.toLowerCase().includes(cat.toLowerCase())) || '';
+                                    const color = categoryColor[colorKey] || 'text-muted-foreground bg-muted';
+                                    return (
+                                      <span key={ev} className={cn('px-2 py-0.5 rounded-md text-xs font-mono font-medium', color)}>
+                                        {ev}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                                Eventos suscritos ({wh.events.length})
-                              </h4>
-                              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                                {wh.events.map((ev) => {
-                                  const cat = ev.split('.')[1] || '';
-                                  const colorKey = Object.keys(categoryColor).find((k) => k.toLowerCase().includes(cat.toLowerCase())) || '';
-                                  const color = categoryColor[colorKey] || 'text-muted-foreground bg-muted';
-                                  return (
-                                    <span key={ev} className={cn('px-2 py-0.5 rounded-md text-xs font-mono font-medium', color)}>
-                                      {ev}
-                                    </span>
-                                  );
-                                })}
-                              </div>
+                            <div className="pt-3 border-t border-border flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                disabled={togglingWebhookId === wh.id}
+                                onClick={() => handleToggleActive(wh)}
+                              >
+                                {togglingWebhookId === wh.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : wh.active ? (
+                                  <PowerOff className="w-4 h-4" />
+                                ) : (
+                                  <Power className="w-4 h-4" />
+                                )}
+                                {wh.active ? 'Desactivar' : 'Activar'}
+                              </Button>
+                              <Button variant="outline" size="sm" className="gap-2" asChild>
+                                <Link href={`${BASE_PATH}/webhooks/${wh.id}/test`.replace(/\/+/g, '/')}>
+                                  <Send className="w-4 h-4" /> Enviar evento de prueba
+                                </Link>
+                              </Button>
                             </div>
                           </div>
                         </motion.div>
@@ -312,19 +427,56 @@ export default function WebhooksPage() {
         )}
       </motion.div>
 
-      <Dialog open={isWebhookModalOpen} onOpenChange={setIsWebhookModalOpen}>
+      <Dialog open={isWebhookModalOpen} onOpenChange={(open) => { setIsWebhookModalOpen(open); if (!open) setWebhookEditMode('form'); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <Webhook className="w-5 h-5" />
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Webhook className="w-5 h-5" />
+                </div>
+                <DialogTitle>Nuevo Webhook</DialogTitle>
               </div>
-              <DialogTitle>Nuevo Webhook</DialogTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => (webhookEditMode === 'form' ? switchToJsonMode() : switchToFormMode())}
+              >
+                {webhookEditMode === 'form' ? (
+                  <>
+                    <FileJson className="w-4 h-4" /> Ver / Editar JSON
+                  </>
+                ) : (
+                  <>
+                    <FormInput className="w-4 h-4" /> Volver al formulario
+                  </>
+                )}
+              </Button>
             </div>
           </DialogHeader>
 
           <form onSubmit={handleCreateWebhook} className="flex flex-col overflow-hidden flex-1 min-h-0">
             <div className="overflow-y-auto space-y-6">
+              {webhookEditMode === 'json' ? (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <FileJson className="w-4 h-4" /> JSON del webhook (edita directamente)
+                  </Label>
+                  <textarea
+                    value={webhookJsonRaw}
+                    onChange={(e) => setWebhookJsonRaw(e.target.value)}
+                    className="w-full min-h-[320px] rounded-xl border border-input bg-background px-4 py-3 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder='{"name":"...","url":"...","events":[...]}'
+                    spellCheck={false}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Campos requeridos: name, url, secret, events (array). Opcionales: description, retries (0-10), active (boolean).
+                  </p>
+                </div>
+              ) : (
+              <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nombre *</Label>
@@ -391,8 +543,47 @@ export default function WebhooksPage() {
                   </Label>
                   <span className="text-xs text-primary font-semibold">{selectedEvents.size} seleccionados</span>
                 </div>
+
+                {/* Eventos más comunes - siempre visible arriba */}
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor('Comunes'))}>Eventos más comunes</span>
+                  </div>
+                  <div className="space-y-1 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                    {COMMON_EVENTS.map((ev) => (
+                      <label
+                        key={ev.code}
+                        className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
+                      >
+                        <div
+                          className={cn(
+                            'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
+                            selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                          )}
+                        >
+                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={selectedEvents.has(ev.code)}
+                          onChange={() => toggleEvent(ev.code)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-mono font-medium">{ev.code}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-2 bg-muted/30 rounded-2xl border p-3 max-h-56 overflow-y-auto">
-                  {Object.entries(eventsByCategory).map(([category, catEvents]) => (
+                  {Object.entries(eventsByCategory).map(([category, catEvents]) => {
+                    const commonCodes = new Set(COMMON_EVENTS.map((e) => e.code));
+                    const filteredEvents = catEvents.filter((e) => !commonCodes.has(e.code));
+                    if (filteredEvents.length === 0) return null;
+                    return (
                     <div key={category}>
                       <Button
                         type="button"
@@ -402,8 +593,8 @@ export default function WebhooksPage() {
                       >
                         <div className="flex items-center gap-2">
                           <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor(category))}>{category}</span>
-                          <span className="text-xs text-muted-foreground">{catEvents.length} eventos</span>
-                          {catEvents.every((e) => selectedEvents.has(e.code)) && catEvents.length > 0 && (
+                          <span className="text-xs text-muted-foreground">{filteredEvents.length} eventos</span>
+                          {filteredEvents.every((e) => selectedEvents.has(e.code)) && filteredEvents.length > 0 && (
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                           )}
                         </div>
@@ -415,10 +606,10 @@ export default function WebhooksPage() {
                             className="text-xs text-muted-foreground hover:text-primary h-auto py-0 px-2"
                             onClick={(e) => {
                               e.stopPropagation();
-                              selectAllInCategory(category);
+                              selectAllInCategory(category, filteredEvents);
                             }}
                           >
-                            {catEvents.every((e) => selectedEvents.has(e.code)) ? 'Quitar todos' : 'Todos'}
+                            {filteredEvents.every((e) => selectedEvents.has(e.code)) ? 'Quitar todos' : 'Todos'}
                           </Button>
                           {expandedCategories.has(category) ? (
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -437,7 +628,7 @@ export default function WebhooksPage() {
                             className="overflow-hidden"
                           >
                             <div className="px-3 pb-2 space-y-1">
-                              {catEvents.map((ev) => (
+                              {filteredEvents.map((ev) => (
                                 <label
                                   key={ev.code}
                                   className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
@@ -467,9 +658,12 @@ export default function WebhooksPage() {
                         )}
                       </AnimatePresence>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
+              </>
+              )}
             </div>
 
             <DialogFooter className="gap-4 pt-6">
