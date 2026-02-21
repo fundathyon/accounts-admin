@@ -24,6 +24,12 @@ Este es un panel de administración moderno construido con **Next.js 15**, **Tai
 
 ## Configuración de API
 El panel utiliza un proxy interno (`/src/app/api/apps/route.ts`) para comunicarse con la API de Go.
-Puedes configurar las variables en `src/lib/utils.ts` o mediante variables de entorno:
+Las variables se cargan desde la carpeta `.envs/` (igual que en el proyecto Go):
+
+1. `.envs/.env.base` — define `ENVIRONMENT` (local, development, production, staging).
+2. Archivo según entorno: `.env.local`, `.env.dev`, `.env.prod` o `.env.staging`.
+
+Variables usadas:
 - `INTERNAL_API_URL`: URL base de la API de Authify (Default: `http://localhost:8000/accounts`).
 - `ADMIN_API_KEY`: Tu Admin API Key (Default: `secret`).
+- `BASE_PATH` / `NEXT_PUBLIC_BASE_PATH`: Ruta base de la aplicación (Default: vacío).
