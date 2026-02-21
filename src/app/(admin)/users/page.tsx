@@ -9,6 +9,7 @@ import {
   Key,
   ShieldCheck,
   CheckCircle2,
+  XCircle,
   Loader2,
   Copy,
   MoreVertical,
@@ -16,6 +17,9 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  RefreshCw,
+  Trash2,
+  ChevronRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -41,6 +45,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/admin-types';
 
@@ -59,11 +69,20 @@ export default function UsersPage() {
   const [isSignupSubmitting, setIsSignupSubmitting] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [signupResult, setSignupResult] = useState<{ access_token?: string; refresh_token?: string; message?: string } | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCodeSize, setVerificationCodeSize] = useState(6);
+  const [isVerificationSubmitting, setIsVerificationSubmitting] = useState(false);
+  const [resendCodeMode, setResendCodeMode] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [isResendSubmitting, setIsResendSubmitting] = useState(false);
   const [isSigninModalOpen, setIsSigninModalOpen] = useState(false);
   const [signinForm, setSigninForm] = useState({ email: '', password: '' });
   const [isSigninSubmitting, setIsSigninSubmitting] = useState(false);
   const [showSigninPassword, setShowSigninPassword] = useState(false);
   const [signinResult, setSigninResult] = useState<{ access_token?: string; refresh_token?: string; message?: string } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchUsers = async () => {
     if (!savedSecretKey) {
@@ -124,11 +143,27 @@ export default function UsersPage() {
           });
           fetchUsers();
         } else {
-          showNotification(message || 'Usuario registrado correctamente', 'success');
-          setIsSignupModalOpen(false);
-          setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
-          setShowSignupPassword(false);
-          fetchUsers();
+          setNeedsVerification(true);
+          setVerificationCode('');
+          if (savedSecretKey) {
+            try {
+              const behRes = await fetch(apiUrl('/api/behaviors'), {
+                headers: { 'X-Secret-API-Key': savedSecretKey },
+              });
+              const behData = await behRes.json();
+              const emailAuth = (behData.data || []).find((b: { behavior_code?: string }) => b.behavior_code === 'email_auth');
+              if (emailAuth?.id) {
+                const detailRes = await fetch(apiUrl(`/api/behaviors/${emailAuth.id}`), {
+                  headers: { 'X-Secret-API-Key': savedSecretKey },
+                });
+                const detailData = await detailRes.json();
+                const size = detailData.data?.config?.verification?.code_size;
+                if (typeof size === 'number' && size > 0) setVerificationCodeSize(size);
+              }
+            } catch {
+              /* usar default 6 */
+            }
+          }
         }
       } else {
         const errMsg = data.error?.message ?? data.errors?.[0] ?? payload?.message ?? 'Error al registrar';
@@ -138,6 +173,105 @@ export default function UsersPage() {
       showNotification('Error de conexión', 'error');
     } finally {
       setIsSignupSubmitting(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!keyForAuth || !signupForm.email.trim() || !verificationCode.trim()) {
+      showNotification('Email y código son requeridos', 'error');
+      return;
+    }
+    setIsVerificationSubmitting(true);
+    try {
+      const res = await fetch(apiUrl('/api/emails/activate'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Publishable-API-Key': keyForAuth,
+        },
+        body: JSON.stringify({
+          email: signupForm.email.trim(),
+          code: verificationCode.trim(),
+        }),
+      });
+      const data = await res.json();
+      const payload = data.data ?? data;
+      if (res.ok && (data.data || data.success)) {
+        const accessToken = payload?.access_token ?? payload?.jwt;
+        const refreshToken = payload?.refresh_token;
+        setSignupResult({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          message: 'Cuenta activada. Tokens de sesión:',
+        });
+        setNeedsVerification(false);
+        setVerificationCode('');
+        fetchUsers();
+      } else {
+        const errMsg = data.error?.message ?? data.errors?.[0] ?? payload?.message ?? 'Código inválido o expirado';
+        showNotification(errMsg, 'error');
+      }
+    } catch {
+      showNotification('Error al verificar', 'error');
+    } finally {
+      setIsVerificationSubmitting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!keyForAuth || !resendEmail.trim()) {
+      showNotification('Email es requerido', 'error');
+      return;
+    }
+    setIsResendSubmitting(true);
+    try {
+      const res = await fetch(apiUrl('/api/emails/signup/resend-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Publishable-API-Key': keyForAuth,
+        },
+        body: JSON.stringify({ email: resendEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && (data.data || data.success)) {
+        showNotification('Código reenviado. Revisa tu correo.', 'success');
+        setSignupForm((p) => ({ ...p, email: resendEmail.trim() }));
+        setResendCodeMode(false);
+        setNeedsVerification(true);
+        setVerificationCode('');
+      } else {
+        const errMsg = data.error?.message ?? data.errors?.[0] ?? 'Error al reenviar el código';
+        showNotification(errMsg, 'error');
+      }
+    } catch {
+      showNotification('Error al reenviar', 'error');
+    } finally {
+      setIsResendSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!savedSecretKey || !userToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(apiUrl(`/api/users/${userToDelete.id}`), {
+        method: 'DELETE',
+        headers: { 'X-Secret-API-Key': savedSecretKey },
+      });
+      const data = await res.json();
+      if (res.ok && (data.status === 200 || data.data?.message)) {
+        showNotification('Usuario eliminado correctamente', 'success');
+        setUserToDelete(null);
+        fetchUsers();
+      } else {
+        const errObj = Array.isArray(data.errors) ? data.errors[0] : data.error;
+        showNotification(errObj?.message || 'Error al eliminar', 'error');
+      }
+    } catch {
+      showNotification('Error al conectar', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -294,7 +428,11 @@ export default function UsersPage() {
                                   )}
                                 >
                                   {lm.entity_type}
-                                  {lm.is_verify && <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />}
+                                  {lm.is_verify ? (
+                                    <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
+                                  ) : (
+                                    <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
+                                  )}
                                 </Badge>
                               )) || <span className="text-muted-foreground text-xs">—</span>}
                             </div>
@@ -320,24 +458,40 @@ export default function UsersPage() {
                               minute: '2-digit',
                             })}
                           </TableCell>
-                          <TableCell
-                            className="px-6 py-3"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
-                            }}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
-                              }}
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
+                          <TableCell className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
+                                  }}
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                  Ver detalle
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-rose-500 focus:text-rose-500"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setUserToDelete(user);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Eliminar cuenta
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -358,6 +512,9 @@ export default function UsersPage() {
             setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
             setShowSignupPassword(false);
             setSignupResult(null);
+            setNeedsVerification(false);
+            setVerificationCode('');
+            setResendCodeMode(false);
           }
         }}
       >
@@ -365,13 +522,110 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              {signupResult ? 'Usuario registrado' : 'Registrar usuario'}
+              {signupResult
+                ? 'Usuario registrado'
+                : resendCodeMode
+                  ? 'Reenviar código'
+                  : needsVerification
+                    ? 'Verificar email'
+                    : 'Registrar usuario'}
             </DialogTitle>
             <DialogDescription>
-              {signupResult ? signupResult.message : 'Registra un nuevo usuario con email y contraseña en la aplicación.'}
+              {signupResult
+                ? signupResult.message
+                : resendCodeMode
+                  ? 'Introduce el email de la cuenta para recibir un nuevo código de verificación.'
+                  : needsVerification
+                    ? `Introduce el código de ${verificationCodeSize} dígitos enviado a ${signupForm.email}`
+                    : 'Registra un nuevo usuario con email y contraseña en la aplicación.'}
             </DialogDescription>
           </DialogHeader>
-          {signupResult ? (
+          {resendCodeMode ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleResendCode();
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  required
+                  placeholder="usuario@ejemplo.com"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setResendCodeMode(false)}>
+                  Volver
+                </Button>
+                <Button type="submit" disabled={isResendSubmitting} className="gap-2">
+                  {isResendSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Reenviar código
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : needsVerification ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleActivate();
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label>Código de verificación</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={verificationCodeSize}
+                  placeholder={'0'.repeat(verificationCodeSize)}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, verificationCodeSize))}
+                  className="font-mono text-center text-lg tracking-[0.5em]"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  Código de {verificationCodeSize} dígitos enviado a tu correo
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground gap-2"
+                  onClick={() => {
+                    setResendEmail(signupForm.email);
+                    setResendCodeMode(true);
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reenviar código
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setNeedsVerification(false);
+                    setVerificationCode('');
+                  }}
+                >
+                  Volver
+                </Button>
+                <Button type="submit" disabled={isVerificationSubmitting || verificationCode.length !== verificationCodeSize} className="gap-2">
+                  {isVerificationSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Verificar
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : signupResult ? (
             <div className="space-y-4">
               {signupResult.access_token && (
                 <div className="space-y-2">
@@ -418,6 +672,9 @@ export default function UsersPage() {
                     setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
                     setShowSignupPassword(false);
                     setSignupResult(null);
+                    setNeedsVerification(false);
+                    setVerificationCode('');
+                    setResendCodeMode(false);
                   }}
                 >
                   Cerrar
@@ -488,6 +745,21 @@ export default function UsersPage() {
                     onChange={(e) => setSignupForm((p) => ({ ...p, user_name: e.target.value }))}
                   />
                 </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="text-muted-foreground h-auto p-0 gap-2"
+                    onClick={() => {
+                      setResendEmail(signupForm.email || '');
+                      setResendCodeMode(true);
+                    }}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    ¿Ya te registraste? Reenviar código
+                  </Button>
+                </div>
                 <DialogFooter className="gap-4 pt-4">
                   <Button
                     type="button"
@@ -497,6 +769,9 @@ export default function UsersPage() {
                       setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
                       setShowSignupPassword(false);
                       setSignupResult(null);
+                      setNeedsVerification(false);
+                      setVerificationCode('');
+                      setResendCodeMode(false);
                     }}
                     className="flex-1"
                   >
@@ -656,6 +931,31 @@ export default function UsersPage() {
               </form>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar cuenta</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar esta cuenta? Se eliminarán todos los datos asociados (códigos, tokens, emails, métodos de login). Esta acción no se puede deshacer.
+              {userToDelete && (
+                <span className="mt-2 block text-foreground font-medium">
+                  {userToDelete.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || userToDelete.user_name || userToDelete.id}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting} className="gap-2">
+              {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Eliminar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
