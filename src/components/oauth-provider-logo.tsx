@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactElement } from 'react';
 import { cn } from '@/lib/utils';
 
 interface OAuthProviderLogoProps {
@@ -74,7 +75,7 @@ const SPOTIFY_LOGO = (
   </svg>
 );
 
-const LOGO_MAP: Record<string, JSX.Element> = {
+const LOGO_MAP: Record<string, ReactElement> = {
   google: GOOGLE_LOGO,
   microsoft: MICROSOFT_LOGO,
   github: GITHUB_LOGO,
