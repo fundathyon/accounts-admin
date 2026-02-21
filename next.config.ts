@@ -1,3 +1,4 @@
+import "./load-envs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
