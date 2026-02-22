@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { I18nProvider } from "@/context/i18n-context";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Authify Admin",
+  title: "Foundathyon Admin",
   description: "Next-gen authentication admin panel",
 };
 
@@ -20,8 +21,10 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <I18nProvider>
           {children}
           <Toaster richColors position="bottom-right" />
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

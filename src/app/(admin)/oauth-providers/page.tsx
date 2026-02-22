@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
@@ -80,6 +81,7 @@ const initialForm: OAuthConfigForm = {
 
 export default function OAuthProvidersPage() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
   const [providers, setProviders] = useState<OAuthConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -103,9 +105,9 @@ export default function OAuthProvidersPage() {
       });
       const data = await res.json();
       if (data.success) setProviders(data.data || []);
-      else showNotification(data.error?.message || 'Error al cargar proveedores OAuth', 'error');
+      else showNotification(data.error?.message || t('oauth.errorLoad'), 'error');
     } catch {
-      showNotification('Error de conexión con la API', 'error');
+      showNotification(t('oauth.errorConnection'), 'error');
     } finally {
       setLoading(false);
     }
@@ -137,7 +139,7 @@ export default function OAuthProvidersPage() {
         const callbackUri = `${baseUrl.replace(/\/$/, '')}/api/v1/oauth/${key}`;
         setFormData((p) => ({ ...p, callback_key: key, callback_uri: callbackUri }));
       } catch {
-        showNotification('Error al obtener la URL base', 'error');
+        showNotification(t('oauth.errorBaseUrl'), 'error');
       }
     };
     autoGenerateCallback();
@@ -147,7 +149,7 @@ export default function OAuthProvidersPage() {
     e.preventDefault();
     if (!formData.provider || !formData.client_id?.trim() || !formData.client_secret?.trim() ||
         !formData.callback_key?.trim() || !formData.callback_uri?.trim() || !formData.redirect_uri_web?.trim()) {
-      showNotification('Completa los campos requeridos', 'error');
+      showNotification(t('oauth.completeFields'), 'error');
       return;
     }
     setIsSubmitting(true);
@@ -176,14 +178,14 @@ export default function OAuthProvidersPage() {
       });
       const data = await res.json();
       if (data.success || res.ok) {
-        showNotification('Proveedor OAuth creado correctamente', 'success');
+        showNotification(t('oauth.created'), 'success');
         closeModal();
         fetchProviders();
       } else {
-        showNotification(data.error?.message || data.error?.Message || 'Error al crear proveedor OAuth', 'error');
+        showNotification(data.error?.message || data.error?.Message || t('oauth.errorCreate'), 'error');
       }
     } catch {
-      showNotification('Error de conexión con el servidor', 'error');
+      showNotification(t('oauth.errorConnectionServer'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -201,15 +203,15 @@ export default function OAuthProvidersPage() {
       const data = await res.json();
       const baseUrl = data.data?.base_url || data.base_url;
       if (!baseUrl) {
-        showNotification('No se pudo obtener la URL base de la API', 'error');
+        showNotification(t('oauth.errorBaseUrlApi'), 'error');
         return;
       }
       const key = generateRandomCallbackKey();
       const callbackUri = `${baseUrl.replace(/\/$/, '')}/api/v1/oauth/${key}`;
       setFormData((p) => ({ ...p, callback_key: key, callback_uri: callbackUri }));
-      showNotification('Callback Key y URI generados', 'success');
+      showNotification(t('oauth.callbackGenerated'), 'success');
     } catch {
-      showNotification('Error al obtener la URL base', 'error');
+      showNotification(t('oauth.errorBaseUrl'), 'error');
     }
   };
 
@@ -218,15 +220,15 @@ export default function OAuthProvidersPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Proveedores OAuth</h1>
+            <h1 className="text-3xl font-bold">{t('oauth.title')}</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Configura proveedores OAuth (Google, Microsoft) para iniciar sesión con tu aplicación.
+              {t('oauth.subtitle')}
             </p>
           </div>
           {!savedSecretKey ? (
             <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
               <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> Configura tu Secret API Key
+                <Key className="w-4 h-4" /> {t('oauth.configSecretKey')}
               </Link>
             </Button>
           ) : (
@@ -241,13 +243,12 @@ export default function OAuthProvidersPage() {
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">Secret API Key Requerida</CardTitle>
+            <CardTitle className="text-amber-300 mb-2">{t('oauth.secretKeyRequired')}</CardTitle>
             <CardDescription className="mb-6">
-              Configura la Secret API Key en Configuración para ver y añadir proveedores OAuth.
-              La app se identifica mediante la Secret Key (sk_...).
+              {t('oauth.configSecretKeyCard')}
             </CardDescription>
             <Button asChild>
-              <Link href={settingsHref}>Ir a Configuración</Link>
+              <Link href={settingsHref}>{t('oauth.goToSettings')}</Link>
             </Button>
           </Card>
         ) : loading ? (
@@ -257,7 +258,7 @@ export default function OAuthProvidersPage() {
         ) : (
           <div className="space-y-4">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> Consultando con: <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+              <ShieldCheck className="w-4 h-4" /> {t('oauth.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
 
             {providers.length === 0 ? (
@@ -265,12 +266,12 @@ export default function OAuthProvidersPage() {
                 <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
                   <LogIn className="w-8 h-8 text-rose-400" />
                 </div>
-                <CardTitle className="mb-2">Sin proveedores OAuth</CardTitle>
+                <CardTitle className="mb-2">{t('oauth.noProviders')}</CardTitle>
                 <CardDescription className="mb-6">
-                  No hay proveedores OAuth configurados. Añade Google o Microsoft para permitir inicio de sesión con OAuth.
+                  {t('oauth.noProvidersDesc')}
                 </CardDescription>
                 <Button onClick={() => setIsModalOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
+                  <Plus className="w-4 h-4" /> {t('oauth.addProvider')}
                 </Button>
               </Card>
             ) : (
@@ -279,11 +280,11 @@ export default function OAuthProvidersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-b">
-                        <TableHead className="px-8 py-4">Proveedor</TableHead>
-                        <TableHead className="px-8 py-4">Nombre</TableHead>
-                        <TableHead className="px-8 py-4">Client ID</TableHead>
-                        <TableHead className="px-8 py-4">Estado</TableHead>
-                        <TableHead className="px-8 py-4">Callback URI</TableHead>
+                        <TableHead className="px-8 py-4">{t('oauth.tableProvider')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('oauth.tableName')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('oauth.tableClientId')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('oauth.tableState')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('oauth.tableCallbackUri')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -302,7 +303,7 @@ export default function OAuthProvidersPage() {
                           </TableCell>
                           <TableCell className="px-8 py-4">
                             <Badge variant={p.enabled ? 'secondary' : 'outline'} className={p.enabled ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
-                              {p.enabled ? 'Habilitado' : 'Deshabilitado'}
+                              {p.enabled ? t('oauth.enabled') : t('oauth.disabled')}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[220px] truncate" title={p.callback_uri}>
@@ -324,16 +325,16 @@ export default function OAuthProvidersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogIn className="w-5 h-5 text-primary" />
-              Nuevo Proveedor OAuth
+              {t('oauth.newProviderTitle')}
             </DialogTitle>
             <DialogDescription>
-              Configura un proveedor OAuth para tu aplicación. La app se identifica con tu Secret API Key.
+              {t('oauth.newProviderDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-2">
-              <Label>Proveedor *</Label>
+              <Label>{t('oauth.providerLabel')}</Label>
               <div className="flex flex-wrap gap-3">
                 {ALLOWED_PROVIDERS.map((prov) => (
                   <button
@@ -354,9 +355,9 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Nombre (opcional)</Label>
+              <Label>{t('oauth.nameOptional')}</Label>
               <Input
-                placeholder="Ej: Web App Producción"
+                placeholder={t('oauth.namePlaceholder')}
                 value={formData.name}
                 onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
               />
@@ -366,7 +367,7 @@ export default function OAuthProvidersPage() {
               <Label>Client ID *</Label>
               <Input
                 required
-                placeholder="xxx.apps.googleusercontent.com"
+                placeholder={t('oauth.clientIdPlaceholder')}
                 value={formData.client_id}
                 onChange={(e) => setFormData((p) => ({ ...p, client_id: e.target.value }))}
                 className="font-mono text-sm"
@@ -387,7 +388,7 @@ export default function OAuthProvidersPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Callback Key y Callback URI *</Label>
+                <Label>{t('oauth.callbackLabel')}</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -396,15 +397,15 @@ export default function OAuthProvidersPage() {
                   className="gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Generar
+                  {t('oauth.generate')}
                 </Button>
               </div>
               <Input
                 required
-                placeholder="Clave opaca usada en Callback URI"
+                readOnly
+                placeholder={t('oauth.callbackKeyPlaceholder')}
                 value={formData.callback_key}
-                onChange={(e) => setFormData((p) => ({ ...p, callback_key: e.target.value }))}
-                className="font-mono text-sm"
+                className="font-mono text-sm bg-muted/50 text-muted-foreground cursor-not-allowed"
               />
             </div>
 
@@ -413,21 +414,21 @@ export default function OAuthProvidersPage() {
               <div className="flex gap-2">
                 <Input
                   required
-                  placeholder="https://accounts.example.com/api/v1/oauth/xxx"
+                  readOnly
+                  placeholder={t('oauth.callbackUriPlaceholder')}
                   value={formData.callback_uri}
-                  onChange={(e) => setFormData((p) => ({ ...p, callback_uri: e.target.value }))}
-                  className="font-mono text-sm flex-1 min-w-0"
+                  className="font-mono text-sm flex-1 min-w-0 bg-muted/50 text-muted-foreground cursor-not-allowed"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="Copiar URI"
+                  title={t('oauth.copyUri')}
                   className={`shrink-0 transition-colors ${copyJustClicked ? 'bg-primary/20' : ''}`}
                   onClick={() => {
                     if (formData.callback_uri) {
                       navigator.clipboard.writeText(formData.callback_uri);
-                      showNotification('Callback URI copiado al portapapeles', 'success');
+                      showNotification(t('oauth.callbackUriCopied'), 'success');
                       setCopyJustClicked(true);
                       setTimeout(() => setCopyJustClicked(false), 300);
                     }
@@ -439,9 +440,9 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Scopes (opcional)</Label>
+              <Label>{t('oauth.scopesLabel')}</Label>
               <Input
-                placeholder="email profile openid"
+                placeholder={t('oauth.scopesPlaceholder')}
                 value={formData.scopes}
                 onChange={(e) => setFormData((p) => ({ ...p, scopes: e.target.value }))}
                 className="font-mono text-sm"
@@ -449,10 +450,10 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Redirect URI Web *</Label>
+              <Label>{t('oauth.redirectWeb')}</Label>
               <Input
                 required
-                placeholder="https://app.example.com/auth/callback"
+                placeholder={t('oauth.redirectWebPlaceholder')}
                 value={formData.redirect_uri_web}
                 onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_web: e.target.value }))}
                 className="font-mono text-sm"
@@ -462,33 +463,33 @@ export default function OAuthProvidersPage() {
             <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
               <CollapsibleTrigger asChild>
                 <Button type="button" variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground">
-                  <span>URIs de redirección por plataforma (opcional)</span>
+                  <span>{t('oauth.redirectPlatform')}</span>
                   {advancedOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 pt-2">
                 <div className="space-y-2">
-                  <Label>Redirect URI Android</Label>
+                  <Label>{t('oauth.redirectAndroid')}</Label>
                   <Input
-                    placeholder="com.yourapp://auth/callback"
+                    placeholder={t('oauth.redirectAndroidPlaceholder')}
                     value={formData.redirect_uri_android}
                     onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_android: e.target.value }))}
                     className="font-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Redirect URI iOS</Label>
+                  <Label>{t('oauth.redirectIos')}</Label>
                   <Input
-                    placeholder="yourapp://auth/callback"
+                    placeholder={t('oauth.redirectIosPlaceholder')}
                     value={formData.redirect_uri_ios}
                     onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_ios: e.target.value }))}
                     className="font-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Redirect URI Desktop</Label>
+                  <Label>{t('oauth.redirectDesktop')}</Label>
                   <Input
-                    placeholder="http://localhost/auth/callback"
+                    placeholder={t('oauth.redirectDesktopPlaceholder')}
                     value={formData.redirect_uri_desktop}
                     onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_desktop: e.target.value }))}
                     className="font-mono text-sm"
@@ -499,8 +500,8 @@ export default function OAuthProvidersPage() {
 
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div>
-                <Label>Habilitado</Label>
-                <p className="text-xs text-muted-foreground">El proveedor estará activo al crearlo</p>
+                <Label>{t('oauth.enabledLabel')}</Label>
+                <p className="text-xs text-muted-foreground">{t('oauth.enabledDesc')}</p>
               </div>
               <Switch
                 checked={formData.enabled}
@@ -510,11 +511,11 @@ export default function OAuthProvidersPage() {
 
             <DialogFooter className="gap-4 pt-4">
               <Button type="button" variant="outline" onClick={closeModal}>
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting} className="gap-2">
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? 'Creando…' : 'Crear Proveedor'}
+                {isSubmitting ? t('oauth.creating') : t('oauth.createProvider')}
               </Button>
             </DialogFooter>
           </form>
@@ -526,7 +527,7 @@ export default function OAuthProvidersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogIn className="w-5 h-5 text-primary" />
-              Detalles del proveedor
+              {t('oauth.providerDetails')}
               {selectedProvider && (
                 <span className="capitalize text-muted-foreground font-normal">
                   ({selectedProvider.provider}{selectedProvider.name ? ` · ${selectedProvider.name}` : ''})
@@ -534,7 +535,7 @@ export default function OAuthProvidersPage() {
               )}
             </DialogTitle>
             <DialogDescription>
-              Configuración del proveedor OAuth para tu aplicación.
+              {t('oauth.providerConfig')}
             </DialogDescription>
           </DialogHeader>
 
@@ -542,77 +543,77 @@ export default function OAuthProvidersPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">ID</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.id')}</Label>
                   <p className="text-sm font-mono break-all">{selectedProvider.id}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">App ID</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.appId')}</Label>
                   <p className="text-sm font-mono break-all">{selectedProvider.app_id}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Proveedor</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.tableProvider')}</Label>
                   <div className="flex items-center gap-2">
                     <OAuthProviderLogo provider={selectedProvider.provider} size={28} className="rounded" />
                     <span className="text-sm font-semibold capitalize">{selectedProvider.provider}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Estado</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.tableState')}</Label>
                   <Badge variant={selectedProvider.enabled ? 'secondary' : 'outline'} className={selectedProvider.enabled ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
-                    {selectedProvider.enabled ? 'Habilitado' : 'Deshabilitado'}
+                    {selectedProvider.enabled ? t('oauth.enabled') : t('oauth.disabled')}
                   </Badge>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Nombre</Label>
+                <Label className="text-muted-foreground text-xs">{t('oauth.tableName')}</Label>
                 <p className="text-sm">{selectedProvider.name || '—'}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Client ID</Label>
+                <Label className="text-muted-foreground text-xs">{t('oauth.tableClientId')}</Label>
                 <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.client_id}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Callback Key</Label>
+                <Label className="text-muted-foreground text-xs">{t('oauth.callbackKey')}</Label>
                 <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.callback_key}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Callback URI</Label>
+                <Label className="text-muted-foreground text-xs">{t('oauth.callbackUri')}</Label>
                 <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.callback_uri}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Scopes</Label>
+                <Label className="text-muted-foreground text-xs">{t('oauth.scopes')}</Label>
                 <p className="text-sm font-mono">{selectedProvider.scopes || '—'}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Redirect URI Web</Label>
+                <Label className="text-muted-foreground text-xs">{t('oauth.redirectWebLabel')}</Label>
                 <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.redirect_uri_web}</p>
               </div>
 
               {(selectedProvider.redirect_uri_android || selectedProvider.redirect_uri_ios || selectedProvider.redirect_uri_desktop) && (
                 <div className="space-y-3 pt-2 border-t">
-                  <Label className="text-muted-foreground text-xs">URIs de redirección por plataforma</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.platformUris')}</Label>
                   <div className="space-y-2">
                     {selectedProvider.redirect_uri_android && (
                       <div>
-                        <span className="text-xs text-muted-foreground block mb-1">Android</span>
+                        <span className="text-xs text-muted-foreground block mb-1">{t('oauth.android')}</span>
                         <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_android}</p>
                       </div>
                     )}
                     {selectedProvider.redirect_uri_ios && (
                       <div>
-                        <span className="text-xs text-muted-foreground block mb-1">iOS</span>
+                        <span className="text-xs text-muted-foreground block mb-1">{t('oauth.ios')}</span>
                         <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_ios}</p>
                       </div>
                     )}
                     {selectedProvider.redirect_uri_desktop && (
                       <div>
-                        <span className="text-xs text-muted-foreground block mb-1">Desktop</span>
+                        <span className="text-xs text-muted-foreground block mb-1">{t('oauth.desktop')}</span>
                         <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_desktop}</p>
                       </div>
                     )}
@@ -622,7 +623,7 @@ export default function OAuthProvidersPage() {
 
               <DialogFooter className="pt-4">
                 <Button variant="outline" onClick={() => setSelectedProvider(null)}>
-                  Cerrar
+                  {t('oauth.close')}
                 </Button>
               </DialogFooter>
             </div>

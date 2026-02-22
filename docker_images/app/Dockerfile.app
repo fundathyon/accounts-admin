@@ -1,5 +1,5 @@
 # ─── Admin Dashboard (Next.js) ────────────────────────────────────
-# Build and serve the Authify Accounts admin panel
+# Build and serve the Foundathyon Accounts admin panel
 
 FROM oven/bun:1-alpine AS deps
 WORKDIR /app

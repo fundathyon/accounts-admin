@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import type { User } from '@/lib/admin-types';
 export default function UserDetailPage() {
   const params = useParams();
   const { apiUrl, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -61,11 +63,11 @@ export default function UserDetailPage() {
       <div className="space-y-6">
         <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
           <Link href={usersHref}>
-            <ChevronLeft className="w-4 h-4" /> Volver a usuarios
+            <ChevronLeft className="w-4 h-4" /> {t('userDetail.backToUsers')}
           </Link>
         </Button>
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">Usuario no encontrado</p>
+          <p className="text-muted-foreground">{t('userDetail.userNotFound')}</p>
         </Card>
       </div>
     );
@@ -85,7 +87,7 @@ export default function UserDetailPage() {
               {(user.name || user.user_name || 'U').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold">{user.name || user.user_name || 'Sin nombre'}</h1>
+              <h1 className="text-2xl font-bold">{user.name || user.user_name || t('userDetail.noName')}</h1>
               <p className="text-muted-foreground font-mono text-sm mt-1">{user.id}</p>
               {user.role_details && (
                 <Badge variant="secondary" className="mt-2">
@@ -99,7 +101,7 @@ export default function UserDetailPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="p-6">
             <CardTitle className="text-base mb-4 flex items-center gap-2">
-              <Shield className="w-4 h-4" /> Información general
+              <Shield className="w-4 h-4" /> {t('userDetail.generalInfo')}
             </CardTitle>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4">
@@ -115,7 +117,7 @@ export default function UserDetailPage() {
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">User name</dt>
+                <dt className="text-muted-foreground">{t('userDetail.userName')}</dt>
                 <dd>{user.user_name || '—'}</dd>
               </div>
               <Separator />
@@ -145,7 +147,7 @@ export default function UserDetailPage() {
 
           <Card className="p-6">
             <CardTitle className="text-base mb-4 flex items-center gap-2">
-              <Mail className="w-4 h-4" /> Métodos de login
+              <Mail className="w-4 h-4" /> {t('userDetail.loginMethods')}
             </CardTitle>
             {user.login_methods && user.login_methods.length > 0 ? (
               <div className="space-y-4">
@@ -188,7 +190,7 @@ export default function UserDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No hay métodos de login registrados</p>
+              <p className="text-sm text-muted-foreground">{t('userDetail.noLoginMethods')}</p>
             )}
           </Card>
         </div>

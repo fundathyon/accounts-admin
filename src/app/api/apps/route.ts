@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { INTERNAL_API_URL, ADMIN_API_KEY } from '@/lib/utils';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     try {
         const res = await fetch(`${INTERNAL_API_URL}/v1/apps?page=${page}&size=${size}&offset=${offset}`, {
             headers: {
-                'X-Admin-API-Key': 'secret',
+                'X-Admin-API-Key': ADMIN_API_KEY,
                 'Accept': 'application/json',
             },
             cache: 'no-store',

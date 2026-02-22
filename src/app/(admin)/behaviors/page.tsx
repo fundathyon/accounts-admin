@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Puzzle, Key, ShieldCheck, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,7 @@ function truncateKey(key: string) {
 
 export default function BehaviorsPage() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
   const [behaviors, setBehaviors] = useState<AppBehavior[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,9 +37,9 @@ export default function BehaviorsPage() {
       const res = await fetch(apiUrl('/api/behaviors'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
       if (data.success) setBehaviors(data.data || []);
-      else showNotification(data.error?.message || 'Error al cargar behaviors', 'error');
+      else showNotification(data.error?.message || t('behaviors.errorLoad'), 'error');
     } catch {
-      showNotification('Error de conexión con la API de Behaviors', 'error');
+      showNotification(t('users.errorConnectionUsers'), 'error');
     } finally {
       setLoading(false);
     }
@@ -52,13 +54,13 @@ export default function BehaviorsPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Behaviors</h1>
-            <p className="text-muted-foreground text-sm mt-1">Comportamientos activos en tu aplicación.</p>
+            <h1 className="text-3xl font-bold">{t('sidebar.behaviors')}</h1>
+            <p className="text-muted-foreground text-sm mt-1">{t('behaviors.desc')}</p>
           </div>
           {!savedSecretKey && (
             <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
               <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> Configura tu Secret API Key
+                <Key className="w-4 h-4" /> {t('behaviors.configSecretKey')}
               </Link>
             </Button>
           )}
@@ -69,10 +71,10 @@ export default function BehaviorsPage() {
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">Secret API Key Requerida</CardTitle>
-            <CardDescription className="mb-6">Necesitas configurar la Secret API Key en Configuración para ver los behaviors.</CardDescription>
+            <CardTitle className="text-amber-300 mb-2">{t('behaviors.secretKeyRequired')}</CardTitle>
+            <CardDescription className="mb-6">{t('behaviors.secretKeyRequiredDesc')}</CardDescription>
             <Button asChild>
-              <Link href={settingsHref}>Ir a Configuración</Link>
+              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
             </Button>
           </Card>
         ) : loading ? (
@@ -82,7 +84,7 @@ export default function BehaviorsPage() {
         ) : (
           <div className="space-y-4">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> Consultando con: <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+              <ShieldCheck className="w-4 h-4" /> {t('roles.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
 
             {behaviors.length === 0 ? (
@@ -90,8 +92,8 @@ export default function BehaviorsPage() {
                 <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
                   <Puzzle className="w-8 h-8 text-rose-400" />
                 </div>
-                <CardTitle className="mb-2">Sin behaviors</CardTitle>
-                <CardDescription>No hay comportamientos configurados para esta aplicación.</CardDescription>
+                <CardTitle className="mb-2">{t('behaviors.noBehaviors')}</CardTitle>
+                <CardDescription>{t('behaviors.noBehaviorsDesc')}</CardDescription>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -106,7 +108,7 @@ export default function BehaviorsPage() {
                           variant={behavior.is_active ? 'secondary' : 'outline'}
                           className={cn(behavior.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : 'bg-muted text-muted-foreground')}
                         >
-                          {behavior.is_active ? 'Activo' : 'Inactivo'}
+                          {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
                         </Badge>
                       </div>
 
@@ -115,11 +117,11 @@ export default function BehaviorsPage() {
 
                       <div className="text-xs text-muted-foreground mt-auto pt-4 border-t border-border flex flex-col gap-1">
                         <div className="flex justify-between">
-                          <span>Actualizado:</span>
+                          <span>{t('behaviors.updated')}:</span>
                           <span className="text-foreground">{new Date(behavior.updated_at).toLocaleDateString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Creado:</span>
+                          <span>{t('behaviors.created')}:</span>
                           <span className="text-foreground">{new Date(behavior.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>

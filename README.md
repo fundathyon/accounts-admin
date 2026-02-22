@@ -1,9 +1,9 @@
-# Authify Admin (Next.js Edition)
+# Foundathyon Admin (Next.js Edition)
 
 Este es un panel de administración moderno construido con **Next.js 15**, **Tailwind CSS** y **Framer Motion**.
 
 ## Características
-- **Route Handlers**: Peticiones protegidas hacia la API real de Authify.
+- **Route Handlers**: Peticiones protegidas hacia la API real de Foundathyon.
 - **Framer Motion**: Animaciones fluidas y modales interactivos.
 - **Tailwind CSS**: Diseño premium y modo oscuro nativo.
 - **TypeScript**: Tipado estricto para mayor seguridad.
@@ -30,6 +30,6 @@ Las variables se cargan desde la carpeta `.envs/` (igual que en el proyecto Go):
 2. Archivo según entorno: `.env.local`, `.env.dev`, `.env.prod` o `.env.staging`.
 
 Variables usadas:
-- `INTERNAL_API_URL`: URL base de la API de Authify (Default: `http://localhost:8000/accounts`).
+- `INTERNAL_API_URL`: URL base de la API de Foundathyon (Default: `http://localhost:8000/accounts`).
 - `ADMIN_API_KEY`: Tu Admin API Key (Default: `secret`).
 - `BASE_PATH` / `NEXT_PUBLIC_BASE_PATH`: Ruta base de la aplicación (Default: vacío).
