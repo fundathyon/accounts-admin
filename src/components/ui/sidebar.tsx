@@ -112,6 +112,7 @@ const SidebarProvider = React.forwardRef<
           setOpenMobile,
           isMobile,
           toggleSidebar,
+          collapsible,
         }}
       >
         <div
