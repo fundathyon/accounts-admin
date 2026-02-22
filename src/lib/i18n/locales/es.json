@@ -366,7 +366,17 @@
     "errorCreate": "Error al crear proveedor OAuth",
     "errorConnectionServer": "Error de conexión con el servidor",
     "errorBaseUrlApi": "No se pudo obtener la URL base de la API",
-    "callbackGenerated": "Callback Key y URI generados"
+    "callbackGenerated": "Callback Key y URI generados",
+    "actions": "Acciones",
+    "getLink": "",
+    "getLinkDesc": "Selecciona la plataforma y obtén el link de inicio de sesión OAuth para este proveedor.",
+    "platformLabel": "Plataforma",
+    "fetchLink": "Obtener link",
+    "fetchingLink": "Obteniendo…",
+    "resultLink": "Link OAuth",
+    "linkCopied": "Link copiado al portapapeles",
+    "errorLink": "Error al obtener el link OAuth",
+    "publishableKeyRequired": "Configura la Publishable API Key (pk_...) en Configuración para obtener los links OAuth."
   },
   "behaviors": {
     "title": "Behaviors",

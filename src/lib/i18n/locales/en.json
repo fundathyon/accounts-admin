@@ -366,7 +366,17 @@
     "errorCreate": "Error creating OAuth provider",
     "errorConnectionServer": "Connection error with server",
     "errorBaseUrlApi": "Could not get API base URL",
-    "callbackGenerated": "Callback Key and URI generated"
+    "callbackGenerated": "Callback Key and URI generated",
+    "actions": "Actions",
+    "getLink": "",
+    "getLinkDesc": "Select the platform and fetch the OAuth sign-in link for this provider.",
+    "platformLabel": "Platform",
+    "fetchLink": "Get Link",
+    "fetchingLink": "Fetching…",
+    "resultLink": "OAuth Link",
+    "linkCopied": "Link copied to clipboard",
+    "errorLink": "Error fetching OAuth link",
+    "publishableKeyRequired": "Configure the Publishable API Key (pk_...) in Settings to fetch OAuth links."
   },
   "behaviors": {
     "title": "Behaviors",
