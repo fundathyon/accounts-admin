@@ -13,6 +13,7 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import type { User } from '@/lib/admin-types';
 
 export default function UserDetailPage() {
@@ -154,14 +155,20 @@ export default function UserDetailPage() {
                 {user.login_methods.map((lm) => (
                   <div key={lm.id} className="p-3 rounded-lg border border-border bg-muted/30">
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          lm.entity_type === 'email' ? 'border-sky-500/40 text-sky-400' : 'border-orange-500/40 text-orange-400'
-                        )}
-                      >
-                        {lm.entity_type}
-                      </Badge>
+                      {lm.entity_type === 'oauth' && lm.details?.platform ? (
+                        <OAuthProviderLogo provider={lm.details.platform} size={24} className="rounded" />
+                      ) : lm.entity_type === 'email' ? (
+                        <span className="inline-flex items-center justify-center w-6 h-6 shrink-0">
+                          <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                        </span>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-orange-500/40 text-orange-400"
+                        >
+                          {lm.entity_type}
+                        </Badge>
+                      )}
                       {lm.is_verify ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                       ) : (

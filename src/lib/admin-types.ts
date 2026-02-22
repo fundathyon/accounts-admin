@@ -9,6 +9,7 @@ export interface LoginMethodDetails {
   email?: string;
   app_id?: string;
   created_at?: string;
+  platform?: string; // OAuth provider: google, apple, microsoft, etc.
 }
 
 export interface LoginMethod {
