@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'X-Webhook-Event': typeof payload.event === 'string' ? payload.event : 'test',
-        'User-Agent': 'Authify-Admin-Test/1.0',
+        'User-Agent': 'Foundathyon-Admin-Test/1.0',
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(30000),

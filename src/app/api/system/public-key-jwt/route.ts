@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { INTERNAL_API_URL, ADMIN_API_KEY } from '@/lib/utils';
 
+/**
+ * GET /api/system/public-key-jwt
+ * Proxy to accounts API. Exposes PUBLIC_KEY_JWT:
+ * - Community: uses ADMIN_API_KEY from env
+ * - Pro: requires X-Secret-API-Key to identify the app
+ */
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const revealSensitive = searchParams.get('reveal_sensitive') === '1' || searchParams.get('reveal_sensitive') === 'true';
-
     if (!ADMIN_API_KEY) {
         return NextResponse.json(
             { success: false, error: { message: 'ADMIN_API_KEY no está configurada en el servidor.' } },
@@ -12,17 +15,19 @@ export async function GET(request: Request) {
         );
     }
 
-    const url = new URL(`${INTERNAL_API_URL}/api/v1/system/env`);
-    if (revealSensitive) url.searchParams.set('reveal_sensitive', '1');
+    const secretKey = request.headers.get('X-Secret-API-Key');
+
+    const url = `${INTERNAL_API_URL}/api/v1/system/public-key-jwt`;
+    const headers: Record<string, string> = {
+        'X-Admin-API-Key': ADMIN_API_KEY,
+        'Accept': 'application/json',
+    };
+    if (secretKey) {
+        headers['X-API-KEY'] = secretKey;
+    }
 
     try {
-        const res = await fetch(url.toString(), {
-            headers: {
-                'X-Admin-API-Key': ADMIN_API_KEY,
-                'Accept': 'application/json',
-            },
-            cache: 'no-store',
-        });
+        const res = await fetch(url, { headers, cache: 'no-store' });
         const data = await res.json();
         return NextResponse.json(data, { status: res.status });
     } catch {

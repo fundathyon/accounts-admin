@@ -88,6 +88,7 @@ export interface Role {
   name: string;
   description: string;
   app_id: string;
+  users_count?: number;
   created_at: string;
   updated_at: string;
 }

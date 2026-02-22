@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { JsonEditor } from '@/components/json-editor';
@@ -18,10 +19,12 @@ import {
 } from '@/components/ui/collapsible';
 import type { WebhookItem, WebhookEvent } from '@/lib/admin-types';
 
-const COMMON_EVENTS: WebhookEvent[] = [
-  { code: 'accounts.user.signup', description: 'Se dispara cuando un usuario se registra', category: 'Comunes' },
-  { code: 'accounts.user.deleted', description: 'Se dispara cuando se elimina un usuario', category: 'Comunes' },
-];
+function useCommonEvents(t: (k: string) => string): WebhookEvent[] {
+  return [
+    { code: 'accounts.user.signup', description: t('webhooks.eventSignupDesc'), category: t('webhooks.categoryCommon') },
+    { code: 'accounts.user.deleted', description: t('webhooks.eventDeletedDesc'), category: t('webhooks.categoryCommon') },
+  ];
+}
 
 function getDefaultTestPayload(code: string): object {
   const ts = new Date().toISOString();
@@ -91,6 +94,8 @@ function getDefaultTestPayload(code: string): object {
 export default function WebhookTestPage() {
   const params = useParams();
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
+  const COMMON_EVENTS = useCommonEvents(t);
   const id = params.id as string;
   const [webhook, setWebhook] = useState<WebhookItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,7 +126,7 @@ export default function WebhookTestPage() {
           }
         }
       } catch {
-        showNotification('Error al cargar el webhook', 'error');
+        showNotification(t('webhooks.testPage.errorLoadWebhook'), 'error');
       } finally {
         setLoading(false);
       }
@@ -140,7 +145,7 @@ export default function WebhookTestPage() {
     try {
       payload = JSON.parse(testEventPayload) as object;
     } catch {
-      showNotification('JSON inválido. Corrige el formato del payload.', 'error');
+      showNotification(t('webhooks.testPage.invalidPayload'), 'error');
       return;
     }
     setTestEventSending(true);
@@ -152,12 +157,12 @@ export default function WebhookTestPage() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('Evento de prueba enviado correctamente', 'success');
+        showNotification(t('webhooks.testPage.eventSent'), 'success');
       } else {
         showNotification(data.error?.message ?? `Error ${data.status ?? ''}: ${data.statusText ?? 'No se pudo enviar'}`, 'error');
       }
     } catch {
-      showNotification('Error de conexión al enviar el evento de prueba', 'error');
+      showNotification(t('webhooks.testPage.errorSend'), 'error');
     } finally {
       setTestEventSending(false);
     }
@@ -167,7 +172,7 @@ export default function WebhookTestPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Cargando webhook…</p>
+        <p className="text-sm text-muted-foreground">{t('webhooks.testPage.loadingWebhook')}</p>
       </div>
     );
   }
@@ -177,17 +182,17 @@ export default function WebhookTestPage() {
       <div className="space-y-6">
         <Button variant="ghost" asChild className="gap-2">
           <Link href={webhooksHref}>
-            <ArrowLeft className="w-4 h-4" /> Volver a Webhooks
+            <ArrowLeft className="w-4 h-4" /> {t('webhooks.testPage.backToWebhooks')}
           </Link>
         </Button>
         <Card className="border-destructive/30">
           <CardHeader>
-            <CardTitle>Webhook no encontrado</CardTitle>
-            <CardDescription>No se encontró el webhook con el ID indicado.</CardDescription>
+            <CardTitle>{t('webhooks.testPage.webhookNotFound')}</CardTitle>
+            <CardDescription>{t('webhooks.testPage.webhookNotFoundDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href={webhooksHref}>Ir a Webhooks</Link>
+              <Link href={webhooksHref}>{t('webhooks.testPage.goToWebhooks')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -200,7 +205,7 @@ export default function WebhookTestPage() {
       <div className="flex items-center justify-between">
         <Button variant="ghost" asChild className="gap-2">
           <Link href={webhooksHref}>
-            <ArrowLeft className="w-4 h-4" /> Volver a Webhooks
+            <ArrowLeft className="w-4 h-4" /> {t('webhooks.testPage.backToWebhooks')}
           </Link>
         </Button>
       </div>
@@ -214,9 +219,9 @@ export default function WebhookTestPage() {
             >
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-cyan-400" />
-                <span className="font-medium">Evento de prueba</span>
+                <span className="font-medium">{t('webhooks.testPage.testEvent')}</span>
                 <span className="text-xs text-muted-foreground font-mono">
-                  {testEventSelectedEvent || 'Seleccionar…'}
+                  {testEventSelectedEvent || t('webhooks.testPage.select')}
                 </span>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]/collapse:rotate-90" />
@@ -246,7 +251,7 @@ export default function WebhookTestPage() {
 
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <FileJson className="w-4 h-4" /> Payload JSON (editable)
+              <FileJson className="w-4 h-4" /> {t('webhooks.testPage.payloadJson')}
             </Label>
             <JsonEditor
               value={testEventPayload}
@@ -257,12 +262,12 @@ export default function WebhookTestPage() {
           </div>
 
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" asChild className="flex-1">
-            <Link href={webhooksHref}>Cancelar</Link>
+            <Button variant="outline" asChild className="flex-1">
+            <Link href={webhooksHref}>{t('webhooks.testPage.cancel')}</Link>
           </Button>
           <Button onClick={sendTestEvent} disabled={testEventSending} className="flex-1 gap-2">
             {testEventSending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {testEventSending ? 'Enviando…' : 'Enviar evento'}
+            {testEventSending ? t('webhooks.testPage.sending') : t('webhooks.testPage.sendEvent')}
           </Button>
         </div>
       </div>

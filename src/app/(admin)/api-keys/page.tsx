@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
@@ -46,6 +47,7 @@ function truncateKey(key: string) {
 
 export default function ApiKeysPage() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
   const [apps, setApps] = useState<App[]>([]);
   const [apiKeys, setApiKeys] = useState<APIKeyListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +72,9 @@ export default function ApiKeysPage() {
       const res = await fetch(apiUrl('/api/apps'));
       const data = await res.json();
       if (data.success) setApps(data.data || []);
-      else showNotification(data.error?.message || 'Error al cargar apps', 'error');
+      else showNotification(data.error?.message || t('apiKeys.errorLoadApps'), 'error');
     } catch {
-      showNotification('Error de conexión con la API', 'error');
+      showNotification(t('apiKeys.errorConnectionApi'), 'error');
     } finally {
       setLoading(false);
     }
@@ -90,9 +92,9 @@ export default function ApiKeysPage() {
       });
       const data = await res.json();
       if (data.success) setApiKeys(data.data || []);
-      else showNotification(data.error?.message || 'Error al cargar API Keys', 'error');
+      else showNotification(data.error?.message || t('apiKeys.errorLoadKeys'), 'error');
     } catch {
-      showNotification('Error de conexión con la API', 'error');
+      showNotification(t('apiKeys.errorConnectionApi'), 'error');
     } finally {
       setKeysLoading(false);
     }
@@ -109,7 +111,7 @@ export default function ApiKeysPage() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.app_id || !formData.name.trim()) {
-      showNotification('Selecciona una aplicación y un nombre', 'error');
+      showNotification(t('apiKeys.selectAppAndName'), 'error');
       return;
     }
     setIsSubmitting(true);
@@ -136,10 +138,10 @@ export default function ApiKeysPage() {
         fetchApps();
         fetchAPIKeys();
       } else {
-        showNotification(data.error?.message || payload?.message || 'Error al generar API Keys', 'error');
+        showNotification(data.error?.message || payload?.message || t('apiKeys.errorGenerate'), 'error');
       }
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('apiKeys.errorConnection'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -158,14 +160,14 @@ export default function ApiKeysPage() {
       });
       const data = await res.json();
       if (data.success || res.ok) {
-        showNotification('API Key desactivada correctamente', 'success');
+        showNotification(t('apiKeys.deactivated'), 'success');
         setSelectedApiKey(null);
         fetchAPIKeys();
       } else {
-        showNotification(data.error?.message || 'Error al desactivar API Key', 'error');
+        showNotification(data.error?.message || t('apiKeys.errorDeactivate'), 'error');
       }
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('apiKeys.errorConnection'), 'error');
     } finally {
       setActionLoading(false);
     }
@@ -173,7 +175,7 @@ export default function ApiKeysPage() {
 
   const handleDelete = async () => {
     if (!selectedApiKey || !savedSecretKey) return;
-    if (!window.confirm(`¿Eliminar permanentemente la API Key "${selectedApiKey.name}"? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(t('apiKeys.deleteConfirm', { name: selectedApiKey.name }))) return;
     setActionLoading(true);
     try {
       const res = await fetch(apiUrl(`/api/api-keys/${selectedApiKey.id}`), {
@@ -182,14 +184,14 @@ export default function ApiKeysPage() {
       });
       const data = await res.json();
       if (data.success || res.ok) {
-        showNotification('API Key eliminada correctamente', 'success');
+        showNotification(t('apiKeys.deleted'), 'success');
         setSelectedApiKey(null);
         fetchAPIKeys();
       } else {
-        showNotification(data.error?.message || 'Error al eliminar API Key', 'error');
+        showNotification(data.error?.message || t('apiKeys.errorDelete'), 'error');
       }
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('apiKeys.errorConnection'), 'error');
     } finally {
       setActionLoading(false);
     }
@@ -206,15 +208,15 @@ export default function ApiKeysPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">API Keys</h1>
+            <h1 className="text-3xl font-bold">{t('apiKeys.title')}</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Genera pares de API Keys (pública y secreta) para tus aplicaciones.
+              {t('apiKeys.subtitle')}
             </p>
           </div>
           {!savedSecretKey ? (
             <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
               <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> Configura tu Secret API Key
+                <Key className="w-4 h-4" /> {t('apiKeys.configSecretKey')}
               </Link>
             </Button>
           ) : (
@@ -229,13 +231,12 @@ export default function ApiKeysPage() {
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">Secret API Key Requerida</CardTitle>
+            <CardTitle className="text-amber-300 mb-2">{t('apiKeys.secretKeyRequired')}</CardTitle>
             <CardDescription className="mb-6">
-              Configura la Secret API Key en Configuración para listar las API Keys de tu aplicación.
-              La app se identifica mediante la Secret Key (sk_...).
+              {t('apiKeys.configSecretKeyCard')}
             </CardDescription>
             <Button asChild>
-              <Link href={settingsHref}>Ir a Configuración</Link>
+              <Link href={settingsHref}>{t('apiKeys.goToSettings')}</Link>
             </Button>
           </Card>
         ) : loading ? (
@@ -247,19 +248,19 @@ export default function ApiKeysPage() {
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Layers className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="mb-2">Sin aplicaciones</CardTitle>
+            <CardTitle className="mb-2">{t('apiKeys.noApps')}</CardTitle>
             <CardDescription className="mb-6">
-              Crea una aplicación primero para poder generar API Keys.
+              {t('apiKeys.noAppsDesc')}
             </CardDescription>
             <Button asChild>
-              <Link href={`${BASE_PATH}/apps`.replace(/\/+/g, '/') || '/apps'}>Ir a Aplicaciones</Link>
+              <Link href={BASE_PATH ? `${BASE_PATH}`.replace(/\/+/g, '/') : '/'}>{t('apiKeys.goToDashboard')}</Link>
             </Button>
           </Card>
         ) : (
           <div className="space-y-4">
             {savedSecretKey && (
               <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-                <ShieldCheck className="w-4 h-4" /> Consultando con: <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+                <ShieldCheck className="w-4 h-4" /> {t('apiKeys.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
               </div>
             )}
 
@@ -273,12 +274,12 @@ export default function ApiKeysPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-b">
-                        <TableHead className="px-8 py-4">Nombre</TableHead>
-                        <TableHead className="px-8 py-4">Descripción</TableHead>
-                        <TableHead className="px-8 py-4">Publishable Key</TableHead>
-                        <TableHead className="px-8 py-4">Estado</TableHead>
-                        <TableHead className="px-8 py-4">Entorno</TableHead>
-                        <TableHead className="px-8 py-4">Creado</TableHead>
+                        <TableHead className="px-8 py-4">{t('apiKeys.tableName')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('apiKeys.tableDescription')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('apiKeys.publishableKey')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('apiKeys.tableState')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('apiKeys.tableEnv')}</TableHead>
+                        <TableHead className="px-8 py-4">{t('apiKeys.tableCreated')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -295,7 +296,7 @@ export default function ApiKeysPage() {
                           </TableCell>
                           <TableCell className="px-8 py-4">
                             <Badge variant={k.is_active ? 'secondary' : 'outline'} className={k.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
-                              {k.is_active ? 'Activa' : 'Inactiva'}
+                              {k.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-8 py-4 text-muted-foreground capitalize">{k.environment}</TableCell>
@@ -317,13 +318,12 @@ export default function ApiKeysPage() {
                     <Key className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg mb-2">Generar nuevas API Keys</h3>
+                    <h3 className="font-semibold text-lg mb-2">{t('apiKeys.generateNew')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Cada par incluye una <strong>publishable key</strong> (pk_...) para operaciones públicas (signup, signin) y una{' '}
-                      <strong>secret key</strong> (sk_...) para operaciones administrativas. Las keys solo se muestran una vez al generarlas.
+                      {t('apiKeys.generateNewDesc')}
                     </p>
                     <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2">
-                      <Plus className="w-4 h-4" /> Generar API Keys
+                      <Plus className="w-4 h-4" /> {t('apiKeys.generateKeys')}
                     </Button>
                   </div>
                 </div>
@@ -338,23 +338,23 @@ export default function ApiKeysPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="w-5 h-5 text-primary" />
-              {generatedKeys ? 'API Keys generadas' : 'Generar API Keys'}
+              {generatedKeys ? t('apiKeys.keysGenerated') : t('apiKeys.generateModalTitle')}
             </DialogTitle>
             <DialogDescription>
               {generatedKeys
-                ? 'Guarda estas keys de forma segura. Solo se muestran una vez.'
-                : 'Genera un nuevo par de API Keys para una aplicación.'}
+                ? t('apiKeys.keysSavedOnce')
+                : t('apiKeys.generateDesc')}
             </DialogDescription>
           </DialogHeader>
           {generatedKeys ? (
             <div className="space-y-4">
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                La secret_key no se volverá a mostrar. Guárdala en un lugar seguro.
+                {t('apiKeys.secretKeyWarning')}
               </div>
               {generatedKeys.publishable_key && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Publishable Key</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">{t('apiKeys.publishableKey')}</Label>
                   <div className="flex gap-2">
                     <Input
                       readOnly
@@ -367,7 +367,7 @@ export default function ApiKeysPage() {
                       size="icon"
                       onClick={() => {
                         navigator.clipboard.writeText(generatedKeys!.publishable_key!);
-                        showNotification('Publishable key copiada', 'success');
+                        showNotification(t('apiKeys.publishableCopied'), 'success');
                       }}
                     >
                       <Copy className="w-4 h-4" />
@@ -377,7 +377,7 @@ export default function ApiKeysPage() {
               )}
               {generatedKeys.secret_key && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Secret Key</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">{t('apiKeys.secretKey')}</Label>
                   <div className="flex gap-2">
                     <Input
                       readOnly
@@ -390,7 +390,7 @@ export default function ApiKeysPage() {
                       size="icon"
                       onClick={() => {
                         navigator.clipboard.writeText(generatedKeys!.secret_key!);
-                        showNotification('Secret key copiada', 'success');
+                        showNotification(t('apiKeys.secretCopied'), 'success');
                       }}
                     >
                       <Copy className="w-4 h-4" />
@@ -399,23 +399,23 @@ export default function ApiKeysPage() {
                 </div>
               )}
               <DialogFooter>
-                <Button onClick={closeModal}>Cerrar</Button>
+                <Button onClick={closeModal}>{t('apiKeys.close')}</Button>
                 <Button variant="outline" onClick={() => { setGeneratedKeys(null); setFormData({ app_id: '', name: '', description: '' }); }}>
-                  Generar otro par
+                  {t('apiKeys.generateAnother')}
                 </Button>
               </DialogFooter>
             </div>
           ) : (
             <form onSubmit={handleGenerate} className="space-y-4">
               <div className="space-y-2">
-                <Label>Aplicación *</Label>
+                <Label>{t('apiKeys.application')}</Label>
                 <select
                   required
                   value={formData.app_id}
                   onChange={(e) => setFormData((p) => ({ ...p, app_id: e.target.value }))}
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
                 >
-                  <option value="">Selecciona una aplicación</option>
+                  <option value="">{t('apiKeys.selectApp')}</option>
                   {apps.map((app) => (
                     <option key={app.id} value={app.id}>
                       {app.name} ({truncateKey(app.id)})
@@ -424,29 +424,29 @@ export default function ApiKeysPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Nombre *</Label>
+                <Label>{t('apiKeys.name')} *</Label>
                 <Input
                   required
-                  placeholder="Producción"
+                  placeholder={t('apiKeys.namePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Descripción (opcional)</Label>
+                <Label>{t('apiKeys.description')}</Label>
                 <Input
-                  placeholder="API Keys para entorno de producción"
+                  placeholder={t('apiKeys.descriptionPlaceholder')}
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 />
               </div>
               <DialogFooter className="gap-4 pt-4">
                 <Button type="button" variant="outline" onClick={closeModal}>
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className="gap-2">
                   {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {isSubmitting ? 'Generando…' : 'Generar'}
+                  {isSubmitting ? t('apiKeys.generating') : t('apiKeys.generate')}
                 </Button>
               </DialogFooter>
             </form>
@@ -459,13 +459,13 @@ export default function ApiKeysPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="w-5 h-5 text-primary" />
-              Detalles de la API Key
+              {t('apiKeys.detailsTitle')}
               {selectedApiKey && (
                 <span className="text-muted-foreground font-normal">({selectedApiKey.name})</span>
               )}
             </DialogTitle>
             <DialogDescription>
-              Información de la API Key de tu aplicación.
+              {t('apiKeys.detailsDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -473,49 +473,49 @@ export default function ApiKeysPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">ID</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.id')}</Label>
                   <p className="text-sm font-mono break-all">{selectedApiKey.id}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">App ID</Label>
+                  <Label className="text-muted-foreground text-xs">{t('oauth.appId')}</Label>
                   <p className="text-sm font-mono break-all">{selectedApiKey.app_id}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Nombre</Label>
+                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableName')}</Label>
                   <p className="text-sm font-semibold">{selectedApiKey.name}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Estado</Label>
+                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableState')}</Label>
                   <Badge variant={selectedApiKey.is_active ? 'secondary' : 'outline'} className={selectedApiKey.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
                     {selectedApiKey.is_active ? 'Activa' : 'Inactiva'}
                   </Badge>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Entorno</Label>
+                  <Label className="text-muted-foreground text-xs">{t('apiKeys.environment')}</Label>
                   <p className="text-sm capitalize">{selectedApiKey.environment}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Key ID</Label>
+                  <Label className="text-muted-foreground text-xs">{t('apiKeys.keyId')}</Label>
                   <p className="text-sm font-mono">{selectedApiKey.key_id}</p>
                 </div>
               </div>
 
               {selectedApiKey.description && (
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Descripción</Label>
+                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableDescription')}</Label>
                   <p className="text-sm">{selectedApiKey.description}</p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Publishable Key</Label>
+                <Label className="text-muted-foreground text-xs">{t('apiKeys.publishableKey')}</Label>
                 <div className="flex gap-2">
                   <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedApiKey.publishable_key}</p>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    title="Copiar"
+                    title={t('apiKeys.copy')}
                     onClick={() => {
                       navigator.clipboard.writeText(selectedApiKey.publishable_key);
                       showNotification('Publishable key copiada', 'success');
@@ -527,27 +527,27 @@ export default function ApiKeysPage() {
               </div>
 
               <p className="text-xs text-muted-foreground/80">
-                La secret key no se muestra tras la creación por seguridad. Usa la Secret API Key configurada en Configuración.
+                {t('apiKeys.secretNotShown')}
               </p>
 
               <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Creado</Label>
+                  <Label className="text-muted-foreground text-xs">{t('roles.created')}</Label>
                   <p className="text-sm">{selectedApiKey.created_at ? new Date(selectedApiKey.created_at).toLocaleString() : '—'}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">Actualizado</Label>
+                  <Label className="text-muted-foreground text-xs">{t('roles.updated')}</Label>
                   <p className="text-sm">{selectedApiKey.updated_at ? new Date(selectedApiKey.updated_at).toLocaleString() : '—'}</p>
                 </div>
                 {selectedApiKey.last_used_at && (
                   <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">Último uso</Label>
+                    <Label className="text-muted-foreground text-xs">{t('apiKeys.lastUsed')}</Label>
                     <p className="text-sm">{new Date(selectedApiKey.last_used_at).toLocaleString()}</p>
                   </div>
                 )}
                 {selectedApiKey.revoked_at && (
                   <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">Revocada</Label>
+                    <Label className="text-muted-foreground text-xs">{t('apiKeys.revoked')}</Label>
                     <p className="text-sm text-amber-500">{new Date(selectedApiKey.revoked_at).toLocaleString()}</p>
                   </div>
                 )}
@@ -564,7 +564,7 @@ export default function ApiKeysPage() {
                       className="gap-1.5 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
                     >
                       {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
-                      Desactivar
+                      {t('apiKeys.deactivate')}
                     </Button>
                   )}
                   <Button
@@ -575,11 +575,11 @@ export default function ApiKeysPage() {
                     className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
                   >
                     {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                    Eliminar
+                    {t('apiKeys.delete')}
                   </Button>
                 </div>
                 <Button variant="outline" onClick={() => setSelectedApiKey(null)}>
-                  Cerrar
+                  {t('apiKeys.close')}
                 </Button>
               </DialogFooter>
             </div>

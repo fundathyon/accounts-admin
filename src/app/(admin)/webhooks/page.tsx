@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
@@ -45,10 +46,12 @@ function truncateKey(key: string) {
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
 
-const COMMON_EVENTS: WebhookEvent[] = [
-  { code: 'accounts.user.signup', description: 'Se dispara cuando un usuario se registra', category: 'Comunes' },
-  { code: 'accounts.user.deleted', description: 'Se dispara cuando se elimina un usuario', category: 'Comunes' },
-];
+function useCommonEvents(t: (k: string) => string): WebhookEvent[] {
+  return [
+    { code: 'accounts.user.signup', description: t('webhooks.eventSignupDesc'), category: t('webhooks.categoryCommon') },
+    { code: 'accounts.user.deleted', description: t('webhooks.eventDeletedDesc'), category: t('webhooks.categoryCommon') },
+  ];
+}
 
 const categoryColor: Record<string, string> = {
   Comunes: 'text-cyan-400 bg-cyan-500/10',
@@ -68,6 +71,8 @@ function getCategoryColor(cat: string) {
 
 export default function WebhooksPage() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
+  const COMMON_EVENTS = useCommonEvents(t);
   const [webhooks, setWebhooks] = useState<WebhookItem[]>([]);
   const [eventsByCategory, setEventsByCategory] = useState<EventsByCategory>({});
   const [loading, setLoading] = useState(true);
@@ -119,7 +124,7 @@ export default function WebhooksPage() {
       setSelectedEvents(new Set(evs));
       setWebhookEditMode('form');
     } catch {
-      showNotification('JSON inválido. Corrige el formato.', 'error');
+      showNotification(t('webhooks.invalidJson'), 'error');
     }
   };
 
@@ -135,9 +140,9 @@ export default function WebhooksPage() {
       const res = await fetch(apiUrl('/api/webhooks'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
       if (data.success) setWebhooks(data.data || []);
-      else showNotification(data.error?.message || 'Error al cargar webhooks', 'error');
+      else showNotification(data.error?.message || t('webhooks.errorLoad'), 'error');
     } catch {
-      showNotification('Error de conexión con la API de Webhooks', 'error');
+      showNotification(t('webhooks.errorConnectionApi'), 'error');
     } finally {
       setLoading(false);
     }
@@ -172,17 +177,17 @@ export default function WebhooksPage() {
       try {
         payload = JSON.parse(webhookJsonRaw) as Record<string, unknown>;
       } catch {
-        showNotification('JSON inválido. Corrige el formato antes de enviar.', 'error');
+        showNotification(t('webhooks.invalidJsonSubmit'), 'error');
         return;
       }
       const events = Array.isArray(payload.events) ? payload.events : [];
       if (events.length === 0) {
-        showNotification('Debes incluir al menos un evento en el array "events"', 'error');
+        showNotification(t('webhooks.selectAtLeastOneEvent'), 'error');
         return;
       }
     } else {
       if (selectedEvents.size === 0) {
-        showNotification('Debes seleccionar al menos un evento', 'error');
+        showNotification(t('webhooks.selectAtLeastOneEventForm'), 'error');
         return;
       }
       payload = buildWebhookPayload();
@@ -196,16 +201,16 @@ export default function WebhooksPage() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('Webhook creado con éxito', 'success');
+        showNotification(t('webhooks.webhookCreated'), 'success');
         setIsWebhookModalOpen(false);
         setWebhookForm({ name: '', description: '', url: '', secret: '', retries: 3, active: true });
         setSelectedEvents(new Set());
         setWebhookEditMode('form');
         setWebhookJsonRaw('');
         fetchWebhooks();
-      } else showNotification(data.error?.message || 'Error al crear webhook', 'error');
+      } else showNotification(data.error?.message || t('webhooks.errorCreate'), 'error');
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('webhooks.errorConnection'), 'error');
     } finally {
       setIsWebhookSubmitting(false);
     }
@@ -242,13 +247,13 @@ export default function WebhooksPage() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification(wh.active ? 'Webhook desactivado' : 'Webhook activado', 'success');
+        showNotification(wh.active ? t('webhooks.webhookDeactivated') : t('webhooks.webhookActivated'), 'success');
         fetchWebhooks();
       } else {
-        showNotification(data.error?.message || 'Error al actualizar webhook', 'error');
+        showNotification(data.error?.message || t('webhooks.errorUpdate'), 'error');
       }
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('webhooks.errorConnection'), 'error');
     } finally {
       setTogglingWebhookId(null);
     }
@@ -259,19 +264,19 @@ export default function WebhooksPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Webhooks</h1>
-            <p className="text-muted-foreground text-sm mt-1">Recibe notificaciones en tiempo real cuando ocurran eventos en tu app.</p>
+            <h1 className="text-3xl font-bold">{t('webhooks.title')}</h1>
+            <p className="text-muted-foreground text-sm mt-1">{t('webhooks.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             {!savedSecretKey ? (
               <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
                 <Link href={settingsHref}>
-                  <Key className="w-4 h-4" /> Configura tu Secret API Key
+                  <Key className="w-4 h-4" /> {t('webhooks.configSecretKey')}
                 </Link>
               </Button>
             ) : (
               <Button onClick={() => setIsWebhookModalOpen(true)} className="gap-2">
-                <Plus className="w-4 h-4" /> Nuevo Webhook
+                <Plus className="w-4 h-4" /> {t('webhooks.newWebhook')}
               </Button>
             )}
           </div>
@@ -282,10 +287,10 @@ export default function WebhooksPage() {
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">Secret API Key Requerida</CardTitle>
-            <CardDescription className="mb-6">Necesitas configurar la Secret API Key en Configuración para gestionar webhooks.</CardDescription>
+            <CardTitle className="text-amber-300 mb-2">{t('webhooks.secretKeyRequired')}</CardTitle>
+            <CardDescription className="mb-6">{t('webhooks.configSecretKeyCard')}</CardDescription>
             <Button asChild>
-              <Link href={settingsHref}>Ir a Configuración</Link>
+              <Link href={settingsHref}>{t('webhooks.goToSettings')}</Link>
             </Button>
           </Card>
         ) : loading ? (
@@ -295,7 +300,7 @@ export default function WebhooksPage() {
         ) : (
           <div className="space-y-4">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> Consultando con: <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+              <ShieldCheck className="w-4 h-4" /> {t('webhooks.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
 
             {webhooks.length === 0 ? (
@@ -303,10 +308,10 @@ export default function WebhooksPage() {
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <Webhook className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle className="mb-2">Sin webhooks</CardTitle>
-                <CardDescription className="mb-6">Crea tu primer webhook para recibir eventos de tu app.</CardDescription>
+                <CardTitle className="mb-2">{t('webhooks.noWebhooks')}</CardTitle>
+                <CardDescription className="mb-6">{t('webhooks.createFirst')}</CardDescription>
                 <Button onClick={() => setIsWebhookModalOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" /> Crear Webhook
+                  <Plus className="w-4 h-4" /> {t('webhooks.addWebhook')}
                 </Button>
               </Card>
             ) : (
@@ -324,11 +329,11 @@ export default function WebhooksPage() {
                           <span className="font-semibold">{wh.name}</span>
                           {wh.active ? (
                             <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-400 border-0">
-                              Activo
+                              {t('common.active')}
                             </Badge>
                           ) : (
                             <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                              Inactivo
+                              {t('behaviors.inactive')}
                             </Badge>
                           )}
                         </div>
@@ -338,10 +343,10 @@ export default function WebhooksPage() {
                       </div>
                       <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <Zap className="w-3.5 h-3.5" /> {wh.events.length} eventos
+                          <Zap className="w-3.5 h-3.5" /> {wh.events.length} {t('webhooks.events')}
                         </div>
                         <div className="flex items-center gap-1">
-                          <RotateCcw className="w-3.5 h-3.5" /> {wh.retries} reintentos
+                          <RotateCcw className="w-3.5 h-3.5" /> {wh.retries} {t('webhooks.retries')}
                         </div>
                         <div className="text-muted-foreground">{new Date(wh.created_at).toLocaleDateString()}</div>
                       </div>
@@ -363,20 +368,20 @@ export default function WebhooksPage() {
                           <div className="px-6 py-5 space-y-5">
                             <div className="grid grid-cols-2 gap-6">
                               <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Detalles</h4>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">{t('webhooks.details')}</h4>
                                 <div className="space-y-2 text-sm">
                                   {wh.description && <p className="text-foreground">{wh.description}</p>}
                                   <div className="flex items-center gap-2 text-muted-foreground">
                                     <Lock className="w-3.5 h-3.5" />
                                     <span className="font-mono text-xs">{wh.secret.slice(0, 6)}{'•'.repeat(8)}</span>
-                                    <span className="text-muted-foreground text-xs">secret hash</span>
+                                    <span className="text-muted-foreground text-xs">{t('webhooks.secretHash')}</span>
                                   </div>
                                   <div className="text-xs text-muted-foreground font-mono">ID: {wh.id}</div>
                                 </div>
                               </div>
                               <div>
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                                  Eventos suscritos ({wh.events.length})
+                                  {t('webhooks.subscribedEvents')} ({wh.events.length})
                                 </h4>
                                 <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                                   {wh.events.map((ev) => {
@@ -407,11 +412,11 @@ export default function WebhooksPage() {
                                 ) : (
                                   <Power className="w-4 h-4" />
                                 )}
-                                {wh.active ? 'Desactivar' : 'Activar'}
+                                {wh.active ? t('webhooks.deactivate') : t('webhooks.activate')}
                               </Button>
                               <Button variant="outline" size="sm" className="gap-2" asChild>
                                 <Link href={`${BASE_PATH}/webhooks/${wh.id}/test`.replace(/\/+/g, '/')}>
-                                  <Send className="w-4 h-4" /> Enviar evento de prueba
+                                  <Send className="w-4 h-4" /> {t('webhooks.sendTestEvent')}
                                 </Link>
                               </Button>
                             </div>
@@ -435,7 +440,7 @@ export default function WebhooksPage() {
                 <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                   <Webhook className="w-5 h-5" />
                 </div>
-                <DialogTitle>Nuevo Webhook</DialogTitle>
+                <DialogTitle>{t('webhooks.newWebhook')}</DialogTitle>
               </div>
               <Button
                 type="button"
@@ -446,11 +451,11 @@ export default function WebhooksPage() {
               >
                 {webhookEditMode === 'form' ? (
                   <>
-                    <FileJson className="w-4 h-4" /> Ver / Editar JSON
+                    <FileJson className="w-4 h-4" /> {t('webhooks.editJson')}
                   </>
                 ) : (
                   <>
-                    <FormInput className="w-4 h-4" /> Volver al formulario
+                    <FormInput className="w-4 h-4" /> {t('webhooks.backToForm')}
                   </>
                 )}
               </Button>
@@ -462,7 +467,7 @@ export default function WebhooksPage() {
               {webhookEditMode === 'json' ? (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <FileJson className="w-4 h-4" /> JSON del webhook (edita directamente)
+                    <FileJson className="w-4 h-4" /> {t('webhooks.jsonLabel')}
                   </Label>
                   <textarea
                     value={webhookJsonRaw}
@@ -472,31 +477,31 @@ export default function WebhooksPage() {
                     spellCheck={false}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Campos requeridos: name, url, secret, events (array). Opcionales: description, retries (0-10), active (boolean).
+                    {t('webhooks.jsonPlaceholder')}
                   </p>
                 </div>
               ) : (
               <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Nombre *</Label>
+                  <Label>{t('webhooks.nameRequired')}</Label>
                   <Input
                     required
-                    placeholder="Mi Webhook"
+                    placeholder={t('webhooks.name')}
                     value={webhookForm.name}
                     onChange={(e) => setWebhookForm((p) => ({ ...p, name: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Descripción</Label>
-                  <Input placeholder="Opcional" value={webhookForm.description} onChange={(e) => setWebhookForm((p) => ({ ...p, description: e.target.value }))} />
+                  <Label>{t('webhooks.description')}</Label>
+                  <Input placeholder={t('webhooks.optional')} value={webhookForm.description} onChange={(e) => setWebhookForm((p) => ({ ...p, description: e.target.value }))} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> URL del endpoint *
-                </Label>
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> {t('webhooks.urlLabel')}
+                  </Label>
                 <Input
                   required
                   type="url"
@@ -510,7 +515,7 @@ export default function WebhooksPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Lock className="w-4 h-4" /> Secret de firma *
+                    <Lock className="w-4 h-4" /> {t('webhooks.secretLabel')}
                   </Label>
                   <Input
                     required
@@ -522,7 +527,7 @@ export default function WebhooksPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4" /> Reintentos (0–10)
+                    <RotateCcw className="w-4 h-4" /> {t('webhooks.retriesLabel')}
                   </Label>
                   <Input type="number" min={0} max={10} value={webhookForm.retries} onChange={(e) => setWebhookForm((p) => ({ ...p, retries: +e.target.value }))} />
                 </div>
@@ -530,8 +535,8 @@ export default function WebhooksPage() {
 
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border">
                 <div>
-                  <div className="text-sm font-medium">Activar inmediatamente</div>
-                  <CardDescription>Comenzará a recibir eventos al crearse</CardDescription>
+                  <div className="text-sm font-medium">{t('webhooks.activateImmediately')}</div>
+                  <CardDescription>{t('webhooks.activateImmediatelyDesc')}</CardDescription>
                 </div>
                 <Switch checked={webhookForm.active} onCheckedChange={(active) => setWebhookForm((p) => ({ ...p, active }))} />
               </div>
@@ -539,15 +544,15 @@ export default function WebhooksPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <Label className="flex items-center gap-2">
-                    <Zap className="w-4 h-4" /> Eventos a suscribir *
+                    <Zap className="w-4 h-4" /> {t('webhooks.eventsToSubscribe')}
                   </Label>
-                  <span className="text-xs text-primary font-semibold">{selectedEvents.size} seleccionados</span>
+                  <span className="text-xs text-primary font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
                 </div>
 
                 {/* Eventos más comunes - siempre visible arriba */}
                 <div className="mb-4 space-y-2">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor('Comunes'))}>Eventos más comunes</span>
+                    <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor('Comunes'))}>{t('webhooks.mostCommon')}</span>
                   </div>
                   <div className="space-y-1 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3">
                     {COMMON_EVENTS.map((ev) => (
@@ -593,7 +598,7 @@ export default function WebhooksPage() {
                       >
                         <div className="flex items-center gap-2">
                           <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor(category))}>{category}</span>
-                          <span className="text-xs text-muted-foreground">{filteredEvents.length} eventos</span>
+                          <span className="text-xs text-muted-foreground">{filteredEvents.length} {t('webhooks.events')}</span>
                           {filteredEvents.every((e) => selectedEvents.has(e.code)) && filteredEvents.length > 0 && (
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                           )}
@@ -609,7 +614,7 @@ export default function WebhooksPage() {
                               selectAllInCategory(category, filteredEvents);
                             }}
                           >
-                            {filteredEvents.every((e) => selectedEvents.has(e.code)) ? 'Quitar todos' : 'Todos'}
+                            {filteredEvents.every((e) => selectedEvents.has(e.code)) ? t('webhooks.removeAll') : t('webhooks.all')}
                           </Button>
                           {expandedCategories.has(category) ? (
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -668,11 +673,11 @@ export default function WebhooksPage() {
 
             <DialogFooter className="gap-4 pt-6">
               <Button type="button" variant="outline" onClick={() => setIsWebhookModalOpen(false)} className="flex-1">
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={isWebhookSubmitting} className="flex-1 gap-2">
                 {isWebhookSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isWebhookSubmitting ? 'Creando…' : 'Crear Webhook'}
+                {isWebhookSubmitting ? t('webhooks.creating') : t('webhooks.createWebhook')}
               </Button>
             </DialogFooter>
           </form>

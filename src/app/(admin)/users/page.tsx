@@ -20,9 +20,11 @@ import {
   RefreshCw,
   Trash2,
   ChevronRight,
+  KeyRound,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
@@ -61,7 +63,8 @@ function truncateKey(key: string) {
 
 export default function UsersPage() {
   const router = useRouter();
-  const { apiUrl, showNotification, savedSecretKey, savedPublishableKey, savedPusheableKey } = useAdmin();
+  const { apiUrl, showNotification, savedSecretKey, savedPublishableKey } = useAdmin();
+  const { t } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
@@ -83,6 +86,30 @@ export default function UsersPage() {
   const [signinResult, setSigninResult] = useState<{ access_token?: string; refresh_token?: string; message?: string } | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPublicKeyModalOpen, setIsPublicKeyModalOpen] = useState(false);
+  const [publicKeyValue, setPublicKeyValue] = useState<string | null>(null);
+  const [publicKeyLoading, setPublicKeyLoading] = useState(false);
+
+  const fetchPublicKeyJWT = async () => {
+    setIsPublicKeyModalOpen(true);
+    setPublicKeyLoading(true);
+    setPublicKeyValue(null);
+    try {
+      const headers: Record<string, string> = {};
+      if (savedSecretKey) headers['X-Secret-API-Key'] = savedSecretKey;
+      const res = await fetch(apiUrl('/api/system/public-key-jwt'), { headers });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setPublicKeyValue(data.data);
+      } else {
+        showNotification(data.error?.message || t('users.errorLoadPublicKey'), 'error');
+      }
+    } catch {
+      showNotification(t('users.errorConnectionPublicKey'), 'error');
+    } finally {
+      setPublicKeyLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     if (!savedSecretKey) {
@@ -94,9 +121,9 @@ export default function UsersPage() {
       const res = await fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
       if (data.data && (data.status === 200 || data.success)) setUsers(data.data || []);
-      else showNotification(data.error?.message || data.errors?.[0] || 'Error al cargar usuarios', 'error');
+      else showNotification(data.error?.message || data.errors?.[0] || t('users.errorLoadUsers'), 'error');
     } catch {
-      showNotification('Error de conexión con la API de Usuarios', 'error');
+      showNotification(t('users.errorConnectionUsers'), 'error');
     } finally {
       setLoading(false);
     }
@@ -106,11 +133,11 @@ export default function UsersPage() {
     fetchUsers();
   }, [savedSecretKey]);
 
-  const keyForAuth = savedPublishableKey || savedPusheableKey;
+  const keyForAuth = savedPublishableKey;
 
   const handleSignup = async () => {
     if (!keyForAuth) {
-      showNotification('Configura la Publishable API Key o la Pusheable API Key en Configuración', 'error');
+      showNotification(t('users.configPublishableKey'), 'error');
       return;
     }
     if (!signupForm.email.trim() || !signupForm.password.trim()) {
@@ -139,7 +166,7 @@ export default function UsersPage() {
           setSignupResult({
             access_token: accessToken,
             refresh_token: refreshToken,
-            message: message || 'Usuario registrado. Tokens de sesión:',
+            message: message || t('users.userRegistered'),
           });
           fetchUsers();
         } else {
@@ -166,11 +193,11 @@ export default function UsersPage() {
           }
         }
       } else {
-        const errMsg = data.error?.message ?? data.errors?.[0] ?? payload?.message ?? 'Error al registrar';
+        const errMsg = data.error?.message ?? data.errors?.[0] ?? payload?.message ?? t('users.errorRegister');
         showNotification(errMsg, 'error');
       }
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('users.errorConnection'), 'error');
     } finally {
       setIsSignupSubmitting(false);
     }
@@ -277,7 +304,7 @@ export default function UsersPage() {
 
   const handleSignin = async () => {
     if (!keyForAuth) {
-      showNotification('Configura la Publishable API Key o la Pusheable API Key en Configuración', 'error');
+      showNotification(t('users.configPublishableKey'), 'error');
       return;
     }
     if (!signinForm.email.trim() || !signinForm.password) {
@@ -314,7 +341,7 @@ export default function UsersPage() {
         showNotification(errMsg, 'error');
       }
     } catch {
-      showNotification('Error de conexión', 'error');
+      showNotification(t('users.errorConnection'), 'error');
     } finally {
       setIsSigninSubmitting(false);
     }
@@ -326,22 +353,30 @@ export default function UsersPage() {
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Usuarios</h1>
+          <h1 className="text-3xl font-bold">{t('users.title')}</h1>
           <div className="flex gap-2">
             {savedSecretKey && (
               <>
                 <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" /> Registrar usuario
+                  <Plus className="w-4 h-4" /> {t('users.registerUser')}
                 </Button>
                 <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
-                  <Lock className="w-4 h-4" /> Iniciar sesión
+                  <Lock className="w-4 h-4" /> {t('users.testLogin')}
                 </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              onClick={fetchPublicKeyJWT}
+              className="gap-2"
+              title="Ver la clave pública JWT para verificar tokens"
+            >
+              <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
+            </Button>
             {!savedSecretKey && (
               <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
                 <Link href={settingsHref}>
-                  <Key className="w-4 h-4" /> Configura tu Secret API Key
+                  <Key className="w-4 h-4" /> {t('users.configSecretKey')}
                 </Link>
               </Button>
             )}
@@ -352,26 +387,26 @@ export default function UsersPage() {
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">Secret API Key Requerida</CardTitle>
-            <CardDescription className="mb-6">Necesitas configurar la Secret API Key en Configuración.</CardDescription>
+            <CardTitle className="text-amber-300 mb-2">{t('users.secretKeyRequired')}</CardTitle>
+            <CardDescription className="mb-6">{t('users.secretKeyRequiredDesc')}</CardDescription>
             <Button asChild>
-              <Link href={settingsHref}>Ir a Configuración</Link>
+              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
             </Button>
           </Card>
         ) : (
           <Card className="overflow-hidden">
             <div className="px-6 py-3 bg-emerald-500/5 border-b border-emerald-500/10 flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4 shrink-0" /> Consultando con: <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+              <ShieldCheck className="w-4 h-4 shrink-0" /> {t('users.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow className="border-b hover:bg-transparent">
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Usuario</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Provider</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Rol</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Creado</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Última actividad</TableHead>
+                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.user')}</TableHead>
+                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.provider')}</TableHead>
+                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</TableHead>
+                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.created')}</TableHead>
+                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.lastActivity')}</TableHead>
                     <TableHead className="px-6 py-3 w-12" />
                   </TableRow>
                 </TableHeader>
@@ -385,7 +420,7 @@ export default function UsersPage() {
                   ) : users.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="py-16 text-center text-muted-foreground text-sm">
-                        No hay usuarios registrados
+                        {t('users.noUsers')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -478,7 +513,7 @@ export default function UsersPage() {
                                   }}
                                 >
                                   <ChevronRight className="w-4 h-4" />
-                                  Ver detalle
+                                  {t('users.viewDetail')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-rose-500 focus:text-rose-500"
@@ -528,7 +563,7 @@ export default function UsersPage() {
                   ? 'Reenviar código'
                   : needsVerification
                     ? 'Verificar email'
-                    : 'Registrar usuario'}
+                    : t('users.registerUser')}
             </DialogTitle>
             <DialogDescription>
               {signupResult
@@ -677,7 +712,7 @@ export default function UsersPage() {
                     setResendCodeMode(false);
                   }}
                 >
-                  Cerrar
+                  {t('users.close')}
                 </Button>
               </DialogFooter>
             </div>
@@ -686,7 +721,7 @@ export default function UsersPage() {
               {!keyForAuth && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  Configura la Publishable API Key o la Pusheable API Key en Configuración para registrar usuarios.
+                  {t('users.configPublishableForSignup')}
                 </div>
               )}
               <form
@@ -779,7 +814,7 @@ export default function UsersPage() {
                   </Button>
                   <Button type="submit" disabled={isSignupSubmitting} className="flex-1 gap-2">
                     {isSignupSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSignupSubmitting ? 'Registrando…' : 'Registrar'}
+                    {isSignupSubmitting ? t('users.registering') : t('users.register')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -858,7 +893,7 @@ export default function UsersPage() {
                     setSigninResult(null);
                   }}
                 >
-                  Cerrar
+                  {t('users.close')}
                 </Button>
               </DialogFooter>
             </div>
@@ -867,7 +902,7 @@ export default function UsersPage() {
               {!keyForAuth && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  Configura la Publishable API Key o la Pusheable API Key en Configuración.
+                  {t('users.configPublishableKeyShort')}
                 </div>
               )}
               <form
@@ -921,11 +956,11 @@ export default function UsersPage() {
                     }}
                     className="flex-1"
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={isSigninSubmitting} className="flex-1 gap-2">
                     {isSigninSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSigninSubmitting ? 'Iniciando…' : 'Iniciar sesión'}
+                    {isSigninSubmitting ? t('users.signingIn') : t('users.testLogin')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -934,12 +969,56 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isPublicKeyModalOpen} onOpenChange={(open) => !open && setIsPublicKeyModalOpen(false)}>
+        <DialogContent className="sm:max-w-2xl max-w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              {t('users.publicKeyJwt')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('users.publicKeyJwtDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          {publicKeyLoading ? (
+            <div className="py-8 flex items-center justify-center gap-2 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              {t('common.loading')}
+            </div>
+          ) : publicKeyValue ? (
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">{t('users.publicKey')}</Label>
+              <div className="flex gap-2">
+                <textarea
+                  readOnly
+                  value={publicKeyValue}
+                  rows={10}
+                  className="flex-1 font-mono text-xs p-3 rounded-md border bg-muted/30 min-w-0 resize-none"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(publicKeyValue);
+                    showNotification(t('common.copied'), 'success');
+                  }}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar cuenta</DialogTitle>
+            <DialogTitle>{t('users.deleteAccount')}</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar esta cuenta? Se eliminarán todos los datos asociados (códigos, tokens, emails, métodos de login). Esta acción no se puede deshacer.
+              {t('users.deleteConfirm')}
               {userToDelete && (
                 <span className="mt-2 block text-foreground font-medium">
                   {userToDelete.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || userToDelete.user_name || userToDelete.id}
@@ -949,11 +1028,11 @@ export default function UsersPage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUserToDelete(null)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting} className="gap-2">
               {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Eliminar
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

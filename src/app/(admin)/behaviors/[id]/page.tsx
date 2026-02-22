@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ChevronLeft, Puzzle, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import type { AppBehaviorDetail } from '@/lib/admin-types';
 export default function BehaviorDetailPage() {
   const params = useParams();
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { t } = useI18n();
   const [behavior, setBehavior] = useState<AppBehaviorDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,9 +34,9 @@ export default function BehaviorDetailPage() {
       });
       const data = await res.json();
       if (data.success) setBehavior(data.data);
-      else showNotification(data.error?.message || 'Error al cargar detalles', 'error');
+      else showNotification(data.error?.message || t('behaviors.errorLoadDetails'), 'error');
     } catch {
-      showNotification('Error al cargar detalles', 'error');
+      showNotification(t('behaviors.errorLoadDetails'), 'error');
     } finally {
       setLoading(false);
     }
@@ -57,13 +59,13 @@ export default function BehaviorDetailPage() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification(isEnabled ? 'Verificación de email desactivada' : 'Verificación de email activada', 'success');
+        showNotification(isEnabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated'), 'success');
         await loadBehavior();
       } else {
-        showNotification(data.error?.message || 'Error al actualizar', 'error');
+        showNotification(data.error?.message || t('behaviors.errorUpdate'), 'error');
       }
     } catch {
-      showNotification('Error al contactar el servidor', 'error');
+      showNotification(t('behaviors.errorServer'), 'error');
     } finally {
       setToggling(false);
     }
@@ -91,11 +93,11 @@ export default function BehaviorDetailPage() {
       <div className="space-y-6">
         <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
           <Link href={behaviorsHref}>
-            <ChevronLeft className="w-4 h-4" /> Volver a behaviors
+            <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
           </Link>
         </Button>
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">Behavior no encontrado</p>
+          <p className="text-muted-foreground">{t('behaviors.behaviorNotFound')}</p>
         </Card>
       </div>
     );
@@ -123,7 +125,7 @@ export default function BehaviorDetailPage() {
                   behavior.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : 'bg-muted text-muted-foreground'
                 )}
               >
-                {behavior.is_active ? 'Activo' : 'Inactivo'}
+                {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
               </Badge>
               <span className="text-xs text-muted-foreground font-mono">{behavior.id}</span>
             </div>
@@ -133,7 +135,7 @@ export default function BehaviorDetailPage() {
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            {behavior.behavior_code === 'email_auth' ? 'Configuración' : 'Configuración JSON'}
+            {behavior.behavior_code === 'email_auth' ? t('behaviors.config') : t('behaviors.configJson')}
           </h3>
           {behavior.behavior_code === 'email_auth' ? (
             <EmailAuthConfigView
@@ -150,19 +152,19 @@ export default function BehaviorDetailPage() {
 
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">Creado por</div>
+            <div className="text-xs text-muted-foreground font-medium uppercase">{t('behaviors.createdBy')}</div>
             <div className="text-sm font-mono">{behavior.created_by}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">App ID</div>
+            <div className="text-xs text-muted-foreground font-medium uppercase">{t('oauth.appId')}</div>
             <div className="text-sm font-mono">{behavior.app_id}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">Fecha de creación</div>
+            <div className="text-xs text-muted-foreground font-medium uppercase">{t('behaviors.dateCreated')}</div>
             <div className="text-sm">{new Date(behavior.created_at).toLocaleString()}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">Última actualización</div>
+            <div className="text-xs text-muted-foreground font-medium uppercase">{t('behaviors.lastUpdate')}</div>
             <div className="text-sm">{new Date(behavior.updated_at).toLocaleString()}</div>
           </div>
         </div>

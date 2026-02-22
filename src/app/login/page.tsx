@@ -3,12 +3,14 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock } from 'lucide-react';
+import { useI18n } from '@/context/i18n-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiUrl, BASE_PATH } from '@/lib/utils';
 
 function LoginForm() {
   const router = useRouter();
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const from = searchParams.get('from') || '/';
   const [user, setUser] = useState('');
@@ -34,10 +36,10 @@ function LoginForm() {
         router.push(fullPath);
         router.refresh();
       } else {
-        setError(data.error || 'Error al iniciar sesión');
+        setError(data.error || t('login.errorLogin'));
       }
     } catch {
-      setError('Error de conexión');
+      setError(t('login.errorConnection'));
     } finally {
       setLoading(false);
     }
@@ -51,14 +53,14 @@ function LoginForm() {
             <Lock className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold">Authify Admin</h1>
-            <p className="text-sm text-muted-foreground mt-1">Inicia sesión para continuar</p>
+            <h1 className="text-xl font-bold">{t('login.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('login.subtitle')}</p>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="user" className="block text-sm font-medium mb-2">
-              Usuario
+              {t('login.user')}
             </label>
             <Input
               id="user"
@@ -73,7 +75,7 @@ function LoginForm() {
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium mb-2">
-              Contraseña
+              {t('login.password')}
             </label>
             <Input
               id="password"
@@ -92,7 +94,7 @@ function LoginForm() {
             </p>
           )}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Entrando…' : 'Entrar'}
+            {loading ? t('login.entering') : t('login.enter')}
           </Button>
         </form>
       </div>
@@ -100,13 +102,18 @@ function LoginForm() {
   );
 }
 
+function LoginFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-muted-foreground">{t('common.loading')}</div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-muted-foreground">Cargando…</div>
-      </div>
-    }>
+    <Suspense fallback={<LoginFallback />}>
       <LoginForm />
     </Suspense>
   );
