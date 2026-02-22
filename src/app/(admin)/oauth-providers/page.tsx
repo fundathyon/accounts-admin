@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy } from 'lucide-react';
+import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy, Link2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -49,6 +49,13 @@ const ALLOWED_PROVIDERS = [
   { value: 'github', label: 'GitHub' },
 ] as const;
 
+const OAUTH_PLATFORMS = [
+  { value: 'web', label: 'Web' },
+  { value: 'android', label: 'Android' },
+  { value: 'ios', label: 'iOS' },
+  { value: 'desktop', label: 'Desktop' },
+] as const;
+
 interface OAuthConfigForm {
   provider: string;
   name: string;
@@ -80,7 +87,7 @@ const initialForm: OAuthConfigForm = {
 };
 
 export default function OAuthProvidersPage() {
-  const { apiUrl, showNotification, savedSecretKey } = useAdmin();
+  const { apiUrl, showNotification, savedSecretKey, savedPublishableKey } = useAdmin();
   const { t } = useI18n();
   const [providers, setProviders] = useState<OAuthConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +97,10 @@ export default function OAuthProvidersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [copyJustClicked, setCopyJustClicked] = useState(false);
+  const [linkDialogProvider, setLinkDialogProvider] = useState<OAuthConfig | null>(null);
+  const [linkPlatform, setLinkPlatform] = useState<string>('web');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkResult, setLinkResult] = useState<string | null>(null);
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -118,11 +129,12 @@ export default function OAuthProvidersPage() {
   }, [savedSecretKey]);
 
   const generateRandomCallbackKey = (): string => {
-    const array = new Uint8Array(24);
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const array = new Uint8Array(32);
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
       crypto.getRandomValues(array);
     }
-    return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    return Array.from(array, (b) => chars[b % chars.length]).join('');
   };
 
   useEffect(() => {
@@ -215,6 +227,42 @@ export default function OAuthProvidersPage() {
     }
   };
 
+  const handleOpenLinkDialog = (e: React.MouseEvent, provider: OAuthConfig) => {
+    e.stopPropagation();
+    setLinkDialogProvider(provider);
+    setLinkPlatform('web');
+    setLinkResult(null);
+  };
+
+  const handleFetchOAuthLink = async () => {
+    if (!linkDialogProvider || !savedPublishableKey) return;
+    setLinkLoading(true);
+    setLinkResult(null);
+    try {
+      const url = apiUrl(`/api/oauths/link?provider=${encodeURIComponent(linkDialogProvider.provider)}&platform=${encodeURIComponent(linkPlatform)}`);
+      const res = await fetch(url, {
+        headers: { 'X-Publishable-API-Key': savedPublishableKey },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setLinkResult(data.data);
+      } else {
+        showNotification(data.error?.message || t('oauth.errorLink'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.errorConnection'), 'error');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (linkResult) {
+      navigator.clipboard.writeText(linkResult);
+      showNotification(t('oauth.linkCopied'), 'success');
+    }
+  };
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -285,6 +333,7 @@ export default function OAuthProvidersPage() {
                         <TableHead className="px-8 py-4">{t('oauth.tableClientId')}</TableHead>
                         <TableHead className="px-8 py-4">{t('oauth.tableState')}</TableHead>
                         <TableHead className="px-8 py-4">{t('oauth.tableCallbackUri')}</TableHead>
+                        <TableHead className="px-8 py-4 w-[120px]">{t('oauth.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -308,6 +357,17 @@ export default function OAuthProvidersPage() {
                           </TableCell>
                           <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[220px] truncate" title={p.callback_uri}>
                             {p.callback_uri}
+                          </TableCell>
+                          <TableCell className="px-8 py-4" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 shrink-0"
+                              onClick={(e) => handleOpenLinkDialog(e, p)}
+                              title={t('oauth.getLink')}
+                            >
+                              <Link2 className="w-4 h-4" /> {t('oauth.getLink')}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -626,6 +686,79 @@ export default function OAuthProvidersPage() {
                   {t('oauth.close')}
                 </Button>
               </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!linkDialogProvider} onOpenChange={(open) => !open && setLinkDialogProvider(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-primary" />
+              {t('oauth.getLink')}
+              {linkDialogProvider && (
+                <span className="capitalize text-muted-foreground font-normal">
+                  ({linkDialogProvider.provider})
+                </span>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {t('oauth.getLinkDesc')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {linkDialogProvider && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('oauth.platformLabel')}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {OAUTH_PLATFORMS.map((pl) => (
+                    <Button
+                      key={pl.value}
+                      type="button"
+                      variant={linkPlatform === pl.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setLinkPlatform(pl.value)}
+                    >
+                      {pl.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {!savedPublishableKey && (
+                <p className="text-sm text-amber-400">{t('oauth.publishableKeyRequired')}</p>
+              )}
+              <DialogFooter className="gap-4 justify-between">
+                <Button variant="outline" onClick={() => setLinkDialogProvider(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  onClick={handleFetchOAuthLink}
+                  disabled={linkLoading || !savedPublishableKey}
+                  className="gap-2"
+                >
+                  {linkLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {linkLoading ? t('oauth.fetchingLink') : t('oauth.fetchLink')}
+                </Button>
+              </DialogFooter>
+
+              {linkResult && (
+                <div className="space-y-2 pt-2 border-t">
+                  <Label className="text-muted-foreground text-xs">{t('oauth.resultLink')}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={linkResult}
+                      className="font-mono text-xs flex-1 min-w-0 bg-muted/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={handleCopyLink} title={t('oauth.copyUri')}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

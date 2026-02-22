@@ -54,6 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import type { User } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -450,26 +451,45 @@ export default function UsersPage() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {user.login_methods?.map((lm) => (
-                                <Badge
-                                  key={lm.id}
-                                  variant="outline"
-                                  className={cn(
-                                    'text-[10px] px-1.5 py-0 font-medium',
-                                    lm.entity_type === 'email'
-                                      ? 'border-sky-500/40 text-sky-400 bg-sky-500/5'
-                                      : 'border-orange-500/40 text-orange-400 bg-orange-500/5'
-                                  )}
-                                >
-                                  {lm.entity_type}
-                                  {lm.is_verify ? (
-                                    <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
-                                  ) : (
-                                    <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
-                                  )}
-                                </Badge>
-                              )) || <span className="text-muted-foreground text-xs">—</span>}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {user.login_methods?.map((lm) =>
+                                lm.entity_type === 'oauth' && lm.details?.platform ? (
+                                  <OAuthProviderLogo
+                                    key={lm.id}
+                                    provider={lm.details.platform}
+                                    size={22}
+                                    className="rounded"
+                                  />
+                                ) : lm.entity_type === 'email' ? (
+                                  <span
+                                    key={lm.id}
+                                    className="inline-flex items-center justify-center gap-0.5 shrink-0"
+                                    title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
+                                  >
+                                    <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
+                                      <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                                    </span>
+                                    {lm.is_verify ? (
+                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                    ) : (
+                                      <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                                    )}
+                                  </span>
+                                ) : (
+                                  <Badge
+                                    key={lm.id}
+                                    variant="outline"
+                                    className="text-[10px] px-1.5 py-0 font-medium border-orange-500/40 text-orange-400 bg-orange-500/5"
+                                  >
+                                    {lm.entity_type}
+                                    {lm.is_verify ? (
+                                      <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
+                                    ) : (
+                                      <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
+                                    )}
+                                  </Badge>
+                                )
+                              ) || <span className="text-muted-foreground text-xs">—</span>}
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3">
