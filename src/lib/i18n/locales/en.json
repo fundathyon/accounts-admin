@@ -96,6 +96,7 @@
     "secretKey": "Secret API Key",
     "secretKeyDesc": "To query users and webhooks of your app",
     "secretKeyPlaceholder": "sk_live_...",
+    "secretKeySetPlaceholder": "Key is set. Enter new key to change...",
     "saveKey": "Save Key",
     "secretKeyRequired": "Secret API Key cannot be empty",
     "secretKeySaved": "Secret API Key saved successfully",

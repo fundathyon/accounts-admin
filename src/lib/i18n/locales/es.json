@@ -96,6 +96,7 @@
     "secretKey": "Secret API Key",
     "secretKeyDesc": "Para consultar usuarios y webhooks de tu aplicación",
     "secretKeyPlaceholder": "sk_live_...",
+    "secretKeySetPlaceholder": "La clave está configurada. Ingresa una nueva para cambiarla...",
     "saveKey": "Guardar Key",
     "secretKeyRequired": "La Secret API Key no puede estar vacía",
     "secretKeySaved": "Secret API Key guardada correctamente",
