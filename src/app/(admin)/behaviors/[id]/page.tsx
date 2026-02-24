@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Puzzle, Settings } from 'lucide-react';
+import { ChevronLeft, Puzzle, Settings, Pencil, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -11,7 +11,15 @@ import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmailAuthConfigView, type EmailAuthConfig } from '@/components/behaviors/email-auth-config-view';
+import { EmailAuthConfigForm } from '@/components/behaviors/email-auth-config-form';
 import { cn } from '@/lib/utils';
 import type { AppBehaviorDetail } from '@/lib/admin-types';
 
@@ -25,6 +33,8 @@ export default function BehaviorDetailPage() {
   const id = params.id as string;
   const behaviorsHref = `${BASE_PATH}/behaviors`.replace(/\/+/g, '/') || '/behaviors';
   const [toggling, setToggling] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const loadBehavior = useCallback(async () => {
     if (!savedSecretKey) return;
@@ -71,6 +81,33 @@ export default function BehaviorDetailPage() {
     }
   };
 
+  const handleSaveConfig = async (newConfig: any) => {
+    if (!savedSecretKey) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(apiUrl(`/api/behaviors/${id}`), {
+        method: 'PUT',
+        headers: {
+          'X-Secret-API-Key': savedSecretKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ config: newConfig }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(t('behaviors.updateSuccess'), 'success');
+        setIsEditing(false);
+        await loadBehavior();
+      } else {
+        showNotification(data.error?.message || t('behaviors.updateError'), 'error');
+      }
+    } catch {
+      showNotification(t('behaviors.updateError'), 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   useEffect(() => {
     if (!savedSecretKey) {
       setLoading(false);
@@ -112,24 +149,30 @@ export default function BehaviorDetailPage() {
       </Button>
 
       <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
-            <Puzzle className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">{behavior.behavior_code}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge
-                variant={behavior.is_active ? 'secondary' : 'outline'}
-                className={cn(
-                  behavior.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : 'bg-muted text-muted-foreground'
-                )}
-              >
-                {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
-              </Badge>
-              <span className="text-xs text-muted-foreground font-mono">{behavior.id}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+              <Puzzle className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{behavior.behavior_code}</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge
+                  variant={behavior.is_active ? 'secondary' : 'outline'}
+                  className={cn(
+                    behavior.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
+                </Badge>
+                <span className="text-xs text-muted-foreground font-mono">{behavior.id}</span>
+              </div>
             </div>
           </div>
+          <Button variant="outline" className="gap-2" onClick={() => setIsEditing(true)}>
+            <Pencil className="w-4 h-4" />
+            {t('common.edit')}
+          </Button>
         </div>
 
         <div>
@@ -169,6 +212,47 @@ export default function BehaviorDetailPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              {t('behaviors.editBehavior')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('behaviors.editDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-hidden mt-4">
+            {behavior.behavior_code === 'email_auth' ? (
+              <EmailAuthConfigForm
+                initialConfig={behavior.config as EmailAuthConfig}
+                onCancel={() => setIsEditing(false)}
+                onSave={handleSaveConfig}
+                isSubmitting={updating}
+              />
+            ) : (
+              <div className="space-y-4 h-full flex flex-col">
+                <div className="flex-1 bg-muted/50 rounded-xl border p-4 font-mono text-sm overflow-auto">
+                  <pre className="text-sky-300">
+                    {JSON.stringify(behavior.config, null, 2)}
+                  </pre>
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button disabled>
+                    (Sólo email_auth es editable por ahora)
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
