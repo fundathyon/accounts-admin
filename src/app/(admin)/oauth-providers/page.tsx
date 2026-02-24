@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy, Link2 } from 'lucide-react';
+import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
-import type { OAuthConfig } from '@/lib/admin-types';
+import type { OAuthConfig, Role } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
@@ -41,6 +41,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const ALLOWED_PROVIDERS = [
   { value: 'google', label: 'Google' },
@@ -92,6 +98,7 @@ export default function OAuthProvidersPage() {
   const [providers, setProviders] = useState<OAuthConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<OAuthConfig | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<OAuthConfig | null>(null);
   const [formData, setFormData] = useState<OAuthConfigForm>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,8 +106,10 @@ export default function OAuthProvidersPage() {
   const [copyJustClicked, setCopyJustClicked] = useState(false);
   const [linkDialogProvider, setLinkDialogProvider] = useState<OAuthConfig | null>(null);
   const [linkPlatform, setLinkPlatform] = useState<string>('web');
+  const [linkRole, setLinkRole] = useState<string>('default');
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkResult, setLinkResult] = useState<string | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -128,6 +137,21 @@ export default function OAuthProvidersPage() {
     fetchProviders();
   }, [savedSecretKey]);
 
+  const fetchRoles = async () => {
+    if (!savedSecretKey) return;
+    try {
+      const res = await fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
+      const data = await res.json();
+      if (data.data && (data.status === 200 || data.success)) setRoles(data.data || []);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    fetchRoles();
+  }, [savedSecretKey]);
+
   const generateRandomCallbackKey = (): string => {
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const array = new Uint8Array(32);
@@ -138,7 +162,7 @@ export default function OAuthProvidersPage() {
   };
 
   useEffect(() => {
-    if (!isModalOpen || !savedSecretKey) return;
+    if (!isModalOpen || !savedSecretKey || editingProvider) return;
     const autoGenerateCallback = async () => {
       try {
         const res = await fetch(apiUrl('/api/oauth-configs/callback-base'), {
@@ -155,7 +179,7 @@ export default function OAuthProvidersPage() {
       }
     };
     autoGenerateCallback();
-  }, [isModalOpen, savedSecretKey, apiUrl, showNotification]);
+  }, [isModalOpen, savedSecretKey, editingProvider, apiUrl, showNotification]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,8 +229,75 @@ export default function OAuthProvidersPage() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setEditingProvider(null);
     setFormData(initialForm);
     setAdvancedOpen(false);
+  };
+
+  const openEditModal = (provider: OAuthConfig) => {
+    setFormData({
+      provider: provider.provider,
+      name: provider.name ?? '',
+      client_id: provider.client_id,
+      client_secret: '',
+      callback_key: provider.callback_key,
+      callback_uri: provider.callback_uri,
+      scopes: provider.scopes ?? 'email profile openid',
+      enabled: provider.enabled,
+      redirect_uri_web: provider.redirect_uri_web,
+      redirect_uri_android: provider.redirect_uri_android ?? '',
+      redirect_uri_ios: provider.redirect_uri_ios ?? '',
+      redirect_uri_desktop: provider.redirect_uri_desktop ?? '',
+    });
+    setEditingProvider(provider);
+    setSelectedProvider(null);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProvider) return;
+    if (!formData.client_id?.trim() || !formData.callback_key?.trim() || !formData.callback_uri?.trim() || !formData.redirect_uri_web?.trim()) {
+      showNotification(t('oauth.completeFields'), 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const payload: Record<string, unknown> = {
+        provider: editingProvider.provider,
+        name: formData.name.trim() || undefined,
+        client_id: formData.client_id.trim(),
+        callback_key: formData.callback_key.trim(),
+        callback_uri: formData.callback_uri.trim(),
+        scopes: formData.scopes.trim() || undefined,
+        enabled: formData.enabled,
+        redirect_uri_web: formData.redirect_uri_web.trim(),
+        redirect_uri_android: formData.redirect_uri_android.trim() || undefined,
+        redirect_uri_ios: formData.redirect_uri_ios.trim() || undefined,
+        redirect_uri_desktop: formData.redirect_uri_desktop.trim() || undefined,
+      };
+      if (formData.client_secret.trim()) payload.client_secret = formData.client_secret.trim();
+      const res = await fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(editingProvider.id)}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Secret-API-Key': savedSecretKey!,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        showNotification(t('oauth.updated'), 'success');
+        closeModal();
+        fetchProviders();
+      } else {
+        showNotification(data.error?.message || data.error?.Message || t('oauth.errorUpdate'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.errorConnectionServer'), 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleGenerateCallback = async () => {
@@ -231,6 +322,7 @@ export default function OAuthProvidersPage() {
     e.stopPropagation();
     setLinkDialogProvider(provider);
     setLinkPlatform('web');
+    setLinkRole(roles.length > 0 ? roles[0].name : 'default');
     setLinkResult(null);
   };
 
@@ -239,7 +331,7 @@ export default function OAuthProvidersPage() {
     setLinkLoading(true);
     setLinkResult(null);
     try {
-      const url = apiUrl(`/api/oauths/link?provider=${encodeURIComponent(linkDialogProvider.provider)}&platform=${encodeURIComponent(linkPlatform)}`);
+      const url = apiUrl(`/api/oauths/link?provider=${encodeURIComponent(linkDialogProvider.provider)}&platform=${encodeURIComponent(linkPlatform)}&role=${encodeURIComponent(linkRole)}`);
       const res = await fetch(url, {
         headers: { 'X-Publishable-API-Key': savedPublishableKey },
       });
@@ -260,6 +352,82 @@ export default function OAuthProvidersPage() {
     if (linkResult) {
       navigator.clipboard.writeText(linkResult);
       showNotification(t('oauth.linkCopied'), 'success');
+    }
+  };
+
+  const [actionLoading, setActionLoading] = useState<'delete' | 'disable' | 'enable' | null>(null);
+
+  const handleDeleteProvider = async () => {
+    if (!selectedProvider || !savedSecretKey) return;
+    if (!window.confirm(t('oauth.deleteConfirm'))) return;
+    setActionLoading('delete');
+    try {
+      const res = await fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(selectedProvider.id)}`), {
+        method: 'DELETE',
+        headers: { 'X-Secret-API-Key': savedSecretKey },
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        showNotification(t('oauth.deleted'), 'success');
+        setSelectedProvider(null);
+        fetchProviders();
+      } else {
+        showNotification(data.error?.message || data.error?.Message || t('oauth.errorDelete'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.errorConnectionServer'), 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDisableProvider = async () => {
+    if (!selectedProvider || !savedSecretKey) return;
+    setActionLoading('disable');
+    try {
+      const res = await fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(selectedProvider.id)}/disable`), {
+        method: 'POST',
+        headers: { 'X-Secret-API-Key': savedSecretKey },
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        showNotification(t('oauth.disabledSuccess'), 'success');
+        setSelectedProvider((prev) => (prev ? { ...prev, enabled: false } : null));
+        fetchProviders();
+      } else {
+        showNotification(data.error?.message || data.error?.Message || t('oauth.errorDisable'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.errorConnectionServer'), 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEnableProvider = async () => {
+    if (!selectedProvider || !savedSecretKey) return;
+    setActionLoading('enable');
+    try {
+      const res = await fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(selectedProvider.id)}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Secret-API-Key': savedSecretKey,
+        },
+        body: JSON.stringify({ enabled: true }),
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        showNotification(t('oauth.enabledSuccess'), 'success');
+        setSelectedProvider((prev) => (prev ? { ...prev, enabled: true } : null));
+        fetchProviders();
+      } else {
+        showNotification(data.error?.message || data.error?.Message || t('oauth.errorEnable'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.errorConnectionServer'), 'error');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -333,7 +501,6 @@ export default function OAuthProvidersPage() {
                         <TableHead className="px-8 py-4">{t('oauth.tableClientId')}</TableHead>
                         <TableHead className="px-8 py-4">{t('oauth.tableState')}</TableHead>
                         <TableHead className="px-8 py-4">{t('oauth.tableCallbackUri')}</TableHead>
-                        <TableHead className="px-8 py-4 w-[120px]">{t('oauth.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -358,17 +525,6 @@ export default function OAuthProvidersPage() {
                           <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[220px] truncate" title={p.callback_uri}>
                             {p.callback_uri}
                           </TableCell>
-                          <TableCell className="px-8 py-4" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5 shrink-0"
-                              onClick={(e) => handleOpenLinkDialog(e, p)}
-                              title={t('oauth.getLink')}
-                            >
-                              <Link2 className="w-4 h-4" /> {t('oauth.getLink')}
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -385,14 +541,14 @@ export default function OAuthProvidersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogIn className="w-5 h-5 text-primary" />
-              {t('oauth.newProviderTitle')}
+              {editingProvider ? t('oauth.editProviderTitle') : t('oauth.newProviderTitle')}
             </DialogTitle>
             <DialogDescription>
-              {t('oauth.newProviderDesc')}
+              {editingProvider ? t('oauth.editProviderDesc') : t('oauth.newProviderDesc')}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreate} className="space-y-4">
+          <form onSubmit={editingProvider ? handleUpdate : handleCreate} className="space-y-4">
             <div className="space-y-2">
               <Label>{t('oauth.providerLabel')}</Label>
               <div className="flex flex-wrap gap-3">
@@ -401,8 +557,9 @@ export default function OAuthProvidersPage() {
                     key={prov.value}
                     type="button"
                     title={prov.label}
-                    onClick={() => setFormData((p) => ({ ...p, provider: prov.value }))}
-                    className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-primary/50 ${
+                    disabled={!!editingProvider}
+                    onClick={() => !editingProvider && setFormData((p) => ({ ...p, provider: prov.value }))}
+                    className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-primary/50 disabled:opacity-70 disabled:cursor-not-allowed ${
                       formData.provider === prov.value
                         ? 'border-primary bg-primary/40'
                         : 'border-input bg-muted/30'
@@ -435,11 +592,11 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Client Secret *</Label>
+              <Label>Client Secret {editingProvider ? '(optional)' : '*'}</Label>
               <Input
-                required
+                required={!editingProvider}
                 type="password"
-                placeholder="••••••••"
+                placeholder={editingProvider ? t('oauth.clientSecretLeaveEmpty') : '••••••••'}
                 value={formData.client_secret}
                 onChange={(e) => setFormData((p) => ({ ...p, client_secret: e.target.value }))}
                 className="font-mono text-sm"
@@ -575,7 +732,9 @@ export default function OAuthProvidersPage() {
               </Button>
               <Button type="submit" disabled={isSubmitting} className="gap-2">
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? t('oauth.creating') : t('oauth.createProvider')}
+                {isSubmitting
+                  ? (editingProvider ? t('oauth.updating') : t('oauth.creating'))
+                  : (editingProvider ? t('oauth.updateProvider') : t('oauth.createProvider'))}
               </Button>
             </DialogFooter>
           </form>
@@ -637,12 +796,40 @@ export default function OAuthProvidersPage() {
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs">{t('oauth.callbackKey')}</Label>
-                <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.callback_key}</p>
+                <div className="flex gap-2 items-start">
+                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_key}</p>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-9 w-9"
+                    title={t('common.copy')}
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedProvider.callback_key);
+                      showNotification(t('oauth.callbackKeyCopied'), 'success');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs">{t('oauth.callbackUri')}</Label>
-                <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.callback_uri}</p>
+                <div className="flex gap-2 items-start">
+                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_uri}</p>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-9 w-9"
+                    title={t('common.copy')}
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedProvider.callback_uri);
+                      showNotification(t('oauth.callbackUriCopied'), 'success');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -652,7 +839,21 @@ export default function OAuthProvidersPage() {
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs">{t('oauth.redirectWebLabel')}</Label>
-                <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.redirect_uri_web}</p>
+                <div className="flex gap-2 items-start">
+                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.redirect_uri_web}</p>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-9 w-9"
+                    title={t('common.copy')}
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedProvider.redirect_uri_web);
+                      showNotification(t('oauth.redirectUriCopied'), 'success');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               {(selectedProvider.redirect_uri_android || selectedProvider.redirect_uri_ios || selectedProvider.redirect_uri_desktop) && (
@@ -660,31 +861,127 @@ export default function OAuthProvidersPage() {
                   <Label className="text-muted-foreground text-xs">{t('oauth.platformUris')}</Label>
                   <div className="space-y-2">
                     {selectedProvider.redirect_uri_android && (
-                      <div>
-                        <span className="text-xs text-muted-foreground block mb-1">{t('oauth.android')}</span>
-                        <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_android}</p>
+                      <div className="flex gap-2 items-start">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">{t('oauth.android')}</span>
+                          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_android}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 h-9 w-9 mt-5"
+                          title={t('common.copy')}
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedProvider.redirect_uri_android!);
+                            showNotification(t('oauth.redirectUriCopied'), 'success');
+                          }}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                     {selectedProvider.redirect_uri_ios && (
-                      <div>
-                        <span className="text-xs text-muted-foreground block mb-1">{t('oauth.ios')}</span>
-                        <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_ios}</p>
+                      <div className="flex gap-2 items-start">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">{t('oauth.ios')}</span>
+                          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_ios}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 h-9 w-9 mt-5"
+                          title={t('common.copy')}
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedProvider.redirect_uri_ios!);
+                            showNotification(t('oauth.redirectUriCopied'), 'success');
+                          }}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                     {selectedProvider.redirect_uri_desktop && (
-                      <div>
-                        <span className="text-xs text-muted-foreground block mb-1">{t('oauth.desktop')}</span>
-                        <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_desktop}</p>
+                      <div className="flex gap-2 items-start">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">{t('oauth.desktop')}</span>
+                          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_desktop}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 h-9 w-9 mt-5"
+                          title={t('common.copy')}
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedProvider.redirect_uri_desktop!);
+                            showNotification(t('oauth.redirectUriCopied'), 'success');
+                          }}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              <DialogFooter className="pt-4">
-                <Button variant="outline" onClick={() => setSelectedProvider(null)}>
-                  {t('oauth.close')}
+              <DialogFooter className="pt-4 gap-2 flex-wrap">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    if (selectedProvider) {
+                      setLinkDialogProvider(selectedProvider);
+                      setLinkPlatform('web');
+                      setLinkRole(roles.length > 0 ? roles[0].name : 'default');
+                      setLinkResult(null);
+                    }
+                  }}
+                >
+                  <Link2 className="w-4 h-4" />
+                  {t('oauth.fetchLink')}
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <MoreVertical className="w-4 h-4" />
+                      {t('oauth.options')}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                    <DropdownMenuItem onClick={() => selectedProvider && openEditModal(selectedProvider)} className="gap-2">
+                      <Pencil className="w-4 h-4" />
+                      {t('oauth.editProvider')}
+                    </DropdownMenuItem>
+                    {selectedProvider?.enabled ? (
+                      <DropdownMenuItem
+                        onClick={handleDisableProvider}
+                        disabled={!!actionLoading}
+                        className="gap-2 text-amber-600 focus:text-amber-600"
+                      >
+                        {actionLoading === 'disable' ? <Loader2 className="w-4 h-4 animate-spin" /> : <PowerOff className="w-4 h-4" />}
+                        {actionLoading === 'disable' ? t('oauth.disabling') : t('oauth.disableProvider')}
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={handleEnableProvider}
+                        disabled={!!actionLoading}
+                        className="gap-2 text-emerald-600 focus:text-emerald-600"
+                      >
+                        {actionLoading === 'enable' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
+                        {actionLoading === 'enable' ? t('oauth.enabling') : t('oauth.enableProvider')}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      onClick={handleDeleteProvider}
+                      disabled={!!actionLoading}
+                      className="gap-2 text-destructive focus:text-destructive"
+                    >
+                      {actionLoading === 'delete' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      {actionLoading === 'delete' ? t('oauth.deleting') : t('oauth.deleteProvider')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </DialogFooter>
             </div>
           )}
@@ -725,6 +1022,22 @@ export default function OAuthProvidersPage() {
                     </Button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('oauth.roleLabel')}</Label>
+                <select
+                  value={linkRole}
+                  onChange={(e) => setLinkRole(e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="default">default</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}{r.description ? ` — ${r.description}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {!savedPublishableKey && (

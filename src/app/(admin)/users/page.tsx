@@ -20,7 +20,10 @@ import {
   RefreshCw,
   Trash2,
   ChevronRight,
+  ChevronDown,
   KeyRound,
+  Download,
+  FileCode,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -348,6 +351,58 @@ export default function UsersPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (users.length === 0) {
+      showNotification(t('users.noUsersToExport') || 'No users to export', 'error');
+      return;
+    }
+
+    const headers = ['ID', 'Email', 'Username', 'Name', 'Role', 'Created At'];
+    const rows = users.map(user => {
+      const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || '';
+      return [
+        user.id,
+        primaryEmail,
+        user.user_name || '',
+        user.name || '',
+        user.role_details?.name || 'default',
+        new Date(user.created_at).toISOString()
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showNotification(t('users.exportSuccess') || 'Export successful', 'success');
+  };
+
+  const handleExportJSON = () => {
+    if (users.length === 0) {
+      showNotification(t('users.noUsersToExport') || 'No users to export', 'error');
+      return;
+    }
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(users, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `users_full_export_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    showNotification(t('users.exportSuccessJSON') || 'JSON export successful', 'success');
+  };
+
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
   return (
@@ -364,6 +419,21 @@ export default function UsersPage() {
                 <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
                   <Lock className="w-4 h-4" /> {t('users.testLogin')}
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
+                      <Download className="w-4 h-4" /> CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
+                      <FileCode className="w-4 h-4" /> JSON
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
             <Button

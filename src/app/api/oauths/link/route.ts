@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const provider = searchParams.get('provider');
   const platform = searchParams.get('platform');
+  const role = searchParams.get('role');
 
   if (!provider || !platform) {
     return NextResponse.json(
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
     const url = new URL(`${INTERNAL_API_URL}/api/v1/oauths/link`);
     url.searchParams.set('provider', provider);
     url.searchParams.set('platform', platform);
+    if (role) url.searchParams.set('role', role);
 
     const res = await fetch(url.toString(), {
       method: 'GET',

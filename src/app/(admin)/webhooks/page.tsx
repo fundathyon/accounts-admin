@@ -20,6 +20,8 @@ import {
   Send,
   Power,
   PowerOff,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -77,14 +79,16 @@ export default function WebhooksPage() {
   const [eventsByCategory, setEventsByCategory] = useState<EventsByCategory>({});
   const [loading, setLoading] = useState(true);
   const [isWebhookModalOpen, setIsWebhookModalOpen] = useState(false);
-  const [webhookForm, setWebhookForm] = useState({
+  const initialWebhookForm = {
     name: '',
     description: '',
     url: '',
     secret: '',
     retries: 3,
     active: true,
-  });
+  };
+  const [webhookForm, setWebhookForm] = useState(initialWebhookForm);
+  const [editingWebhook, setEditingWebhook] = useState<WebhookItem | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isWebhookSubmitting, setIsWebhookSubmitting] = useState(false);
@@ -203,8 +207,9 @@ export default function WebhooksPage() {
       if (data.success) {
         showNotification(t('webhooks.webhookCreated'), 'success');
         setIsWebhookModalOpen(false);
-        setWebhookForm({ name: '', description: '', url: '', secret: '', retries: 3, active: true });
+        setWebhookForm(initialWebhookForm);
         setSelectedEvents(new Set());
+        setEditingWebhook(null);
         setWebhookEditMode('form');
         setWebhookJsonRaw('');
         fetchWebhooks();
@@ -259,6 +264,111 @@ export default function WebhooksPage() {
     }
   };
 
+  const [deletingWebhookId, setDeletingWebhookId] = useState<string | null>(null);
+
+  const openEditModal = (wh: WebhookItem) => {
+    setWebhookForm({
+      name: wh.name,
+      description: wh.description ?? '',
+      url: wh.url,
+      secret: '',
+      retries: wh.retries,
+      active: wh.active,
+    });
+    setSelectedEvents(new Set(wh.events));
+    setEditingWebhook(wh);
+    setWebhookEditMode('form');
+    setWebhookJsonRaw('');
+    setIsWebhookModalOpen(true);
+  };
+
+  const closeWebhookModal = () => {
+    setIsWebhookModalOpen(false);
+    setEditingWebhook(null);
+    setWebhookForm(initialWebhookForm);
+    setSelectedEvents(new Set());
+    setWebhookEditMode('form');
+    setWebhookJsonRaw('');
+  };
+
+  const handleUpdateWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWebhook || !savedSecretKey) return;
+    let payload: Record<string, unknown>;
+    if (webhookEditMode === 'json') {
+      try {
+        payload = JSON.parse(webhookJsonRaw) as Record<string, unknown>;
+      } catch {
+        showNotification(t('webhooks.invalidJsonSubmit'), 'error');
+        return;
+      }
+      const events = Array.isArray(payload.events) ? payload.events : [];
+      if (events.length === 0) {
+        showNotification(t('webhooks.selectAtLeastOneEvent'), 'error');
+        return;
+      }
+    } else {
+      if (selectedEvents.size === 0) {
+        showNotification(t('webhooks.selectAtLeastOneEventForm'), 'error');
+        return;
+      }
+      payload = {
+        name: webhookForm.name,
+        description: webhookForm.description || undefined,
+        url: webhookForm.url,
+        retries: webhookForm.retries,
+        active: webhookForm.active,
+        events: Array.from(selectedEvents),
+      };
+      if (webhookForm.secret.trim()) payload.secret = webhookForm.secret.trim();
+    }
+    setIsWebhookSubmitting(true);
+    try {
+      const res = await fetch(apiUrl(`/api/webhooks/${editingWebhook.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Secret-API-Key': savedSecretKey },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(t('webhooks.webhookUpdated'), 'success');
+        closeWebhookModal();
+        setExpandedWebhook(null);
+        fetchWebhooks();
+      } else {
+        showNotification(data.error?.message || t('webhooks.errorUpdate'), 'error');
+      }
+    } catch {
+      showNotification(t('webhooks.errorConnection'), 'error');
+    } finally {
+      setIsWebhookSubmitting(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (wh: WebhookItem) => {
+    if (!savedSecretKey) return;
+    if (!window.confirm(t('webhooks.deleteWebhookConfirm'))) return;
+    setDeletingWebhookId(wh.id);
+    try {
+      const res = await fetch(apiUrl(`/api/webhooks/${wh.id}`), {
+        method: 'DELETE',
+        headers: { 'X-Secret-API-Key': savedSecretKey },
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(t('webhooks.webhookDeleted'), 'success');
+        setExpandedWebhook((prev) => (prev === wh.id ? null : prev));
+        fetchWebhooks();
+      } else {
+        showNotification(data.error?.message || t('webhooks.errorDelete'), 'error');
+      }
+    } catch {
+      showNotification(t('webhooks.errorConnection'), 'error');
+    } finally {
+      setDeletingWebhookId(null);
+    }
+  };
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -275,7 +385,17 @@ export default function WebhooksPage() {
                 </Link>
               </Button>
             ) : (
-              <Button onClick={() => setIsWebhookModalOpen(true)} className="gap-2">
+              <Button
+                onClick={() => {
+                  setEditingWebhook(null);
+                  setWebhookForm(initialWebhookForm);
+                  setSelectedEvents(new Set());
+                  setWebhookEditMode('form');
+                  setWebhookJsonRaw('');
+                  setIsWebhookModalOpen(true);
+                }}
+                className="gap-2"
+              >
                 <Plus className="w-4 h-4" /> {t('webhooks.newWebhook')}
               </Button>
             )}
@@ -310,7 +430,17 @@ export default function WebhooksPage() {
                 </div>
                 <CardTitle className="mb-2">{t('webhooks.noWebhooks')}</CardTitle>
                 <CardDescription className="mb-6">{t('webhooks.createFirst')}</CardDescription>
-                <Button onClick={() => setIsWebhookModalOpen(true)} className="gap-2">
+                <Button
+                  onClick={() => {
+                    setEditingWebhook(null);
+                    setWebhookForm(initialWebhookForm);
+                    setSelectedEvents(new Set());
+                    setWebhookEditMode('form');
+                    setWebhookJsonRaw('');
+                    setIsWebhookModalOpen(true);
+                  }}
+                  className="gap-2"
+                >
                   <Plus className="w-4 h-4" /> {t('webhooks.addWebhook')}
                 </Button>
               </Card>
@@ -402,6 +532,28 @@ export default function WebhooksPage() {
                                 variant="outline"
                                 size="sm"
                                 className="gap-2"
+                                onClick={() => openEditModal(wh)}
+                              >
+                                <Pencil className="w-4 h-4" /> {t('webhooks.editWebhook')}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                disabled={deletingWebhookId === wh.id}
+                                onClick={() => handleDeleteWebhook(wh)}
+                              >
+                                {deletingWebhookId === wh.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                                {deletingWebhookId === wh.id ? t('webhooks.deleting') : t('webhooks.deleteWebhook')}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
                                 disabled={togglingWebhookId === wh.id}
                                 onClick={() => handleToggleActive(wh)}
                               >
@@ -432,15 +584,15 @@ export default function WebhooksPage() {
         )}
       </motion.div>
 
-      <Dialog open={isWebhookModalOpen} onOpenChange={(open) => { setIsWebhookModalOpen(open); if (!open) setWebhookEditMode('form'); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <Dialog open={isWebhookModalOpen} onOpenChange={(open) => { if (!open) closeWebhookModal(); setIsWebhookModalOpen(open); }}>
+        <DialogContent className="sm:max-w-4xl max-w-full max-h-[90vh] flex flex-col">
           <DialogHeader>
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                   <Webhook className="w-5 h-5" />
                 </div>
-                <DialogTitle>{t('webhooks.newWebhook')}</DialogTitle>
+                <DialogTitle>{editingWebhook ? t('webhooks.editWebhookTitle') : t('webhooks.newWebhook')}</DialogTitle>
               </div>
               <Button
                 type="button"
@@ -462,7 +614,7 @@ export default function WebhooksPage() {
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleCreateWebhook} className="flex flex-col overflow-hidden flex-1 min-h-0">
+          <form onSubmit={editingWebhook ? handleUpdateWebhook : handleCreateWebhook} className="flex flex-col overflow-hidden flex-1 min-h-0">
             <div className="overflow-y-auto space-y-6">
               {webhookEditMode === 'json' ? (
                 <div className="space-y-2">
@@ -515,11 +667,11 @@ export default function WebhooksPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Lock className="w-4 h-4" /> {t('webhooks.secretLabel')}
+                    <Lock className="w-4 h-4" /> {t('webhooks.secretLabel')} {editingWebhook ? `(${t('webhooks.optional')})` : ''}
                   </Label>
                   <Input
-                    required
-                    placeholder="mi-secret-seguro"
+                    required={!editingWebhook}
+                    placeholder={editingWebhook ? t('webhooks.secretLeaveEmpty') : 'mi-secret-seguro'}
                     value={webhookForm.secret}
                     onChange={(e) => setWebhookForm((p) => ({ ...p, secret: e.target.value }))}
                     className="font-mono"
@@ -672,12 +824,14 @@ export default function WebhooksPage() {
             </div>
 
             <DialogFooter className="gap-4 pt-6">
-              <Button type="button" variant="outline" onClick={() => setIsWebhookModalOpen(false)} className="flex-1">
+              <Button type="button" variant="outline" onClick={closeWebhookModal} className="flex-1">
                 {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={isWebhookSubmitting} className="flex-1 gap-2">
                 {isWebhookSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isWebhookSubmitting ? t('webhooks.creating') : t('webhooks.createWebhook')}
+                {isWebhookSubmitting
+                  ? (editingWebhook ? t('webhooks.updating') : t('webhooks.creating'))
+                  : (editingWebhook ? t('webhooks.updateWebhook') : t('webhooks.createWebhook'))}
               </Button>
             </DialogFooter>
           </form>
