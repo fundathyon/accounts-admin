@@ -23,7 +23,7 @@ interface CreateAppResponse {
 }
 
 export function OnboardingScreen() {
-  const { apiUrl: getApiUrl, showNotification, setSavedSecretKey } = useAdmin();
+  const { apiUrl: getApiUrl, showNotification, setSavedSecretKey, setSavedPublishableKey } = useAdmin();
   const { t } = useI18n();
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [formData, setFormData] = useState({ name: '', root_email: '' });
@@ -55,6 +55,10 @@ export function OnboardingScreen() {
         const sk = data.data.secret_key;
         if (sk && typeof sk === 'string') {
           setSavedSecretKey(sk.trim());
+        }
+        const pk = data.data.publishable_key;
+        if (pk && typeof pk === 'string') {
+          setSavedPublishableKey(pk.trim());
         }
         showNotification(t('onboarding.appCreated'), 'success');
       } else {
