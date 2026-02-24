@@ -22,6 +22,10 @@ import {
   PowerOff,
   Pencil,
   Trash2,
+  Search,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Filter,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -67,6 +71,14 @@ const categoryColor: Record<string, string> = {
   Security: 'text-rose-400 bg-rose-500/10',
 };
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 function getCategoryColor(cat: string) {
   return categoryColor[cat] || 'text-muted-foreground bg-muted';
 }
@@ -96,6 +108,9 @@ export default function WebhooksPage() {
   const [webhookEditMode, setWebhookEditMode] = useState<'form' | 'json'>('form');
   const [webhookJsonRaw, setWebhookJsonRaw] = useState('');
   const [togglingWebhookId, setTogglingWebhookId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
   const buildWebhookPayload = () => ({
     name: webhookForm.name,
@@ -173,6 +188,25 @@ export default function WebhooksPage() {
   useEffect(() => {
     fetchWebhooks();
   }, [savedSecretKey]);
+
+  const filteredWebhooks = webhooks.filter(wh => {
+    const query = searchQuery.toLowerCase();
+    const searchMatch = wh.name.toLowerCase().includes(query) ||
+      wh.url.toLowerCase().includes(query) ||
+      (wh.description && wh.description.toLowerCase().includes(query)) ||
+      wh.id.toLowerCase().includes(query);
+
+    if (!searchMatch) return false;
+
+    if (statusFilter === 'active' && !wh.active) return false;
+    if (statusFilter === 'inactive' && wh.active) return false;
+
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+  });
 
   const handleCreateWebhook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,14 +447,48 @@ export default function WebhooksPage() {
               <Link href={settingsHref}>{t('webhooks.goToSettings')}</Link>
             </Button>
           </Card>
-        ) : loading ? (
-          <div className="py-20 flex justify-center">
-            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-          </div>
         ) : (
           <div className="space-y-4">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
               <ShieldCheck className="w-4 h-4" /> {t('webhooks.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
+              <div className="relative flex-1 min-w-[300px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('webhooks.searchPlaceholder') || "Search by name, URL or ID..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                  <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                      <SelectValue placeholder={t('users.state') || "State"} />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
+                    <SelectItem value="active">{t('common.active') || "Active"}</SelectItem>
+                    <SelectItem value="inactive">{t('behaviors.inactive') || "Inactive"}</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                  className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
+                >
+                  {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                  {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
+                </Button>
+              </div>
             </div>
 
             {webhooks.length === 0 ? (
@@ -446,7 +514,7 @@ export default function WebhooksPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {webhooks.map((wh) => (
+                {filteredWebhooks.map((wh) => (
                   <Card key={wh.id} className="overflow-hidden">
                     <Button
                       variant="ghost"
@@ -633,193 +701,193 @@ export default function WebhooksPage() {
                   </p>
                 </div>
               ) : (
-              <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t('webhooks.nameRequired')}</Label>
-                  <Input
-                    required
-                    placeholder={t('webhooks.name')}
-                    value={webhookForm.name}
-                    onChange={(e) => setWebhookForm((p) => ({ ...p, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('webhooks.description')}</Label>
-                  <Input placeholder={t('webhooks.optional')} value={webhookForm.description} onChange={(e) => setWebhookForm((p) => ({ ...p, description: e.target.value }))} />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Globe className="w-4 h-4" /> {t('webhooks.urlLabel')}
-                  </Label>
-                <Input
-                  required
-                  type="url"
-                  placeholder="https://tuapp.com/webhooks"
-                  value={webhookForm.url}
-                  onChange={(e) => setWebhookForm((p) => ({ ...p, url: e.target.value }))}
-                  className="font-mono"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Lock className="w-4 h-4" /> {t('webhooks.secretLabel')} {editingWebhook ? `(${t('webhooks.optional')})` : ''}
-                  </Label>
-                  <Input
-                    required={!editingWebhook}
-                    placeholder={editingWebhook ? t('webhooks.secretLeaveEmpty') : 'mi-secret-seguro'}
-                    value={webhookForm.secret}
-                    onChange={(e) => setWebhookForm((p) => ({ ...p, secret: e.target.value }))}
-                    className="font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4" /> {t('webhooks.retriesLabel')}
-                  </Label>
-                  <Input type="number" min={0} max={10} value={webhookForm.retries} onChange={(e) => setWebhookForm((p) => ({ ...p, retries: +e.target.value }))} />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border">
-                <div>
-                  <div className="text-sm font-medium">{t('webhooks.activateImmediately')}</div>
-                  <CardDescription>{t('webhooks.activateImmediatelyDesc')}</CardDescription>
-                </div>
-                <Switch checked={webhookForm.active} onCheckedChange={(active) => setWebhookForm((p) => ({ ...p, active }))} />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <Label className="flex items-center gap-2">
-                    <Zap className="w-4 h-4" /> {t('webhooks.eventsToSubscribe')}
-                  </Label>
-                  <span className="text-xs text-primary font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
-                </div>
-
-                {/* Eventos más comunes - siempre visible arriba */}
-                <div className="mb-4 space-y-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor('Comunes'))}>{t('webhooks.mostCommon')}</span>
-                  </div>
-                  <div className="space-y-1 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3">
-                    {COMMON_EVENTS.map((ev) => (
-                      <label
-                        key={ev.code}
-                        className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
-                      >
-                        <div
-                          className={cn(
-                            'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                            selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
-                          )}
-                        >
-                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
-                        </div>
-                        <input
-                          type="checkbox"
-                          className="hidden"
-                          checked={selectedEvents.has(ev.code)}
-                          onChange={() => toggleEvent(ev.code)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-mono font-medium">{ev.code}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2 bg-muted/30 rounded-2xl border p-3 max-h-56 overflow-y-auto">
-                  {Object.entries(eventsByCategory).map(([category, catEvents]) => {
-                    const commonCodes = new Set(COMMON_EVENTS.map((e) => e.code));
-                    const filteredEvents = catEvents.filter((e) => !commonCodes.has(e.code));
-                    if (filteredEvents.length === 0) return null;
-                    return (
-                    <div key={category}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full justify-between px-3 py-2 h-auto"
-                        onClick={() => toggleCategory(category)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor(category))}>{category}</span>
-                          <span className="text-xs text-muted-foreground">{filteredEvents.length} {t('webhooks.events')}</span>
-                          {filteredEvents.every((e) => selectedEvents.has(e.code)) && filteredEvents.length > 0 && (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-muted-foreground hover:text-primary h-auto py-0 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              selectAllInCategory(category, filteredEvents);
-                            }}
-                          >
-                            {filteredEvents.every((e) => selectedEvents.has(e.code)) ? t('webhooks.removeAll') : t('webhooks.all')}
-                          </Button>
-                          {expandedCategories.has(category) ? (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      </Button>
-                      <AnimatePresence>
-                        {expandedCategories.has(category) && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.15 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="px-3 pb-2 space-y-1">
-                              {filteredEvents.map((ev) => (
-                                <label
-                                  key={ev.code}
-                                  className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
-                                >
-                                  <div
-                                    className={cn(
-                                      'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                                      selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
-                                    )}
-                                  >
-                                    {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
-                                  </div>
-                                  <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={selectedEvents.has(ev.code)}
-                                    onChange={() => toggleEvent(ev.code)}
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-mono font-medium">{ev.code}</div>
-                                    <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
-                                  </div>
-                                </label>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t('webhooks.nameRequired')}</Label>
+                      <Input
+                        required
+                        placeholder={t('webhooks.name')}
+                        value={webhookForm.name}
+                        onChange={(e) => setWebhookForm((p) => ({ ...p, name: e.target.value }))}
+                      />
                     </div>
-                    );
-                  })}
-                </div>
-              </div>
-              </>
+                    <div className="space-y-2">
+                      <Label>{t('webhooks.description')}</Label>
+                      <Input placeholder={t('webhooks.optional')} value={webhookForm.description} onChange={(e) => setWebhookForm((p) => ({ ...p, description: e.target.value }))} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Globe className="w-4 h-4" /> {t('webhooks.urlLabel')}
+                    </Label>
+                    <Input
+                      required
+                      type="url"
+                      placeholder="https://tuapp.com/webhooks"
+                      value={webhookForm.url}
+                      onChange={(e) => setWebhookForm((p) => ({ ...p, url: e.target.value }))}
+                      className="font-mono"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Lock className="w-4 h-4" /> {t('webhooks.secretLabel')} {editingWebhook ? `(${t('webhooks.optional')})` : ''}
+                      </Label>
+                      <Input
+                        required={!editingWebhook}
+                        placeholder={editingWebhook ? t('webhooks.secretLeaveEmpty') : 'mi-secret-seguro'}
+                        value={webhookForm.secret}
+                        onChange={(e) => setWebhookForm((p) => ({ ...p, secret: e.target.value }))}
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <RotateCcw className="w-4 h-4" /> {t('webhooks.retriesLabel')}
+                      </Label>
+                      <Input type="number" min={0} max={10} value={webhookForm.retries} onChange={(e) => setWebhookForm((p) => ({ ...p, retries: +e.target.value }))} />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border">
+                    <div>
+                      <div className="text-sm font-medium">{t('webhooks.activateImmediately')}</div>
+                      <CardDescription>{t('webhooks.activateImmediatelyDesc')}</CardDescription>
+                    </div>
+                    <Switch checked={webhookForm.active} onCheckedChange={(active) => setWebhookForm((p) => ({ ...p, active }))} />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="flex items-center gap-2">
+                        <Zap className="w-4 h-4" /> {t('webhooks.eventsToSubscribe')}
+                      </Label>
+                      <span className="text-xs text-primary font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
+                    </div>
+
+                    {/* Eventos más comunes - siempre visible arriba */}
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor('Comunes'))}>{t('webhooks.mostCommon')}</span>
+                      </div>
+                      <div className="space-y-1 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                        {COMMON_EVENTS.map((ev) => (
+                          <label
+                            key={ev.code}
+                            className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
+                          >
+                            <div
+                              className={cn(
+                                'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
+                                selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                              )}
+                            >
+                              {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                            </div>
+                            <input
+                              type="checkbox"
+                              className="hidden"
+                              checked={selectedEvents.has(ev.code)}
+                              onChange={() => toggleEvent(ev.code)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-mono font-medium">{ev.code}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 bg-muted/30 rounded-2xl border p-3 max-h-56 overflow-y-auto">
+                      {Object.entries(eventsByCategory).map(([category, catEvents]) => {
+                        const commonCodes = new Set(COMMON_EVENTS.map((e) => e.code));
+                        const filteredEvents = catEvents.filter((e) => !commonCodes.has(e.code));
+                        if (filteredEvents.length === 0) return null;
+                        return (
+                          <div key={category}>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="w-full justify-between px-3 py-2 h-auto"
+                              onClick={() => toggleCategory(category)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor(category))}>{category}</span>
+                                <span className="text-xs text-muted-foreground">{filteredEvents.length} {t('webhooks.events')}</span>
+                                {filteredEvents.every((e) => selectedEvents.has(e.code)) && filteredEvents.length > 0 && (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs text-muted-foreground hover:text-primary h-auto py-0 px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    selectAllInCategory(category, filteredEvents);
+                                  }}
+                                >
+                                  {filteredEvents.every((e) => selectedEvents.has(e.code)) ? t('webhooks.removeAll') : t('webhooks.all')}
+                                </Button>
+                                {expandedCategories.has(category) ? (
+                                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            </Button>
+                            <AnimatePresence>
+                              {expandedCategories.has(category) && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.15 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="px-3 pb-2 space-y-1">
+                                    {filteredEvents.map((ev) => (
+                                      <label
+                                        key={ev.code}
+                                        className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
+                                      >
+                                        <div
+                                          className={cn(
+                                            'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
+                                            selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                                          )}
+                                        >
+                                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                                        </div>
+                                        <input
+                                          type="checkbox"
+                                          className="hidden"
+                                          checked={selectedEvents.has(ev.code)}
+                                          onChange={() => toggleEvent(ev.code)}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-xs font-mono font-medium">{ev.code}</div>
+                                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
