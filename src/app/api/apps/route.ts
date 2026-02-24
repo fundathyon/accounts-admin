@@ -41,3 +41,30 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: { message: 'Failed to create app' } }, { status: 500 });
     }
 }
+
+export async function PATCH(request: Request) {
+    const secretKey = request.headers.get('X-Secret-API-Key');
+    if (!secretKey) {
+        return NextResponse.json(
+            { success: false, error: { message: 'Secret API Key es requerida.' } },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const body = await request.json();
+        const res = await fetch(`${INTERNAL_API_URL}/api/v1/apps`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-KEY': secretKey,
+            },
+            body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+        return NextResponse.json(data, { status: res.status });
+    } catch (error) {
+        return NextResponse.json({ success: false, error: { message: 'Failed to update app' } }, { status: 500 });
+    }
+}
