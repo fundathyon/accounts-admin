@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Plus,
   Loader2,
+  Pencil,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -47,6 +48,7 @@ export default function RolesPage() {
   const [loading, setLoading] = useState(true);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '' });
   const [isRoleSubmitting, setIsRoleSubmitting] = useState(false);
 
@@ -64,22 +66,26 @@ export default function RolesPage() {
     }
   };
 
-  const handleCreateRole = async (e: React.FormEvent) => {
+  const handleSubmitRole = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsRoleSubmitting(true);
     try {
-      const res = await fetch(apiUrl('/api/roles'), {
-        method: 'POST',
+      const method = isEditing ? 'PATCH' : 'POST';
+      const url = isEditing ? apiUrl(`/api/roles/${selectedRole?.id}`) : apiUrl('/api/roles');
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', 'X-Secret-API-Key': savedSecretKey },
         body: JSON.stringify(roleForm),
       });
       const data = await res.json();
       if (data.data || data.success) {
-        showNotification(t('roles.roleCreated'), 'success');
+        showNotification(isEditing ? t('roles.roleUpdated') : t('roles.roleCreated'), 'success');
         setIsRoleModalOpen(false);
         setRoleForm({ name: '', description: '' });
+        setSelectedRole(null);
+        setIsEditing(false);
         fetchRoles();
-      } else showNotification(data.error?.message || t('roles.errorCreateRole'), 'error');
+      } else showNotification(data.error?.message || (isEditing ? t('roles.errorUpdateRole') : t('roles.errorCreateRole')), 'error');
     } catch {
       showNotification(t('settings.errorConnectionServer'), 'error');
     } finally {
@@ -98,7 +104,7 @@ export default function RolesPage() {
       .then((rData) => {
         if (rData.data && (rData.status === 200 || rData.success)) setRoles(rData.data || []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [savedSecretKey]);
 
@@ -193,11 +199,11 @@ export default function RolesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
-              {t('roles.newRole')}
+              {isEditing ? t('roles.editRole') : t('roles.newRole')}
             </DialogTitle>
-            <DialogDescription>{t('roles.roleDescription')}</DialogDescription>
+            <DialogDescription>{isEditing ? t('roles.editRoleDescription') : t('roles.roleDescription')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateRole} className="space-y-5">
+          <form onSubmit={handleSubmitRole} className="space-y-5">
             <div className="space-y-2">
               <Label>{t('roles.name')} *</Label>
               <Input required placeholder="admin" value={roleForm.name} onChange={(e) => setRoleForm((p) => ({ ...p, name: e.target.value }))} />
@@ -207,12 +213,17 @@ export default function RolesPage() {
               <Input placeholder="Rol con permisos de administración" value={roleForm.description} onChange={(e) => setRoleForm((p) => ({ ...p, description: e.target.value }))} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsRoleModalOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                setIsRoleModalOpen(false);
+                setIsEditing(false);
+                setSelectedRole(null);
+                setRoleForm({ name: '', description: '' });
+              }}>
                 {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={isRoleSubmitting} className="gap-2">
                 {isRoleSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isRoleSubmitting ? t('roles.creating') : t('roles.createRole')}
+                {isRoleSubmitting ? (isEditing ? t('roles.updating') : t('roles.creating')) : (isEditing ? t('roles.updateRole') : t('roles.createRole'))}
               </Button>
             </DialogFooter>
           </form>
@@ -272,7 +283,17 @@ export default function RolesPage() {
                 </div>
               </div>
 
-              <DialogFooter className="pt-4">
+              <DialogFooter className="pt-4 gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => {
+                  if (selectedRole) {
+                    setIsEditing(true);
+                    setRoleForm({ name: selectedRole.name, description: selectedRole.description || '' });
+                    setIsRoleModalOpen(true);
+                  }
+                }}>
+                  <Pencil className="w-4 h-4" />
+                  {t('common.edit')}
+                </Button>
                 <Button variant="outline" onClick={() => setSelectedRole(null)}>
                   {t('common.close')}
                 </Button>
