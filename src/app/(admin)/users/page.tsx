@@ -24,6 +24,10 @@ import {
   KeyRound,
   Download,
   FileCode,
+  Search,
+  Filter,
+  ArrowDownAZ,
+  ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -49,6 +53,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -56,9 +65,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
-import type { User } from '@/lib/admin-types';
+import type { User, Role } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
@@ -93,6 +109,12 @@ export default function UsersPage() {
   const [isPublicKeyModalOpen, setIsPublicKeyModalOpen] = useState(false);
   const [publicKeyValue, setPublicKeyValue] = useState<string | null>(null);
   const [publicKeyLoading, setPublicKeyLoading] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [loginFilter, setLoginFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [isGroupedByRole, setIsGroupedByRole] = useState(false);
 
   const fetchPublicKeyJWT = async () => {
     setIsPublicKeyModalOpen(true);
@@ -133,8 +155,21 @@ export default function UsersPage() {
     }
   };
 
+  const fetchRoles = async () => {
+    if (!savedSecretKey) return;
+    try {
+      const res = await fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const list = Array.isArray(data.data) ? data.data : (data.data.data || []);
+        setRoles(list);
+      }
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, [savedSecretKey]);
 
   const keyForAuth = savedPublishableKey;
@@ -351,6 +386,41 @@ export default function UsersPage() {
     }
   };
 
+  const filteredUsers = users.filter((user) => {
+    const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || '';
+    const searchableText = `${user.id} ${user.user_name || ''} ${primaryEmail} ${user.name || ''}`.toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    if (query && !searchableText.includes(query)) return false;
+
+    if (roleFilter !== 'all' && user.role_id !== roleFilter && user.role_details?.name !== roleFilter) return false;
+
+    if (loginFilter !== 'all') {
+      if (loginFilter === 'email') {
+        if (!user.login_methods?.some(lm => lm.entity_type === 'email')) return false;
+      } else if (loginFilter === 'oauth') {
+        if (!user.login_methods?.some(lm => lm.entity_type === 'oauth')) return false;
+      } else {
+        if (!user.login_methods?.some(lm => lm.details?.platform === loginFilter)) return false;
+      }
+    }
+
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+  });
+
+  const groupedUsers = isGroupedByRole
+    ? filteredUsers.reduce((acc, user) => {
+      const roleName = user.role_details?.name || 'default';
+      if (!acc[roleName]) acc[roleName] = [];
+      acc[roleName].push(user);
+      return acc;
+    }, {} as Record<string, User[]>)
+    : { "All Users": filteredUsers };
+
   const handleExportCSV = () => {
     if (users.length === 0) {
       showNotification(t('users.noUsersToExport') || 'No users to export', 'error');
@@ -413,37 +483,65 @@ export default function UsersPage() {
           <div className="flex gap-2">
             {savedSecretKey && (
               <>
-                <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" /> {t('users.registerUser')}
-                </Button>
-                <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
-                  <Lock className="w-4 h-4" /> {t('users.testLogin')}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
+                      <Plus className="w-4 h-4" /> {t('users.registerUser')}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
-                      <Download className="w-4 h-4" /> CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
-                      <FileCode className="w-4 h-4" /> JSON
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.registerUser')}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
+                      <Lock className="w-4 h-4" /> {t('users.testLogin')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.testLogin')}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2">
+                          <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
+                          <Download className="w-4 h-4" /> CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
+                          <FileCode className="w-4 h-4" /> JSON
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('users.export')}
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={fetchPublicKeyJWT}
-              className="gap-2"
-              title="Ver la clave pública JWT para verificar tokens"
-            >
-              <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={fetchPublicKeyJWT}
+                  className="gap-2"
+                >
+                  <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}
+              </TooltipContent>
+            </Tooltip>
             {!savedSecretKey && (
               <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
                 <Link href={settingsHref}>
@@ -453,6 +551,92 @@ export default function UsersPage() {
             )}
           </div>
         </div>
+
+        {savedSecretKey && (
+          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
+            <div className="relative flex-1 min-w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</span>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[160px] h-9 bg-background border-none shadow-none focus:ring-1 focus:ring-primary/30">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('users.allRoles') || "All Roles"}</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.loginType')}</span>
+              <Select value={loginFilter} onValueChange={setLoginFilter}>
+                <SelectTrigger className="w-[160px] h-9 bg-background border-none shadow-none focus:ring-1 focus:ring-primary/30">
+                  <SelectValue placeholder="Any Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('users.allTypes') || "Any Type"}</SelectItem>
+                  <SelectItem value="email">Email / Password</SelectItem>
+                  <SelectItem value="oauth">Any OAuth</SelectItem>
+                  <SelectItem value="google">Google</SelectItem>
+                  <SelectItem value="apple">Apple</SelectItem>
+                  <SelectItem value="microsoft">Microsoft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.sortBy')}
+                </TooltipContent>
+              </Tooltip>
+              <div className="w-px h-4 bg-border" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsGroupedByRole(!isGroupedByRole)}
+                    className={cn(
+                      "h-9 gap-2 text-xs font-medium",
+                      isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
+                    )}
+                  >
+                    <Users className="w-4 h-4" />
+                    {t('users.groupByRole') || "Group by Role"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.groupByRole')}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
         {!savedSecretKey ? (
           <Card className="border-amber-500/20 p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
@@ -470,160 +654,167 @@ export default function UsersPage() {
               <ShieldCheck className="w-4 h-4 shrink-0" /> {t('users.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b hover:bg-transparent">
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.user')}</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.provider')}</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.created')}</TableHead>
-                    <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.lastActivity')}</TableHead>
-                    <TableHead className="px-6 py-3 w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-20 text-center">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  ) : users.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-16 text-center text-muted-foreground text-sm">
-                        {t('users.noUsers')}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    users.map((user) => {
-                      const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
-                      const displayName = user.name || user.user_name || primaryEmail || 'Sin nombre';
-                      return (
-                        <TableRow
-                          key={user.id}
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'))}
-                        >
-                          <TableCell className="px-6 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
-                                {(displayName || 'U').charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-mono text-xs text-muted-foreground truncate max-w-[140px]" title={user.id}>
-                                  {user.id}
-                                </div>
-                                <div className="font-medium text-sm truncate">{primaryEmail || user.user_name || '—'}</div>
-                                {displayName !== primaryEmail && displayName !== user.user_name && (
-                                  <div className="text-xs text-muted-foreground truncate">{displayName}</div>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {user.login_methods?.map((lm) =>
-                                lm.entity_type === 'oauth' && lm.details?.platform ? (
-                                  <OAuthProviderLogo
-                                    key={lm.id}
-                                    provider={lm.details.platform}
-                                    size={22}
-                                    className="rounded"
-                                  />
-                                ) : lm.entity_type === 'email' ? (
-                                  <span
-                                    key={lm.id}
-                                    className="inline-flex items-center justify-center gap-0.5 shrink-0"
-                                    title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
-                                  >
-                                    <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
-                                      <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
-                                    </span>
-                                    {lm.is_verify ? (
-                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                                    ) : (
-                                      <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
-                                    )}
-                                  </span>
-                                ) : (
-                                  <Badge
-                                    key={lm.id}
-                                    variant="outline"
-                                    className="text-[10px] px-1.5 py-0 font-medium border-orange-500/40 text-orange-400 bg-orange-500/5"
-                                  >
-                                    {lm.entity_type}
-                                    {lm.is_verify ? (
-                                      <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
-                                    ) : (
-                                      <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
-                                    )}
-                                  </Badge>
-                                )
-                              ) || <span className="text-muted-foreground text-xs">—</span>}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            {user.role_details ? (
-                              <Badge variant="secondary" className="text-xs font-normal">
-                                {user.role_details.name}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="px-6 py-3 text-xs text-muted-foreground">
-                            {new Date(user.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </TableCell>
-                          <TableCell className="px-6 py-3 text-xs text-muted-foreground">
-                            {new Date(user.updated_at).toLocaleDateString('es', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </TableCell>
-                          <TableCell className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
-                                  }}
-                                >
-                                  <ChevronRight className="w-4 h-4" />
-                                  {t('users.viewDetail')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-rose-500 focus:text-rose-500"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setUserToDelete(user);
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Eliminar cuenta
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+              {loading ? (
+                <div className="py-20 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground text-sm">
+                  {t('users.noUsers')}
+                </div>
+              ) : (
+                Object.entries(groupedUsers).map(([groupName, groupUsers]) => (
+                  <div key={groupName} className="border-b last:border-none">
+                    {isGroupedByRole && (
+                      <div className="px-6 py-3 bg-muted/20 flex items-center justify-between border-b border-border/50">
+                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                          {groupName} <span className="ml-2 font-normal opacity-50">({groupUsers.length})</span>
+                        </span>
+                      </div>
+                    )}
+                    <Table>
+                      <TableHeader className={cn(isGroupedByRole ? "hidden" : "")}>
+                        <TableRow className="border-b hover:bg-transparent">
+                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.user')}</TableHead>
+                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.provider')}</TableHead>
+                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</TableHead>
+                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.created')}</TableHead>
+                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.lastActivity')}</TableHead>
+                          <TableHead className="px-6 py-3 w-12" />
                         </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {groupUsers.map((user) => {
+                          const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
+                          const displayName = user.name || user.user_name || primaryEmail || 'Sin nombre';
+                          return (
+                            <TableRow
+                              key={user.id}
+                              className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={() => router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'))}
+                            >
+                              <TableCell className="px-6 py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
+                                    {(displayName || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="font-mono text-xs text-muted-foreground truncate max-w-[140px]" title={user.id}>
+                                      {user.id}
+                                    </div>
+                                    <div className="font-medium text-sm truncate">{primaryEmail || user.user_name || '—'}</div>
+                                    {displayName !== primaryEmail && displayName !== user.user_name && (
+                                      <div className="text-xs text-muted-foreground truncate">{displayName}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-center">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {user.login_methods?.map((lm) =>
+                                    lm.entity_type === 'oauth' && lm.details?.platform ? (
+                                      <OAuthProviderLogo
+                                        key={lm.id}
+                                        provider={lm.details.platform}
+                                        size={22}
+                                        className="rounded"
+                                      />
+                                    ) : lm.entity_type === 'email' ? (
+                                      <span
+                                        key={lm.id}
+                                        className="inline-flex items-center justify-center gap-0.5 shrink-0"
+                                        title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
+                                      >
+                                        <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
+                                          <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                                        </span>
+                                        {lm.is_verify ? (
+                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                        ) : (
+                                          <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                                        )}
+                                      </span>
+                                    ) : (
+                                      <Badge
+                                        key={lm.id}
+                                        variant="outline"
+                                        className="text-[10px] px-1.5 py-0 font-medium border-orange-500/40 text-orange-400 bg-orange-500/5"
+                                      >
+                                        {lm.entity_type}
+                                        {lm.is_verify ? (
+                                          <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
+                                        ) : (
+                                          <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
+                                        )}
+                                      </Badge>
+                                    )
+                                  ) || <span className="text-muted-foreground text-xs">—</span>}
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                {user.role_details ? (
+                                  <Badge variant="secondary" className="text-xs font-normal">
+                                    {user.role_details.name}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-xs text-muted-foreground">
+                                {new Date(user.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-xs text-muted-foreground">
+                                {new Date(user.updated_at).toLocaleDateString('es', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </TableCell>
+                              <TableCell className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
+                                      }}
+                                    >
+                                      <ChevronRight className="w-4 h-4" />
+                                      {t('users.viewDetail')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-rose-500 focus:text-rose-500"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setUserToDelete(user);
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Eliminar cuenta
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical } from 'lucide-react';
+import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, Filter, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -47,6 +47,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const ALLOWED_PROVIDERS = [
   { value: 'google', label: 'Google' },
@@ -110,6 +122,9 @@ export default function OAuthProvidersPage() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkResult, setLinkResult] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [providerFilter, setProviderFilter] = useState<string>('all');
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -136,6 +151,23 @@ export default function OAuthProvidersPage() {
   useEffect(() => {
     fetchProviders();
   }, [savedSecretKey]);
+
+  const filteredProviders = providers.filter(p => {
+    const query = searchQuery.toLowerCase();
+    const searchMatch = (p.name || '').toLowerCase().includes(query) ||
+      p.provider.toLowerCase().includes(query) ||
+      p.client_id.toLowerCase().includes(query) ||
+      p.id.toLowerCase().includes(query);
+
+    if (!searchMatch) return false;
+
+    if (statusFilter === 'enabled' && !p.enabled) return false;
+    if (statusFilter === 'disabled' && p.enabled) return false;
+
+    if (providerFilter !== 'all' && p.provider !== providerFilter) return false;
+
+    return true;
+  });
 
   const fetchRoles = async () => {
     if (!savedSecretKey) return;
@@ -184,7 +216,7 @@ export default function OAuthProvidersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.provider || !formData.client_id?.trim() || !formData.client_secret?.trim() ||
-        !formData.callback_key?.trim() || !formData.callback_uri?.trim() || !formData.redirect_uri_web?.trim()) {
+      !formData.callback_key?.trim() || !formData.callback_uri?.trim() || !formData.redirect_uri_web?.trim()) {
       showNotification(t('oauth.completeFields'), 'error');
       return;
     }
@@ -448,9 +480,16 @@ export default function OAuthProvidersPage() {
               </Link>
             </Button>
           ) : (
-            <Button onClick={() => setIsModalOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('tooltips.newOAuth')}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
@@ -475,6 +514,63 @@ export default function OAuthProvidersPage() {
           <div className="space-y-4">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
               <ShieldCheck className="w-4 h-4" /> {t('oauth.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
+              <div className="relative flex-1 min-w-[300px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('oauth.searchPlaceholder') || "Search by name, provider or ID..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('oauth.provider') || "Provider"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
+                        {ALLOWED_PROVIDERS.map(p => (
+                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.oauth')}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('users.state') || "State"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "Both"}</SelectItem>
+                        <SelectItem value="enabled">{t('oauth.enabled') || "Enabled"}</SelectItem>
+                        <SelectItem value="disabled">{t('oauth.disabled') || "Disabled"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.state')}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
 
             {providers.length === 0 ? (
@@ -504,7 +600,7 @@ export default function OAuthProvidersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {providers.map((p) => (
+                      {filteredProviders.map((p) => (
                         <TableRow
                           key={p.id}
                           className="group cursor-pointer hover:bg-muted/50 transition-colors"
@@ -559,11 +655,10 @@ export default function OAuthProvidersPage() {
                     title={prov.label}
                     disabled={!!editingProvider}
                     onClick={() => !editingProvider && setFormData((p) => ({ ...p, provider: prov.value }))}
-                    className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-primary/50 disabled:opacity-70 disabled:cursor-not-allowed ${
-                      formData.provider === prov.value
-                        ? 'border-primary bg-primary/40'
-                        : 'border-input bg-muted/30'
-                    }`}
+                    className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-primary/50 disabled:opacity-70 disabled:cursor-not-allowed ${formData.provider === prov.value
+                      ? 'border-primary bg-primary/40'
+                      : 'border-input bg-muted/30'
+                      }`}
                   >
                     <OAuthProviderLogo provider={prov.value} size={28} className="rounded" />
                   </button>

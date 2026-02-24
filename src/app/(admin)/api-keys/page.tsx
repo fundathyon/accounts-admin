@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   Trash2,
   PowerOff,
+  Search,
+  Filter,
+  ArrowDownAZ,
+  ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -38,6 +42,18 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { App, APIKeyListItem } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -63,6 +79,9 @@ export default function ApiKeysPage() {
     app_id?: string;
     created_at?: string;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [envFilter, setEnvFilter] = useState<'all' | 'production' | 'staging' | 'development'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -107,6 +126,24 @@ export default function ApiKeysPage() {
   useEffect(() => {
     fetchAPIKeys();
   }, [savedSecretKey]);
+
+  const filteredApiKeys = apiKeys.filter(key => {
+    const query = searchQuery.toLowerCase();
+    const searchMatch = key.name.toLowerCase().includes(query) ||
+      (key.description && key.description.toLowerCase().includes(query)) ||
+      key.publishable_key.toLowerCase().includes(query) ||
+      key.id.toLowerCase().includes(query);
+
+    if (!searchMatch) return false;
+
+    if (envFilter !== 'all' && key.environment !== envFilter) return false;
+
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+  });
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,6 +301,59 @@ export default function ApiKeysPage() {
               </div>
             )}
 
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
+              <div className="relative flex-1 min-w-[300px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={envFilter} onValueChange={(v: any) => setEnvFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('apiKeys.environment') || "Env"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "All Envs"}</SelectItem>
+                        <SelectItem value="production">Production</SelectItem>
+                        <SelectItem value="staging">Staging</SelectItem>
+                        <SelectItem value="development">Development</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.state')}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                      className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
+                    >
+                      {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                      {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.sortBy')}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+
             {keysLoading ? (
               <div className="py-12 flex justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -283,7 +373,7 @@ export default function ApiKeysPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {apiKeys.map((k) => (
+                      {filteredApiKeys.map((k) => (
                         <TableRow
                           key={k.id}
                           className="group cursor-pointer hover:bg-muted/50 transition-colors"

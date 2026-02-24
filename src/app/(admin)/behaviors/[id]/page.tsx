@@ -18,6 +18,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { EmailAuthConfigView, type EmailAuthConfig } from '@/components/behaviors/email-auth-config-view';
 import { EmailAuthConfigForm } from '@/components/behaviors/email-auth-config-form';
 import { cn } from '@/lib/utils';
@@ -142,11 +147,18 @@ export default function BehaviorDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
-        <Link href={behaviorsHref}>
-          <ChevronLeft className="w-4 h-4" /> Volver a behaviors
-        </Link>
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
+            <Link href={behaviorsHref}>
+              <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
+            </Link>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {t('behaviors.backToBehaviors')}
+        </TooltipContent>
+      </Tooltip>
 
       <div className="space-y-8">
         <div className="flex items-center justify-between">
@@ -169,10 +181,17 @@ export default function BehaviorDetailPage() {
               </div>
             </div>
           </div>
-          <Button variant="outline" className="gap-2" onClick={() => setIsEditing(true)}>
-            <Pencil className="w-4 h-4" />
-            {t('common.edit')}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" className="gap-2" onClick={() => setIsEditing(true)}>
+                <Pencil className="w-4 h-4" />
+                {t('common.edit')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('behaviors.editBehavior')}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div>

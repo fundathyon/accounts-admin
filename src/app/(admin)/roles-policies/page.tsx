@@ -9,6 +9,9 @@ import {
   Plus,
   Loader2,
   Pencil,
+  Search,
+  ArrowDownAZ,
+  ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -34,6 +37,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Role } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -51,6 +59,8 @@ export default function RolesPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '' });
   const [isRoleSubmitting, setIsRoleSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -108,6 +118,19 @@ export default function RolesPage() {
       .finally(() => setLoading(false));
   }, [savedSecretKey]);
 
+  const filteredRoles = roles.filter(role => {
+    const query = searchQuery.toLowerCase();
+    return (
+      role.name.toLowerCase().includes(query) ||
+      (role.description && role.description.toLowerCase().includes(query)) ||
+      role.id.toLowerCase().includes(query)
+    );
+  }).sort((a, b) => {
+    const dateA = new Date(a.created_at || 0).getTime();
+    const dateB = new Date(b.created_at || 0).getTime();
+    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+  });
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -123,11 +146,51 @@ export default function RolesPage() {
               </Link>
             </Button>
           ) : (
-            <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2">
-              <Shield className="w-4 h-4" /> {t('roles.newRole')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2">
+                  <Shield className="w-4 h-4" /> {t('roles.newRole')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('tooltips.newRole')}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
+
+        {savedSecretKey && (
+          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
+            <div className="relative flex-1 min-w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={t('roles.searchPlaceholder') || "Search by name, description or ID..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
+                  >
+                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.sortBy')}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
 
         {!savedSecretKey ? (
           <Card className="border-amber-500/20 p-12 text-center">
@@ -168,7 +231,7 @@ export default function RolesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {roles.map((role) => (
+                      {filteredRoles.map((role) => (
                         <TableRow
                           key={role.id}
                           className="group cursor-pointer hover:bg-muted/50 transition-colors"
