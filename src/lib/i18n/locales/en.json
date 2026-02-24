@@ -147,6 +147,7 @@
     "noUsersToExport": "No users to export",
     "exportSuccess": "Users exported successfully (CSV)",
     "exportSuccessJSON": "Users exported successfully (JSON)",
+    "export": "Export",
     "consultingWith": "Querying with:",
     "noUsers": "No registered users",
     "user": "User",

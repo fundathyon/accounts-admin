@@ -20,6 +20,7 @@ import {
   RefreshCw,
   Trash2,
   ChevronRight,
+  ChevronDown,
   KeyRound,
   Download,
   FileCode,
@@ -418,12 +419,21 @@ export default function UsersPage() {
                 <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
                   <Lock className="w-4 h-4" /> {t('users.testLogin')}
                 </Button>
-                <Button variant="outline" onClick={handleExportCSV} className="gap-2 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10">
-                  <Download className="w-4 h-4" /> CSV
-                </Button>
-                <Button variant="outline" onClick={handleExportJSON} className="gap-2 border-sky-500/20 text-sky-500 hover:bg-sky-500/10">
-                  <FileCode className="w-4 h-4" /> JSON
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
+                      <Download className="w-4 h-4" /> CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
+                      <FileCode className="w-4 h-4" /> JSON
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
             <Button
