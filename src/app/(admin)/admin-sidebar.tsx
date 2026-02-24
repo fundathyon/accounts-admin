@@ -140,12 +140,13 @@ export function AdminSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground h-12"
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm">
+                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm">
                     A
                   </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[state=collapsed]/sidebar-wrapper:hidden">
                     <span className="truncate font-semibold">
                       {app?.name ?? 'Foundathyon Admin'}
                     </span>
@@ -153,7 +154,7 @@ export function AdminSidebar() {
                       {app ? t('sidebar.app') : t('sidebar.apiAccounts')}
                     </span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4 shrink-0" />
+                  <ChevronsUpDown className="ml-auto size-4 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -192,11 +193,13 @@ export function AdminSidebar() {
                 return (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild isActive={active}>
-                      <Link href={href} className="flex items-center gap-3">
+                      <Link href={href} className="flex items-center gap-3 overflow-hidden">
                         <item.icon className="size-4 shrink-0" />
-                        <span>{t(item.labelKey)}</span>
+                        <span className="truncate group-data-[state=collapsed]/sidebar-wrapper:hidden">
+                          {t(item.labelKey)}
+                        </span>
                         {needsKey && !savedSecretKey && (
-                          <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0" />
+                          <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden" />
                         )}
                       </Link>
                     </SidebarMenuButton>
@@ -214,18 +217,19 @@ export function AdminSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
+                  size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs shrink-0">
+                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">
                     {(adminUser || 'A').charAt(0).toUpperCase()}
                   </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight truncate min-w-0">
+                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight truncate group-data-[state=collapsed]/sidebar-wrapper:hidden">
                     <span className="truncate font-medium">{adminUser ?? t('sidebar.adminUser')}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {adminUser ? `${adminUser}@admin` : ''}
                     </span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4 shrink-0" />
+                  <ChevronsUpDown className="ml-auto size-4 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -315,7 +319,7 @@ export function AdminSidebar() {
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="px-2 py-3 border-t border-sidebar-border">
+        <div className="px-2 py-3 border-t border-sidebar-border group-data-[state=collapsed]/sidebar-wrapper:hidden">
           <p className="text-[10px] text-muted-foreground truncate" title={`v${ADMIN_VERSION} · ${t('sidebar.poweredBy')}`}>
             v{ADMIN_VERSION} · {t('sidebar.poweredBy')}
           </p>
