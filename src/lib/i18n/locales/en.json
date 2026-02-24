@@ -42,7 +42,8 @@
     "active": "Active",
     "error": "Error",
     "errorConnection": "Connection error",
-    "edit": "Edit"
+    "edit": "Edit",
+    "all": "All"
   },
   "dashboard": {
     "title": "Dashboard",
