@@ -21,6 +21,7 @@ import {
   Trash2,
   ChevronRight,
   KeyRound,
+  Download,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -348,6 +349,42 @@ export default function UsersPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (users.length === 0) {
+      showNotification(t('users.noUsersToExport') || 'No users to export', 'error');
+      return;
+    }
+
+    const headers = ['ID', 'Email', 'Username', 'Name', 'Role', 'Created At'];
+    const rows = users.map(user => {
+      const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || '';
+      return [
+        user.id,
+        primaryEmail,
+        user.user_name || '',
+        user.name || '',
+        user.role_details?.name || 'default',
+        new Date(user.created_at).toISOString()
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showNotification(t('users.exportSuccess') || 'Export successful', 'success');
+  };
+
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
   return (
@@ -363,6 +400,9 @@ export default function UsersPage() {
                 </Button>
                 <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
                   <Lock className="w-4 h-4" /> {t('users.testLogin')}
+                </Button>
+                <Button variant="outline" onClick={handleExportCSV} className="gap-2 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10">
+                  <Download className="w-4 h-4" /> CSV
                 </Button>
               </>
             )}

@@ -144,6 +144,8 @@
     "secretKeyRequired": "Secret API Key Required",
     "secretKeyRequiredDesc": "You need to configure the Secret API Key in Settings.",
     "goToSettings": "Go to Settings",
+    "noUsersToExport": "No users to export",
+    "exportSuccess": "Users exported successfully (CSV)",
     "consultingWith": "Querying with:",
     "noUsers": "No registered users",
     "user": "User",
