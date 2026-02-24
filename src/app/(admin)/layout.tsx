@@ -14,10 +14,10 @@ export default function AdminLayout({
     <AdminProvider>
       <AdminSessionGuard>
         <OnboardingGuard>
-          <SidebarProvider collapsible="icon">
+          <SidebarProvider>
             <AdminSidebar />
             <SidebarInset>
-              <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+              <header className="relative z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
               </header>
