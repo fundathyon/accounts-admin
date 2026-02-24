@@ -10,7 +10,15 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  AlertTriangle,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -158,13 +166,28 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="flex gap-3 mt-auto pt-4">
-                <Button onClick={handleSaveKey} className="flex-1 gap-2">
-                  <Key className="w-4 h-4" /> {t('settings.saveKey')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handleSaveKey} className="flex-1 gap-2">
+                      <Key className="w-4 h-4" /> {t('settings.saveKey')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.saveSettings')}
+                  </TooltipContent>
+                </Tooltip>
+
                 {savedSecretKey && (
-                  <Button variant="outline" onClick={handleClearKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
-                    {t('common.delete')}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" onClick={handleClearKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                        {t('common.delete')}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('tooltips.clearKey')}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </div>

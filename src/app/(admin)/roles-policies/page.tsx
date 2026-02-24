@@ -146,9 +146,16 @@ export default function RolesPage() {
               </Link>
             </Button>
           ) : (
-            <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2">
-              <Shield className="w-4 h-4" /> {t('roles.newRole')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2">
+                  <Shield className="w-4 h-4" /> {t('roles.newRole')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('tooltips.newRole')}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 

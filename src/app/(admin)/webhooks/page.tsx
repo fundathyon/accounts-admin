@@ -424,19 +424,26 @@ export default function WebhooksPage() {
                 </Link>
               </Button>
             ) : (
-              <Button
-                onClick={() => {
-                  setEditingWebhook(null);
-                  setWebhookForm(initialWebhookForm);
-                  setSelectedEvents(new Set());
-                  setWebhookEditMode('form');
-                  setWebhookJsonRaw('');
-                  setIsWebhookModalOpen(true);
-                }}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" /> {t('webhooks.newWebhook')}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      setEditingWebhook(null);
+                      setWebhookForm(initialWebhookForm);
+                      setSelectedEvents(new Set());
+                      setWebhookEditMode('form');
+                      setWebhookJsonRaw('');
+                      setIsWebhookModalOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> {t('webhooks.newWebhook')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.addWebhook')}
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>

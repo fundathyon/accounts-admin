@@ -17,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface EmailTemplate {
@@ -169,17 +175,24 @@ export default function EmailTemplatesPage() {
                 </option>
               ))}
             </select>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => {
-                setSendTestEmail('');
-                setSendTestDialogOpen(true);
-              }}
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              {t('emailTemplates.sendEmail')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    setSendTestEmail('');
+                    setSendTestDialogOpen(true);
+                  }}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {t('emailTemplates.sendEmail')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('tooltips.sendTestEmail')}
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
       </div>
@@ -241,11 +254,11 @@ export default function EmailTemplatesPage() {
                       srcDoc={
                         previewHtml.includes('</body>')
                           ? previewHtml.replace(
-                              '</body>',
-                              `<script>(function(){function s(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);if(window.parent!==window)window.parent.postMessage({type:'email-preview-height',height:h},'*');}if(document.readyState==='complete')s();else window.addEventListener('load',s);})();<\/script></body>`
-                            )
+                            '</body>',
+                            `<script>(function(){function s(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);if(window.parent!==window)window.parent.postMessage({type:'email-preview-height',height:h},'*');}if(document.readyState==='complete')s();else window.addEventListener('load',s);})();<\/script></body>`
+                          )
                           : previewHtml +
-                            `<script>(function(){function s(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);if(window.parent!==window)window.parent.postMessage({type:'email-preview-height',height:h},'*');}if(document.readyState==='complete')s();else window.addEventListener('load',s);})();<\/script>`
+                          `<script>(function(){function s(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);if(window.parent!==window)window.parent.postMessage({type:'email-preview-height',height:h},'*');}if(document.readyState==='complete')s();else window.addEventListener('load',s);})();<\/script>`
                       }
                       title={t('emailTemplates.previewTitle')}
                       className="w-full flex-1 min-h-0 border-0"

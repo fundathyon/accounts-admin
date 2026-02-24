@@ -480,9 +480,16 @@ export default function OAuthProvidersPage() {
               </Link>
             </Button>
           ) : (
-            <Button onClick={() => setIsModalOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('tooltips.newOAuth')}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 

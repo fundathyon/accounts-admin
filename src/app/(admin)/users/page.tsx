@@ -483,12 +483,27 @@ export default function UsersPage() {
           <div className="flex gap-2">
             {savedSecretKey && (
               <>
-                <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" /> {t('users.registerUser')}
-                </Button>
-                <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
-                  <Lock className="w-4 h-4" /> {t('users.testLogin')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
+                      <Plus className="w-4 h-4" /> {t('users.registerUser')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.registerUser')}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
+                      <Lock className="w-4 h-4" /> {t('users.testLogin')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.testLogin')}
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenu>
