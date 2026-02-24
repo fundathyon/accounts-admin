@@ -146,6 +146,7 @@
     "goToSettings": "Ir a Configuración",
     "noUsersToExport": "No hay usuarios para exportar",
     "exportSuccess": "Usuarios exportados correctamente (CSV)",
+    "exportSuccessJSON": "Usuarios exportados correctamente (JSON)",
     "consultingWith": "Consultando con:",
     "noUsers": "No hay usuarios registrados",
     "user": "Usuario",

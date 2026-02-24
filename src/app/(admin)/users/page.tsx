@@ -22,6 +22,7 @@ import {
   ChevronRight,
   KeyRound,
   Download,
+  FileCode,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -385,6 +386,22 @@ export default function UsersPage() {
     showNotification(t('users.exportSuccess') || 'Export successful', 'success');
   };
 
+  const handleExportJSON = () => {
+    if (users.length === 0) {
+      showNotification(t('users.noUsersToExport') || 'No users to export', 'error');
+      return;
+    }
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(users, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `users_full_export_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    showNotification(t('users.exportSuccessJSON') || 'JSON export successful', 'success');
+  };
+
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
   return (
@@ -403,6 +420,9 @@ export default function UsersPage() {
                 </Button>
                 <Button variant="outline" onClick={handleExportCSV} className="gap-2 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10">
                   <Download className="w-4 h-4" /> CSV
+                </Button>
+                <Button variant="outline" onClick={handleExportJSON} className="gap-2 border-sky-500/20 text-sky-500 hover:bg-sky-500/10">
+                  <FileCode className="w-4 h-4" /> JSON
                 </Button>
               </>
             )}
