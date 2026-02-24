@@ -54,6 +54,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const ALLOWED_PROVIDERS = [
   { value: 'google', label: 'Google' },
@@ -516,34 +521,48 @@ export default function OAuthProvidersPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v)}>
-                  <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                      <SelectValue placeholder={t('oauth.provider') || "Provider"} />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
-                    {ALLOWED_PROVIDERS.map(p => (
-                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('oauth.provider') || "Provider"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
+                        {ALLOWED_PROVIDERS.map(p => (
+                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.oauth')}
+                  </TooltipContent>
+                </Tooltip>
 
-                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                  <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-                      <SelectValue placeholder={t('users.state') || "State"} />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all') || "Both"}</SelectItem>
-                    <SelectItem value="enabled">{t('oauth.enabled') || "Enabled"}</SelectItem>
-                    <SelectItem value="disabled">{t('oauth.disabled') || "Disabled"}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('users.state') || "State"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "Both"}</SelectItem>
+                        <SelectItem value="enabled">{t('oauth.enabled') || "Enabled"}</SelectItem>
+                        <SelectItem value="disabled">{t('oauth.disabled') || "Disabled"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.state')}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
 
@@ -630,8 +649,8 @@ export default function OAuthProvidersPage() {
                     disabled={!!editingProvider}
                     onClick={() => !editingProvider && setFormData((p) => ({ ...p, provider: prov.value }))}
                     className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-primary/50 disabled:opacity-70 disabled:cursor-not-allowed ${formData.provider === prov.value
-                        ? 'border-primary bg-primary/40'
-                        : 'border-input bg-muted/30'
+                      ? 'border-primary bg-primary/40'
+                      : 'border-input bg-muted/30'
                       }`}
                   >
                     <OAuthProviderLogo provider={prov.value} size={28} className="rounded" />

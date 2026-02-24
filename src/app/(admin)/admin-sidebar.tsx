@@ -67,6 +67,11 @@ import {
 import { useI18n } from '@/context/i18n-context';
 import { SUPPORTED_LOCALES } from '@/lib/i18n/types';
 import { useTheme } from 'next-themes';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const ADMIN_VERSION = '0.1.0';
 
@@ -194,32 +199,39 @@ export function AdminSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                >
-                  <div className={cn(
-                    "flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg font-bold text-sm overflow-hidden",
-                    !app?.image && "bg-sidebar-primary text-sidebar-primary-foreground"
-                  )}>
-                    {app?.image ? (
-                      <img src={app.image} alt={app.name} className="size-full object-cover" />
-                    ) : (
-                      (app?.name || 'A').charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[state=collapsed]/sidebar-wrapper:hidden">
-                    <span className="truncate font-semibold text-sidebar-primary">
-                      {app?.name ?? 'Foundathyon Admin'}
-                    </span>
-                    <span className="truncate text-[10px] text-muted-foreground/80 uppercase tracking-wider font-bold">
-                      {app ? t('sidebar.app') : t('sidebar.apiAccounts')}
-                    </span>
-                  </div>
-                  <ChevronsUpDown className="ml-auto size-4 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden opacity-50" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton
+                      size="lg"
+                      className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    >
+                      <div className={cn(
+                        "flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg font-bold text-sm overflow-hidden",
+                        !app?.image && "bg-sidebar-primary text-sidebar-primary-foreground"
+                      )}>
+                        {app?.image ? (
+                          <img src={app.image} alt={app.name} className="size-full object-cover" />
+                        ) : (
+                          (app?.name || 'A').charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[state=collapsed]/sidebar-wrapper:hidden">
+                        <span className="truncate font-semibold text-sidebar-primary">
+                          {app?.name ?? 'Foundathyon Admin'}
+                        </span>
+                        <span className="truncate text-[10px] text-muted-foreground/80 uppercase tracking-wider font-bold">
+                          {app ? t('sidebar.app') : t('sidebar.apiAccounts')}
+                        </span>
+                      </div>
+                      <ChevronsUpDown className="ml-auto size-4 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden opacity-50" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="center">
+                  {t('tooltips.editApp')}
+                </TooltipContent>
+              </Tooltip>
               <DropdownMenuContent
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
                 align="start"
@@ -333,17 +345,24 @@ export function AdminSidebar() {
 
                 return (
                   <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild isActive={active}>
-                      <Link href={href} className="flex items-center gap-3 overflow-hidden">
-                        <item.icon className="size-4 shrink-0" />
-                        <span className="truncate group-data-[state=collapsed]/sidebar-wrapper:hidden">
-                          {t(item.labelKey)}
-                        </span>
-                        {needsKey && !savedSecretKey && (
-                          <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden" />
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton asChild isActive={active}>
+                          <Link href={href} className="flex items-center gap-3 overflow-hidden text-sm">
+                            <item.icon className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                            <span className="truncate group-data-[state=collapsed]/sidebar-wrapper:hidden">
+                              {t(item.labelKey)}
+                            </span>
+                            {needsKey && !savedSecretKey && (
+                              <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0 group-data-[state=collapsed]/sidebar-wrapper:hidden animate-pulse" />
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" align="center" sideOffset={10} className="font-medium">
+                        {t(`tooltips.${item.id.replace('_', '')}`)}
+                      </TooltipContent>
+                    </Tooltip>
                   </SidebarMenuItem>
                 );
               })}

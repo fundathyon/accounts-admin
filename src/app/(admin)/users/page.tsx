@@ -53,6 +53,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -484,31 +489,44 @@ export default function UsersPage() {
                 <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
                   <Lock className="w-4 h-4" /> {t('users.testLogin')}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
-                      <Download className="w-4 h-4" /> CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
-                      <FileCode className="w-4 h-4" /> JSON
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2">
+                          <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
+                          <Download className="w-4 h-4" /> CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
+                          <FileCode className="w-4 h-4" /> JSON
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('users.export')}
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={fetchPublicKeyJWT}
-              className="gap-2"
-              title="Ver la clave pública JWT para verificar tokens"
-            >
-              <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={fetchPublicKeyJWT}
+                  className="gap-2"
+                >
+                  <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}
+              </TooltipContent>
+            </Tooltip>
             {!savedSecretKey && (
               <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
                 <Link href={settingsHref}>
@@ -564,28 +582,42 @@ export default function UsersPage() {
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.sortBy')}
+                </TooltipContent>
+              </Tooltip>
               <div className="w-px h-4 bg-border" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsGroupedByRole(!isGroupedByRole)}
-                className={cn(
-                  "h-9 gap-2 text-xs font-medium",
-                  isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
-                )}
-              >
-                <Users className="w-4 h-4" />
-                {t('users.groupByRole') || "Group by Role"}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsGroupedByRole(!isGroupedByRole)}
+                    className={cn(
+                      "h-9 gap-2 text-xs font-medium",
+                      isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
+                    )}
+                  >
+                    <Users className="w-4 h-4" />
+                    {t('users.groupByRole') || "Group by Role"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.groupByRole')}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         )}

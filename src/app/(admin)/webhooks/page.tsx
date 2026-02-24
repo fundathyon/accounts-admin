@@ -78,6 +78,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 function getCategoryColor(cat: string) {
   return categoryColor[cat] || 'text-muted-foreground bg-muted';
@@ -465,29 +470,44 @@ export default function WebhooksPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                  <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                      <SelectValue placeholder={t('users.state') || "State"} />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
-                    <SelectItem value="active">{t('common.active') || "Active"}</SelectItem>
-                    <SelectItem value="inactive">{t('behaviors.inactive') || "Inactive"}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.state')}</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('users.state') || "State"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
+                        <SelectItem value="active">{t('common.active') || "Active"}</SelectItem>
+                        <SelectItem value="inactive">{t('behaviors.inactive') || "Inactive"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.state')}
+                  </TooltipContent>
+                </Tooltip>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                  className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
-                >
-                  {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                  {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                      className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
+                    >
+                      {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                      {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.sortBy')}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
 

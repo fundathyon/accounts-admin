@@ -37,6 +37,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Role } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -160,15 +165,22 @@ export default function RolesPage() {
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
+                  >
+                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('tooltips.sortBy')}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         )}

@@ -602,5 +602,25 @@
     "appCreated": "Application created! Save the API keys",
     "secretKeyCopied": "Secret key copied",
     "publishableKeyCopied": "Publishable key copied"
+  },
+  "tooltips": {
+    "dashboard": "Application stats and quick insights",
+    "users": "Manage registered users, identities and login methods",
+    "roles": "Define access roles and permission policies",
+    "webhooks": "Configure real-time event notifications",
+    "apiKeys": "Manage public and secret keys for integrations",
+    "oauth": "Configure Google, Apple, Microsoft and other providers",
+    "behaviors": "Customize authentication workflows and logic",
+    "emailTemplates": "Design and manage localized system emails",
+    "tokens": "Debug, validate and refresh authentication tokens",
+    "settings": "System configuration and environment variables",
+    "exportCsv": "Export visible data to a CSV file",
+    "exportJson": "Download full user details in JSON format",
+    "sortBy": "Toggle list order by date",
+    "groupByRole": "Organize users in sections by their role",
+    "refresh": "Reload data from server",
+    "copyId": "Copy ID to clipboard",
+    "editApp": "Change the name and logo of the admin panel",
+    "state": "Filter by active or inactive status"
   }
 }

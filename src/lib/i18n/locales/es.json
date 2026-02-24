@@ -600,7 +600,27 @@
     "roleCreated": "Rol creado",
     "goToDashboard": "Ir al Dashboard",
     "appCreated": "¡Aplicación creada! Guarda las API keys",
-    "secretKeyCopied": "Secret key copiada",
-    "publishableKeyCopied": "Publishable key copiada"
+    "secretKeyCopied": "Clave secreta copiada",
+    "publishableKeyCopied": "Clave pública copiada"
+  },
+  "tooltips": {
+    "dashboard": "Estadísticas de la aplicación y vista rápida",
+    "users": "Gestiona usuarios registrados, identidades y métodos de acceso",
+    "roles": "Define roles de acceso y políticas de permisos",
+    "webhooks": "Configura notificaciones de eventos en tiempo real",
+    "apiKeys": "Gestiona claves públicas y secretas para integraciones",
+    "oauth": "Configura Google, Apple, Microsoft y otros proveedores",
+    "behaviors": "Personaliza flujos de autenticación y lógica de negocio",
+    "emailTemplates": "Diseña y gestiona emails de sistema localizados",
+    "tokens": "Depura, valida y refresca tokens de autenticación",
+    "settings": "Configuración del sistema y variables de entorno",
+    "exportCsv": "Exporta los datos visibles a un archivo CSV",
+    "exportJson": "Descarga los detalles completos del usuario en formato JSON",
+    "sortBy": "Cambia el orden de la lista por fecha",
+    "groupByRole": "Organiza los usuarios en secciones por su rol",
+    "refresh": "Recarga los datos desde el servidor",
+    "copyId": "Copiar ID al portapapeles",
+    "editApp": "Cambia el nombre y logo del panel administrativo",
+    "state": "Filtrar por estado activo o inactivo"
   }
 }

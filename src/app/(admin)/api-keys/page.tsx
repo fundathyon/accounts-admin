@@ -49,6 +49,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { App, APIKeyListItem } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -308,30 +313,44 @@ export default function ApiKeysPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Select value={envFilter} onValueChange={(v: any) => setEnvFilter(v)}>
-                  <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                      <SelectValue placeholder={t('apiKeys.environment') || "Env"} />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all') || "All Envs"}</SelectItem>
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="staging">Staging</SelectItem>
-                    <SelectItem value="development">Development</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Select value={envFilter} onValueChange={(v: any) => setEnvFilter(v)}>
+                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('apiKeys.environment') || "Env"} />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all') || "All Envs"}</SelectItem>
+                        <SelectItem value="production">Production</SelectItem>
+                        <SelectItem value="staging">Staging</SelectItem>
+                        <SelectItem value="development">Development</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.state')}
+                  </TooltipContent>
+                </Tooltip>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                  className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
-                >
-                  {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                  {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                      className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
+                    >
+                      {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+                      {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.sortBy')}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
 
