@@ -10,7 +10,15 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  AlertTriangle,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -44,9 +52,10 @@ export default function SettingsPage() {
   const [hasRevealedEnvVars, setHasRevealedEnvVars] = useState(false);
 
   useEffect(() => {
-    setSecretApiKey(savedSecretKey);
+    // We don't auto-populate the secretApiKey state with the saved value for security
+    // setSecretApiKey(savedSecretKey);
     setPublishableApiKey(savedPublishableKey);
-  }, [savedSecretKey, savedPublishableKey]);
+  }, [savedPublishableKey]); // Also removed savedSecretKey from deps to avoid unnecessary cycles
 
   const handleSaveKey = () => {
     if (!secretApiKey.trim()) {
@@ -133,86 +142,98 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-8">{t('settings.title')}</h1>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        <Card className="p-8 flex flex-col">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-              <Key className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{t('settings.secretKey')}</CardTitle>
-              <CardDescription>{t('settings.secretKeyDesc')}</CardDescription>
-            </div>
-          </div>
-          <div className="flex flex-col flex-1 space-y-4">
-            <div className="space-y-2">
-              <Label>{t('settings.secretKey')}</Label>
-              <div className="relative">
-                <Input
-                  type={showKey ? 'text' : 'password'}
-                  placeholder={t('settings.secretKeyPlaceholder')}
-                  value={secretApiKey}
-                  onChange={(e) => setSecretApiKey(e.target.value)}
-                  className="pr-12 font-mono"
-                />
-                <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowKey((v) => !v)}>
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
+          <Card className="p-8 flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <Key className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{t('settings.secretKey')}</CardTitle>
+                <CardDescription>{t('settings.secretKeyDesc')}</CardDescription>
               </div>
             </div>
-            <div className="flex gap-3 mt-auto pt-4">
-              <Button onClick={handleSaveKey} className="flex-1 gap-2">
-                <Key className="w-4 h-4" /> {t('settings.saveKey')}
-              </Button>
-              {savedSecretKey && (
-                <Button variant="outline" onClick={handleClearKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
-                  {t('common.delete')}
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+            <div className="flex flex-col flex-1 space-y-4">
+              <div className="space-y-2">
+                <Label>{t('settings.secretKey')}</Label>
+                <div className="relative">
+                  <Input
+                    type="password"
+                    placeholder={savedSecretKey ? t('settings.secretKeySetPlaceholder') : t('settings.secretKeyPlaceholder')}
+                    value={secretApiKey}
+                    onChange={(e) => setSecretApiKey(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-auto pt-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handleSaveKey} className="flex-1 gap-2">
+                      <Key className="w-4 h-4" /> {t('settings.saveKey')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.saveSettings')}
+                  </TooltipContent>
+                </Tooltip>
 
-        <Card className="p-8 flex flex-col">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{t('settings.publishableKey')}</CardTitle>
-              <CardDescription>{t('settings.publishableKeyDesc')}</CardDescription>
-            </div>
-          </div>
-          <div className="flex flex-col flex-1 space-y-4">
-            <div className="space-y-2">
-              <Label>{t('settings.publishableKey')}</Label>
-              <div className="relative">
-                <Input
-                  type={showPublishableKey ? 'text' : 'password'}
-                  placeholder={t('settings.publishableKeyPlaceholder')}
-                  value={publishableApiKey}
-                  onChange={(e) => setPublishableApiKey(e.target.value)}
-                  className="pr-12 font-mono"
-                />
-                <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowPublishableKey((v) => !v)}>
-                  {showPublishableKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
+                {savedSecretKey && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" onClick={handleClearKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                        {t('common.delete')}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('tooltips.clearKey')}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground px-1">
-                {t('settings.getPublishableHint')}
-              </p>
             </div>
-            <div className="flex gap-3 mt-auto pt-4">
-              <Button onClick={handleSavePublishableKey} className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-500">
-                <Users className="w-4 h-4" /> {t('settings.savePublishableKey')}
-              </Button>
-              {savedPublishableKey && (
-                <Button variant="outline" onClick={handleClearPublishableKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
-                  {t('common.delete')}
+          </Card>
+
+          <Card className="p-8 flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{t('settings.publishableKey')}</CardTitle>
+                <CardDescription>{t('settings.publishableKeyDesc')}</CardDescription>
+              </div>
+            </div>
+            <div className="flex flex-col flex-1 space-y-4">
+              <div className="space-y-2">
+                <Label>{t('settings.publishableKey')}</Label>
+                <div className="relative">
+                  <Input
+                    type={showPublishableKey ? 'text' : 'password'}
+                    placeholder={t('settings.publishableKeyPlaceholder')}
+                    value={publishableApiKey}
+                    onChange={(e) => setPublishableApiKey(e.target.value)}
+                    className="pr-12 font-mono"
+                  />
+                  <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowPublishableKey((v) => !v)}>
+                    {showPublishableKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground px-1">
+                  {t('settings.getPublishableHint')}
+                </p>
+              </div>
+              <div className="flex gap-3 mt-auto pt-4">
+                <Button onClick={handleSavePublishableKey} className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-500">
+                  <Users className="w-4 h-4" /> {t('settings.savePublishableKey')}
                 </Button>
-              )}
+                {savedPublishableKey && (
+                  <Button variant="outline" onClick={handleClearPublishableKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                    {t('common.delete')}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
         </div>
 
         <Card className="overflow-hidden">

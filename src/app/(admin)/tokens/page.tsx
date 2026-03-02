@@ -429,36 +429,58 @@ function TokenSection({
                 className="w-full flex-1 min-h-[200px]"
               />
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => onValidate(tokenValue.trim())}
-                disabled={loading || !tokenValue.trim()}
-                className="gap-1.5"
-              >
-                {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {loading ? t('tokens.validating') : t('tokens.validate')}
-              </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onCopy(tokenValue, copyFieldId)}
-                  disabled={!tokenValue.trim()}
-                >
-                  {copiedField === copyFieldId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {t('common.copy')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onTokenChange('')}
-                  disabled={!tokenValue.trim()}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  {t('tokens.clear')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onValidate(tokenValue.trim())}
+                      disabled={loading || !tokenValue.trim()}
+                      className="gap-1.5"
+                    >
+                      {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {loading ? t('tokens.validating') : t('tokens.validate')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.validateToken')}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onCopy(tokenValue, copyFieldId)}
+                      disabled={!tokenValue.trim()}
+                    >
+                      {copiedField === copyFieldId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {t('common.copy')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.copyId')}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onTokenChange('')}
+                      disabled={!tokenValue.trim()}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {t('tokens.clear')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('tooltips.clearInput')}
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="shrink-0 space-y-1">
                 {tokenValue.trim() && (
@@ -728,10 +750,17 @@ export default function TokensPage() {
           </h1>
           <p className="text-muted-foreground mt-1">{t('tokens.subtitle')}</p>
         </div>
-        <Button onClick={openGetAccessDialog} className="gap-2 shrink-0">
-          <RefreshCw className="w-4 h-4" />
-          {t('tokens.getAccessToken')}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button onClick={openGetAccessDialog} className="gap-2 shrink-0">
+              <RefreshCw className="w-4 h-4" />
+              {t('tokens.getAccessToken')}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {t('tooltips.getToken')}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="space-y-4">

@@ -14,6 +14,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { EmailAuthConfig } from './email-auth-config-view';
 
@@ -349,9 +354,16 @@ export function EmailAuthConfigForm({
                 <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
                     {t('common.cancel')}
                 </Button>
-                <Button onClick={() => onSave(config)} disabled={isSubmitting}>
-                    {isSubmitting ? t('behaviors.saving') : t('behaviors.saveChanges')}
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button onClick={() => onSave(config)} disabled={isSubmitting}>
+                            {isSubmitting ? t('behaviors.saving') : t('behaviors.saveChanges')}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {t('tooltips.saveSettings')}
+                    </TooltipContent>
+                </Tooltip>
             </div>
         </div>
     );

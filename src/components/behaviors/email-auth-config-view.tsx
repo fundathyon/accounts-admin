@@ -4,6 +4,11 @@ import { Mail, Link2, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export interface EmailAuthConfig {
@@ -111,6 +116,7 @@ export function EmailAuthConfigView({ config, onToggleVerification, togglingVeri
         </div>
       )}
 
+
       <div className="grid gap-4 md:grid-cols-2">
         <ConfigSection icon={<Mail className="w-4 h-4 text-sky-400" />} title={t('emailAuth.email')}>
           <ConfigRow label={t('emailAuth.active')} value={<BoolBadge value={email.enabled} />} />
@@ -180,20 +186,27 @@ export function EmailAuthConfigView({ config, onToggleVerification, togglingVeri
           <ConfigRow label={t('emailAuth.ttlSec')} value={<span className="font-mono">{verification.ttl_seconds ?? '—'}</span>} />
           {onToggleVerification && (
             <div className="pt-3 mt-2 border-t border-border/50">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onToggleVerification}
-                disabled={togglingVerification}
-                className="gap-2"
-              >
-                {togglingVerification ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <ShieldCheck className="w-4 h-4" />
-                )}
-                {verification.enabled ? t('emailAuth.deactivateVerification') : t('emailAuth.activateVerification')}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onToggleVerification}
+                    disabled={togglingVerification}
+                    className="gap-2"
+                  >
+                    {togglingVerification ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="w-4 h-4" />
+                    )}
+                    {verification.enabled ? t('emailAuth.deactivateVerification') : t('emailAuth.activateVerification')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {verification.enabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated')}
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
         </ConfigSection>
