@@ -24,6 +24,11 @@ import {
   KeyRound,
   Download,
   FileCode,
+  Search,
+  Filter,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  ShieldOff,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -50,6 +55,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,6 +103,82 @@ export default function UsersPage() {
   const [isPublicKeyModalOpen, setIsPublicKeyModalOpen] = useState(false);
   const [publicKeyValue, setPublicKeyValue] = useState<string | null>(null);
   const [publicKeyLoading, setPublicKeyLoading] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [loginFilter, setLoginFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [isGroupedByRole, setIsGroupedByRole] = useState(false);
+  const [isRevokeRefreshOpen, setIsRevokeRefreshOpen] = useState(false);
+  const [revokeByTokenValue, setRevokeByTokenValue] = useState('');
+  const [revokeByIdValue, setRevokeByIdValue] = useState('');
+  const [revokeLoading, setRevokeLoading] = useState(false);
+  const [revokeMode, setRevokeMode] = useState<'token' | 'id'>('token');
+
+  const handleRevokeByToken = async () => {
+    const token = revokeByTokenValue.trim();
+    if (!token) {
+      showNotification('Introduce el refresh token (JWT) a revocar', 'error');
+      return;
+    }
+    if (!savedSecretKey) {
+      showNotification(t('users.configSecretKey') || 'Configura la API Key secreta', 'error');
+      return;
+    }
+    setRevokeLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/revoke-refresh'), {
+        method: 'POST',
+        headers: {
+          'X-Secret-API-Key': savedSecretKey,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.success !== false) {
+        showNotification('Refresh token revocado correctamente', 'success');
+        setRevokeByTokenValue('');
+        setIsRevokeRefreshOpen(false);
+      } else {
+        showNotification(data.error?.message || data.errors?.[0]?.message || 'Error al revocar', 'error');
+      }
+    } catch {
+      showNotification('Error al conectar', 'error');
+    } finally {
+      setRevokeLoading(false);
+    }
+  };
+
+  const handleRevokeById = async () => {
+    const id = revokeByIdValue.trim();
+    if (!id) {
+      showNotification('Introduce el ID del refresh token a revocar', 'error');
+      return;
+    }
+    if (!savedSecretKey) {
+      showNotification(t('users.configSecretKey') || 'Configura la API Key secreta', 'error');
+      return;
+    }
+    setRevokeLoading(true);
+    try {
+      const res = await fetch(apiUrl(`/api/revoke-refresh/${encodeURIComponent(id)}`), {
+        method: 'DELETE',
+        headers: { 'X-Secret-API-Key': savedSecretKey },
+      });
+      const data = await res.json();
+      if (res.ok && data.success !== false) {
+        showNotification('Refresh token revocado correctamente', 'success');
+        setRevokeByIdValue('');
+        setIsRevokeRefreshOpen(false);
+      } else {
+        showNotification(data.error?.message || data.errors?.[0]?.message || 'Error al revocar', 'error');
+      }
+    } catch {
+      showNotification('Error al conectar', 'error');
+    } finally {
+      setRevokeLoading(false);
+    }
+  };
 
   const fetchPublicKeyJWT = async () => {
     setIsPublicKeyModalOpen(true);
@@ -436,14 +522,34 @@ export default function UsersPage() {
                 </DropdownMenu>
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={fetchPublicKeyJWT}
-              className="gap-2"
-              title="Ver la clave pública JWT para verificar tokens"
-            >
-              <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRevokeRefreshOpen(true)}
+                  className="gap-2"
+                >
+                  <ShieldOff className="w-4 h-4" /> Revocar refresh token
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Revocar un refresh token por JWT o por ID (cierre de sesión en un dispositivo).
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={fetchPublicKeyJWT}
+                  className="gap-2"
+                >
+                  <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}
+              </TooltipContent>
+            </Tooltip>
             {!savedSecretKey && (
               <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
                 <Link href={settingsHref}>
@@ -1100,6 +1206,91 @@ export default function UsersPage() {
               </div>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isRevokeRefreshOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsRevokeRefreshOpen(false);
+            setRevokeByTokenValue('');
+            setRevokeByIdValue('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldOff className="w-5 h-5 text-primary" />
+              Revocar refresh token
+            </DialogTitle>
+            <DialogDescription>
+              Revoca un refresh token (p. ej. para cerrar sesión en un dispositivo). Requiere API Key secreta. Puedes revocar por JWT o por ID del token.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex gap-2 border-b border-border pb-2">
+              <Button
+                type="button"
+                variant={revokeMode === 'token' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setRevokeMode('token')}
+              >
+                Por JWT
+              </Button>
+              <Button
+                type="button"
+                variant={revokeMode === 'id' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setRevokeMode('id')}
+              >
+                Por ID
+              </Button>
+            </div>
+            {revokeMode === 'token' ? (
+              <div className="space-y-2">
+                <Label>Refresh token (JWT)</Label>
+                <Input
+                  placeholder="eyJhbGciOiJSUzI1NiIs..."
+                  value={revokeByTokenValue}
+                  onChange={(e) => setRevokeByTokenValue(e.target.value)}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  onClick={handleRevokeByToken}
+                  disabled={revokeLoading}
+                  className="gap-2 w-full"
+                >
+                  {revokeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Revocar por token
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>ID del refresh token</Label>
+                <Input
+                  placeholder="uuid-del-token"
+                  value={revokeByIdValue}
+                  onChange={(e) => setRevokeByIdValue(e.target.value)}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  El ID es el claim &quot;id&quot; del JWT del refresh token.
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleRevokeById}
+                  disabled={revokeLoading}
+                  className="gap-2 w-full"
+                >
+                  {revokeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Revocar por ID
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
