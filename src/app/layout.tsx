@@ -11,6 +11,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Foundathyon Admin",
   description: "Next-gen authentication admin panel",
+  icons: {
+    icon: "/accounts-small.svg",
+  },
 };
 
 export default function RootLayout({
