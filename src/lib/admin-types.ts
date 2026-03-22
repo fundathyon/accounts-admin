@@ -122,6 +122,13 @@ export interface APIKeyListItem {
   updated_at: string;
 }
 
+/** Whitelist redirect target (API: redirect_urls, auth_type oauth). */
+export interface OAuthRedirectItem {
+  url: string;
+  platform: 'web' | 'android' | 'ios' | 'desktop';
+  name?: string;
+}
+
 export interface OAuthConfig {
   id: string;
   app_id: string;
@@ -136,4 +143,6 @@ export interface OAuthConfig {
   redirect_uri_android?: string;
   redirect_uri_ios?: string;
   redirect_uri_desktop?: string;
+  /** Optional: returned if API includes whitelist rows in the future */
+  redirects?: OAuthRedirectItem[];
 }

@@ -11,5 +11,12 @@ export function apiUrl(path: string): string {
   return `${BASE_PATH}${path}`
 }
 
+/** Ruta para `<Link href>` respetando `NEXT_PUBLIC_BASE_PATH`. */
+export function buildAdminHref(path: string): string {
+  const bp = BASE_PATH || ''
+  if (path === '/') return bp || '/'
+  return `${bp}${path}`.replace(/\/+/g, '/') || '/'
+}
+
 export const INTERNAL_API_URL = process.env.INTERNAL_API_URL || 'http://localhost:8000/accounts'
 export const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'secret'
