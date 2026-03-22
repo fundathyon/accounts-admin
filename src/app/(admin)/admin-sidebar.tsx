@@ -26,6 +26,7 @@ import {
   Palette,
   Image as ImageIcon,
   Bell,
+  ScrollText,
 } from 'lucide-react';
 import { cn, BASE_PATH } from '@/lib/utils';
 import { useAdmin } from '@/context/admin-context';
@@ -373,6 +374,31 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        <div className="px-2 pb-3 border-b border-sidebar-border group-data-[state=collapsed]/sidebar-wrapper:hidden">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t('sidebar.releaseNotesSection')}
+          </p>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarMenuButton asChild className="h-9">
+                    <Link
+                      href={buildHref('/release-notes')}
+                      className="flex items-center gap-2 overflow-hidden"
+                    >
+                      <ScrollText className="size-4 shrink-0" aria-hidden />
+                      <span className="truncate">{t('sidebar.releaseNotesLink')}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="center" sideOffset={10} className="font-medium">
+                  {t('sidebar.releaseNotesLink')}
+                </TooltipContent>
+              </Tooltip>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

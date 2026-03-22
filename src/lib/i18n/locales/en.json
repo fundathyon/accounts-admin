@@ -30,7 +30,77 @@
     "appUpdated": "Application updated successfully",
     "appUpdateError": "Error updating application",
     "pendingOAuthMigrationAlert": "Pending: migrate legacy OAuth redirect URLs (see toast or OAuth Providers)",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "releaseNotesSection": "Release notes",
+    "releaseNotesLink": "0.1.0 → 0.2.0"
+  },
+  "releaseNotes": {
+    "title": "Release notes",
+    "subtitle": "What’s new from v0.1.0 to v0.2.0. Notes are grouped by topic so you can scan what matters to you.",
+    "v020Title": "v0.2.0",
+    "v020Date": "Current · Accounts Admin",
+    "v020": {
+      "intro": "This release focuses on safer, clearer OAuth redirects, better visibility when something must be migrated, and new sign-in options on the Accounts API side. Use the sections below to see each area at a glance.",
+      "sections": {
+        "oauthApi": {
+          "title": "Microsoft & Apple OAuth (Accounts API)",
+          "lead": "Besides Google, the Accounts API can now complete the same login flow for Microsoft (Entra ID / Azure AD) and Sign in with Apple. You register each provider like before; callback and “get link” behaviour stay familiar.",
+          "i1": "Microsoft: uses the Microsoft identity platform (multi-tenant `common`), exchanges the auth code for tokens, and reads the profile from Microsoft Graph.",
+          "i2": "Apple: uses Sign in with Apple’s authorize URL; the token step uses Apple’s required JWT client secret (configured with your Team ID, Key ID, and `.p8` private key—see Accounts API docs).",
+          "i3": "In the admin, you still choose the provider when building or testing OAuth links; no separate screen only for Microsoft or Apple.",
+          "i4": "Shared internals: user profile is normalized the same way as Google so tokens and user records stay consistent across providers."
+        },
+        "redirects": {
+          "title": "Redirects & migration",
+          "i1": "Whitelist several redirect URLs per platform (web, mobile, desktop) instead of relying on a single legacy field.",
+          "i2": "Optional opaque token (`rt`) in the OAuth state when you need to target one whitelist row from the “get link” dialog.",
+          "i3": "If old redirect columns are still in use, the app prompts you to move values into the whitelist—notifications and OAuth Providers link you to the fix."
+        },
+        "adminUi": {
+          "title": "Notifications & OAuth in the admin",
+          "i1": "Notifications page lists pending work (for example OAuth redirect migration) so it doesn’t get lost.",
+          "i2": "OAuth link dialog: pick platform, role, optional destination redirect, then copy the provider’s authorization URL.",
+          "i3": "Sidebar shows a subtle alert on the account menu when OAuth migration still needs attention."
+        },
+        "usersBranding": {
+          "title": "Users & branding",
+          "i1": "User detail: change the user’s role from the profile and small actions like copying an email from a login method.",
+          "i2": "Favicon updated to match the Accounts branding."
+        },
+        "meta": {
+          "title": "Language & version",
+          "i1": "New and updated English/Spanish strings for OAuth redirects, migration, and notifications.",
+          "i2": "Sidebar version label shows v0.2.0."
+        }
+      }
+    },
+    "v010Title": "v0.1.0",
+    "v010Date": "Baseline · Accounts Admin Community",
+    "v010": {
+      "intro": "The first public admin slice for Accounts: manage apps, users, and integrations, with Google OAuth and session login.",
+      "sections": {
+        "foundation": {
+          "title": "Core areas",
+          "i1": "Dashboard, users, roles & policies, webhooks, API keys, OAuth providers, behaviors, email templates, tokens, and settings.",
+          "i2": "Central place to work with your Accounts app and related configuration."
+        },
+        "security": {
+          "title": "API access & login",
+          "i1": "Secret API Key to call Accounts from the admin (stored client-side when you save it).",
+          "i2": "Session-backed login and BFF routes so the browser talks to Accounts safely."
+        },
+        "oauthGoogle": {
+          "title": "Google OAuth",
+          "i1": "Configure Google as an OAuth provider and run the standard authorization + callback flow with Accounts.",
+          "i2": "Same patterns you still use today; v0.2.0 extends them to more providers and redirect rules."
+        },
+        "experience": {
+          "title": "Look & language",
+          "i1": "Light and dark themes.",
+          "i2": "English and Spanish UI, plus a link to documentation from the account menu."
+        }
+      }
+    }
   },
   "notifications": {
     "title": "Notifications",
