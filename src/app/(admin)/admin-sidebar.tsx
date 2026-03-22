@@ -25,6 +25,7 @@ import {
   Pencil,
   Palette,
   Image as ImageIcon,
+  Bell,
 } from 'lucide-react';
 import { cn, BASE_PATH } from '@/lib/utils';
 import { useAdmin } from '@/context/admin-context';
@@ -101,7 +102,7 @@ interface AppInfo {
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { savedSecretKey, apiUrl } = useAdmin();
+  const { savedSecretKey, apiUrl, pendingOAuthLegacyMigration } = useAdmin();
   const { t, locale, setLocale } = useI18n();
   const { theme, setTheme } = useTheme();
   const { isMobile } = useSidebar();
@@ -380,9 +381,29 @@ export function AdminSidebar() {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">
-                    {(adminUser || 'A').charAt(0).toUpperCase()}
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          'relative flex shrink-0 aspect-square size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs',
+                          pendingOAuthLegacyMigration && 'cursor-help'
+                        )}
+                      >
+                        {(adminUser || 'A').charAt(0).toUpperCase()}
+                        {pendingOAuthLegacyMigration && (
+                          <span
+                            className="pointer-events-none absolute right-0 top-0 size-2.5 translate-x-px -translate-y-px rounded-full bg-orange-500 ring-2 ring-sidebar"
+                            aria-hidden
+                          />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    {pendingOAuthLegacyMigration && (
+                      <TooltipContent side="right" align="center" className="max-w-[260px] text-xs leading-snug">
+                        {t('sidebar.pendingOAuthMigrationAlert')}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
                   <div className="grid min-w-0 flex-1 text-left text-sm leading-tight truncate group-data-[state=collapsed]/sidebar-wrapper:hidden">
                     <span className="truncate font-medium">{adminUser ?? t('sidebar.adminUser')}</span>
                     <span className="truncate text-xs text-muted-foreground">
@@ -411,6 +432,21 @@ export function AdminSidebar() {
                   <Link href={buildHref('/settings')}>
                     <Settings className="mr-2 size-4" />
                     {t('sidebar.settings')}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={buildHref('/notifications')}
+                    className="relative flex w-full cursor-pointer items-center"
+                  >
+                    <Bell className="mr-2 size-4 shrink-0" />
+                    <span className="flex-1">{t('sidebar.notifications')}</span>
+                    {pendingOAuthLegacyMigration ? (
+                      <span
+                        className="ml-1 size-2 shrink-0 rounded-full bg-orange-500 ring-2 ring-popover"
+                        aria-hidden
+                      />
+                    ) : null}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSub>

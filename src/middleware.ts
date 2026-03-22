@@ -25,6 +25,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Migración OAuth legacy: el BFF reenvía con X-API-KEY; la autorización real es la Secret Key.
+  // Sin esta excepción, un 302 al login devolvía HTML y el cliente no parseaba JSON (sin aviso).
+  if (pathname.startsWith('/api/oauth-configs/migration/')) {
+    return NextResponse.next();
+  }
+
   // Allow static assets and Next.js internals
   if (
     pathname.startsWith('/_next') ||

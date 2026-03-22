@@ -3,7 +3,7 @@
 import {
   createContext,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useState,
   useCallback,
   type ReactNode,
@@ -22,7 +22,10 @@ interface AdminContextValue {
   setSavedSecretKey: (v: string) => void;
   setSavedPublishableKey: (v: string) => void;
   apiUrl: (path: string) => string;
-  showNotification: (message: string, type: 'success' | 'error') => void;
+  showNotification: (message: string, type: 'success' | 'error' | 'warning') => void;
+  /** True si el API reporta migración de redirects OAuth legacy pendiente (indicador en perfil). */
+  pendingOAuthLegacyMigration: boolean;
+  setPendingOAuthLegacyMigration: (v: boolean) => void;
 }
 
 const AdminContext = createContext<AdminContextValue | null>(null);
@@ -30,7 +33,10 @@ const AdminContext = createContext<AdminContextValue | null>(null);
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [savedSecretKey, setSavedSecretKeyState] = useState('');
   const [savedPublishableKey, setSavedPublishableKeyState] = useState('');
-  useEffect(() => {
+  const [pendingOAuthLegacyMigration, setPendingOAuthLegacyMigration] = useState(false);
+  // useLayoutEffect: hidratar antes del paint para que los hijos (p. ej. migración OAuth)
+  // vean ya la Secret Key en el primer useEffect y no salgan con clave vacía.
+  useLayoutEffect(() => {
     const s = localStorage.getItem(STORAGE_KEYS.secret);
     if (s) setSavedSecretKeyState(s);
     const p = localStorage.getItem(STORAGE_KEYS.publishable) || localStorage.getItem('authify_pusheable_key');
@@ -54,8 +60,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     setSavedPublishableKeyState(v);
   }, []);
 
-  const showNotification = useCallback((message: string, type: 'success' | 'error') => {
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
     if (type === 'success') toast.success(message);
+    else if (type === 'warning') toast.warning(message);
     else toast.error(message);
   }, []);
 
@@ -68,6 +75,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         setSavedPublishableKey,
         apiUrl: apiUrlUtil,
         showNotification,
+        pendingOAuthLegacyMigration,
+        setPendingOAuthLegacyMigration,
       }}
     >
       {children}

@@ -1,4 +1,5 @@
 import { AdminProvider } from '@/context/admin-context';
+import { OAuthLegacyMigrationNotifier } from '@/components/oauth-legacy-migration-notifier';
 import { AdminSidebar } from './admin-sidebar';
 import { AdminSessionGuard } from '@/components/admin-session-guard';
 import { OnboardingGuard } from '@/components/onboarding-guard';
@@ -13,6 +14,7 @@ export default function AdminLayout({
 }) {
   return (
     <AdminProvider>
+      <OAuthLegacyMigrationNotifier />
       <AdminSessionGuard>
         <OnboardingGuard>
           <TooltipProvider delayDuration={300}>
