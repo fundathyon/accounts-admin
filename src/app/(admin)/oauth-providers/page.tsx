@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { LogIn, Plus, Loader2, Key, ChevronDown, ChevronUp, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, Filter, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
+import { LogIn, Plus, Loader2, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -19,7 +19,70 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
-import type { OAuthConfig, Role } from '@/lib/admin-types';
+import type { OAuthConfig, OAuthRedirectItem, Role } from '@/lib/admin-types';
+
+type OAuthPlatform = OAuthRedirectItem['platform'];
+
+/** Row from GET /oauth-configs/:id/redirects (Secret Key). */
+interface OAuthRedirectOption {
+  url: string;
+  platform: string;
+  name?: string;
+  rt: string;
+  /** True when URL comes from oauth_configs legacy columns (omit redirect_url on get-link). */
+  legacy?: boolean;
+}
+
+interface RedirectsLegacyDeprecation {
+  active: boolean;
+  deprecation_version: string;
+  message: string;
+}
+
+interface RedirectFormRow {
+  url: string;
+  platform: OAuthPlatform;
+  name: string;
+}
+
+function normalizeRedirectsPayload(rows: RedirectFormRow[]): OAuthRedirectItem[] {
+  return rows
+    .filter((r) => r.url.trim() && r.platform)
+    .map((r) => ({
+      url: r.url.trim(),
+      platform: r.platform,
+      ...(r.name.trim() ? { name: r.name.trim() } : {}),
+    }));
+}
+
+function redirectsFromProvider(p: OAuthConfig): RedirectFormRow[] {
+  const list = p.redirects;
+  if (Array.isArray(list) && list.length > 0) {
+    return list.map((r) => ({
+      url: r.url ?? '',
+      platform: (r.platform as OAuthPlatform) || 'web',
+      name: r.name ?? '',
+    }));
+  }
+  const rows: RedirectFormRow[] = [];
+  if (p.redirect_uri_web?.trim()) rows.push({ url: p.redirect_uri_web.trim(), platform: 'web', name: '' });
+  if (p.redirect_uri_android?.trim()) rows.push({ url: p.redirect_uri_android.trim(), platform: 'android', name: '' });
+  if (p.redirect_uri_ios?.trim()) rows.push({ url: p.redirect_uri_ios.trim(), platform: 'ios', name: '' });
+  if (p.redirect_uri_desktop?.trim()) rows.push({ url: p.redirect_uri_desktop.trim(), platform: 'desktop', name: '' });
+  return rows;
+}
+
+/** First URL per platform for API legacy columns (callback sin `rt`). */
+function deriveLegacyRedirectUris(rows: RedirectFormRow[]) {
+  const norm = normalizeRedirectsPayload(rows);
+  const first = (platform: OAuthPlatform) => norm.find((r) => r.platform === platform)?.url?.trim() ?? '';
+  return {
+    redirect_uri_web: first('web'),
+    redirect_uri_android: first('android') || undefined,
+    redirect_uri_ios: first('ios') || undefined,
+    redirect_uri_desktop: first('desktop') || undefined,
+  };
+}
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
@@ -36,11 +99,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,14 +141,11 @@ interface OAuthConfigForm {
   callback_uri: string;
   scopes: string;
   enabled: boolean;
-  redirect_uri_web: string;
-  redirect_uri_android: string;
-  redirect_uri_ios: string;
-  redirect_uri_desktop: string;
+  redirects: RedirectFormRow[];
 }
 
 const initialForm: OAuthConfigForm = {
-  provider: '',
+  provider: 'google',
   name: '',
   client_id: '',
   client_secret: '',
@@ -98,14 +153,17 @@ const initialForm: OAuthConfigForm = {
   callback_uri: '',
   scopes: 'email profile openid',
   enabled: true,
-  redirect_uri_web: '',
-  redirect_uri_android: '',
-  redirect_uri_ios: '',
-  redirect_uri_desktop: '',
+  redirects: [],
 };
 
 export default function OAuthProvidersPage() {
-  const { apiUrl, showNotification, savedSecretKey, savedPublishableKey } = useAdmin();
+  const {
+    apiUrl,
+    showNotification,
+    savedSecretKey,
+    savedPublishableKey,
+    setPendingOAuthLegacyMigration,
+  } = useAdmin();
   const { t } = useI18n();
   const [providers, setProviders] = useState<OAuthConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,17 +172,24 @@ export default function OAuthProvidersPage() {
   const [selectedProvider, setSelectedProvider] = useState<OAuthConfig | null>(null);
   const [formData, setFormData] = useState<OAuthConfigForm>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [copyJustClicked, setCopyJustClicked] = useState(false);
   const [linkDialogProvider, setLinkDialogProvider] = useState<OAuthConfig | null>(null);
   const [linkPlatform, setLinkPlatform] = useState<string>('web');
   const [linkRole, setLinkRole] = useState<string>('default');
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkResult, setLinkResult] = useState<string | null>(null);
+  const [linkRedirectUrl, setLinkRedirectUrl] = useState('');
+  const [linkRt, setLinkRt] = useState('');
+  const [linkRedirectOptions, setLinkRedirectOptions] = useState<OAuthRedirectOption[]>([]);
+  const [linkLegacyDeprecation, setLinkLegacyDeprecation] = useState<RedirectsLegacyDeprecation | null>(null);
+  const [linkRedirectsLoading, setLinkRedirectsLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [providerFilter, setProviderFilter] = useState<string>('all');
+  const [migrationPendingIds, setMigrationPendingIds] = useState<Set<string>>(new Set());
+  const [migrationPending, setMigrationPending] = useState(false);
+  const [migrationApplyLoading, setMigrationApplyLoading] = useState(false);
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -151,6 +216,98 @@ export default function OAuthProvidersPage() {
   useEffect(() => {
     fetchProviders();
   }, [savedSecretKey]);
+
+  useEffect(() => {
+    if (!savedSecretKey?.trim()) {
+      setMigrationPending(false);
+      setMigrationPendingIds(new Set());
+      setPendingOAuthLegacyMigration(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(apiUrl('/api/oauth-configs/migration/legacy-redirects-status'), {
+          credentials: 'include',
+          headers: { 'X-Secret-API-Key': savedSecretKey },
+        });
+        const raw = await res.text();
+        let data: {
+          success?: boolean;
+          data?: { pending_migration?: boolean; pending?: { oauth_config_id: string }[] };
+        } = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          if (!cancelled) {
+            setMigrationPending(false);
+            setMigrationPendingIds(new Set());
+            setPendingOAuthLegacyMigration(false);
+          }
+          return;
+        }
+        if (cancelled || !res.ok || !data.success) {
+          if (!cancelled) {
+            setMigrationPending(false);
+            setMigrationPendingIds(new Set());
+            setPendingOAuthLegacyMigration(false);
+          }
+          return;
+        }
+        const list = data.data?.pending ?? [];
+        const ids = new Set(list.map((x) => x.oauth_config_id));
+        const pending = !!data.data?.pending_migration;
+        setMigrationPending(pending);
+        setMigrationPendingIds(ids);
+        setPendingOAuthLegacyMigration(pending);
+      } catch {
+        if (!cancelled) {
+          setMigrationPending(false);
+          setMigrationPendingIds(new Set());
+          setPendingOAuthLegacyMigration(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [savedSecretKey, apiUrl, setPendingOAuthLegacyMigration]);
+
+  const handleRunLegacyMigration = async () => {
+    if (!savedSecretKey?.trim()) {
+      showNotification(t('oauth.secretKeyRequired'), 'error');
+      return;
+    }
+    setMigrationApplyLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/oauth-configs/migration/legacy-redirects-apply'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-Secret-API-Key': savedSecretKey },
+      });
+      const raw = await res.text();
+      let data: { success?: boolean; error?: { message?: string } } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        showNotification(t('oauth.errorConnection'), 'error');
+        return;
+      }
+      if (data.success) {
+        showNotification(t('oauth.migrationSuccess'), 'success');
+        setMigrationPending(false);
+        setMigrationPendingIds(new Set());
+        setPendingOAuthLegacyMigration(false);
+        fetchProviders();
+      } else {
+        showNotification(data.error?.message || t('oauth.migrationError'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.errorConnection'), 'error');
+    } finally {
+      setMigrationApplyLoading(false);
+    }
+  };
 
   const filteredProviders = providers.filter(p => {
     const query = searchQuery.toLowerCase();
@@ -184,6 +341,69 @@ export default function OAuthProvidersPage() {
     fetchRoles();
   }, [savedSecretKey]);
 
+  useEffect(() => {
+    if (!linkDialogProvider || !savedSecretKey) {
+      setLinkRedirectOptions([]);
+      setLinkLegacyDeprecation(null);
+      setLinkRedirectsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLinkRedirectsLoading(true);
+    fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(linkDialogProvider.id)}/redirects`), {
+      headers: { 'X-Secret-API-Key': savedSecretKey },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.success || data.data == null) {
+          setLinkRedirectOptions([]);
+          setLinkLegacyDeprecation(null);
+          return;
+        }
+        const raw = data.data as OAuthRedirectOption[] | { redirects?: OAuthRedirectOption[]; legacy_deprecation?: RedirectsLegacyDeprecation };
+        if (Array.isArray(raw)) {
+          setLinkRedirectOptions(raw);
+          setLinkLegacyDeprecation(null);
+          return;
+        }
+        const list = Array.isArray(raw.redirects) ? raw.redirects : [];
+        setLinkRedirectOptions(list);
+        setLinkLegacyDeprecation(raw.legacy_deprecation && raw.legacy_deprecation.active ? raw.legacy_deprecation : null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLinkRedirectOptions([]);
+          setLinkLegacyDeprecation(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLinkRedirectsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkDialogProvider, savedSecretKey, apiUrl]);
+
+  const linkRedirectsForPlatform = useMemo(
+    () => linkRedirectOptions.filter((r) => r.platform === linkPlatform),
+    [linkRedirectOptions, linkPlatform]
+  );
+
+  /** Por defecto la primera URL de la plataforma; al cambiar plataforma o lista, si la selección actual no aplica, se usa la primera. */
+  useEffect(() => {
+    const list = linkRedirectOptions.filter((r) => r.platform === linkPlatform);
+    if (list.length === 0) {
+      setLinkRedirectUrl('');
+      return;
+    }
+    const firstUrl = list[0].url;
+    setLinkRedirectUrl((prev) => {
+      if (list.some((r) => r.url === prev)) return prev;
+      return firstUrl;
+    });
+  }, [linkPlatform, linkRedirectOptions]);
+
   const generateRandomCallbackKey = (): string => {
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const array = new Uint8Array(32);
@@ -216,13 +436,19 @@ export default function OAuthProvidersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.provider || !formData.client_id?.trim() || !formData.client_secret?.trim() ||
-      !formData.callback_key?.trim() || !formData.callback_uri?.trim() || !formData.redirect_uri_web?.trim()) {
+      !formData.callback_key?.trim() || !formData.callback_uri?.trim()) {
       showNotification(t('oauth.completeFields'), 'error');
+      return;
+    }
+    const legacy = deriveLegacyRedirectUris(formData.redirects);
+    if (!legacy.redirect_uri_web.trim()) {
+      showNotification(t('oauth.redirectWebRequired'), 'error');
       return;
     }
     setIsSubmitting(true);
     try {
-      const payload = {
+      const redirectsPayload = normalizeRedirectsPayload(formData.redirects);
+      const payload: Record<string, unknown> = {
         provider: formData.provider.trim(),
         name: formData.name.trim() || undefined,
         client_id: formData.client_id.trim(),
@@ -231,10 +457,11 @@ export default function OAuthProvidersPage() {
         callback_uri: formData.callback_uri.trim(),
         scopes: formData.scopes.trim() || undefined,
         enabled: formData.enabled,
-        redirect_uri_web: formData.redirect_uri_web.trim(),
-        redirect_uri_android: formData.redirect_uri_android.trim() || undefined,
-        redirect_uri_ios: formData.redirect_uri_ios.trim() || undefined,
-        redirect_uri_desktop: formData.redirect_uri_desktop.trim() || undefined,
+        redirect_uri_web: legacy.redirect_uri_web,
+        redirect_uri_android: legacy.redirect_uri_android,
+        redirect_uri_ios: legacy.redirect_uri_ios,
+        redirect_uri_desktop: legacy.redirect_uri_desktop,
+        redirects: redirectsPayload,
       };
       const res = await fetch(apiUrl('/api/oauth-configs'), {
         method: 'POST',
@@ -263,7 +490,12 @@ export default function OAuthProvidersPage() {
     setIsModalOpen(false);
     setEditingProvider(null);
     setFormData(initialForm);
-    setAdvancedOpen(false);
+  };
+
+  const openCreateModal = () => {
+    setEditingProvider(null);
+    setFormData(initialForm);
+    setIsModalOpen(true);
   };
 
   const openEditModal = (provider: OAuthConfig) => {
@@ -276,10 +508,7 @@ export default function OAuthProvidersPage() {
       callback_uri: provider.callback_uri,
       scopes: provider.scopes ?? 'email profile openid',
       enabled: provider.enabled,
-      redirect_uri_web: provider.redirect_uri_web,
-      redirect_uri_android: provider.redirect_uri_android ?? '',
-      redirect_uri_ios: provider.redirect_uri_ios ?? '',
-      redirect_uri_desktop: provider.redirect_uri_desktop ?? '',
+      redirects: redirectsFromProvider(provider),
     });
     setEditingProvider(provider);
     setSelectedProvider(null);
@@ -289,12 +518,18 @@ export default function OAuthProvidersPage() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProvider) return;
-    if (!formData.client_id?.trim() || !formData.callback_key?.trim() || !formData.callback_uri?.trim() || !formData.redirect_uri_web?.trim()) {
+    if (!formData.client_id?.trim() || !formData.callback_key?.trim() || !formData.callback_uri?.trim()) {
       showNotification(t('oauth.completeFields'), 'error');
+      return;
+    }
+    const legacy = deriveLegacyRedirectUris(formData.redirects);
+    if (!legacy.redirect_uri_web.trim()) {
+      showNotification(t('oauth.redirectWebRequired'), 'error');
       return;
     }
     setIsSubmitting(true);
     try {
+      const redirectsPayload = normalizeRedirectsPayload(formData.redirects);
       const payload: Record<string, unknown> = {
         provider: editingProvider.provider,
         name: formData.name.trim() || undefined,
@@ -303,10 +538,11 @@ export default function OAuthProvidersPage() {
         callback_uri: formData.callback_uri.trim(),
         scopes: formData.scopes.trim() || undefined,
         enabled: formData.enabled,
-        redirect_uri_web: formData.redirect_uri_web.trim(),
-        redirect_uri_android: formData.redirect_uri_android.trim() || undefined,
-        redirect_uri_ios: formData.redirect_uri_ios.trim() || undefined,
-        redirect_uri_desktop: formData.redirect_uri_desktop.trim() || undefined,
+        redirect_uri_web: legacy.redirect_uri_web,
+        redirect_uri_android: legacy.redirect_uri_android,
+        redirect_uri_ios: legacy.redirect_uri_ios,
+        redirect_uri_desktop: legacy.redirect_uri_desktop,
+        redirects: redirectsPayload,
       };
       if (formData.client_secret.trim()) payload.client_secret = formData.client_secret.trim();
       const res = await fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(editingProvider.id)}`), {
@@ -355,21 +591,43 @@ export default function OAuthProvidersPage() {
     setLinkDialogProvider(provider);
     setLinkPlatform('web');
     setLinkRole(roles.length > 0 ? roles[0].name : 'default');
+    setLinkRedirectUrl('');
+    setLinkRt('');
     setLinkResult(null);
   };
 
   const handleFetchOAuthLink = async () => {
     if (!linkDialogProvider || !savedPublishableKey) return;
+    const redirectTarget =
+      linkRedirectUrl.trim() || linkRedirectsForPlatform[0]?.url?.trim() || '';
+    const selectedRow =
+      linkRedirectsForPlatform.find((r) => r.url === linkRedirectUrl) ?? linkRedirectsForPlatform[0];
+    const useLegacyLink = selectedRow?.legacy === true;
+    if (!redirectTarget) {
+      showNotification(t('oauth.linkRedirectRequired'), 'error');
+      return;
+    }
     setLinkLoading(true);
     setLinkResult(null);
     try {
-      const url = apiUrl(`/api/oauths/link?provider=${encodeURIComponent(linkDialogProvider.provider)}&platform=${encodeURIComponent(linkPlatform)}&role=${encodeURIComponent(linkRole)}`);
+      let qs = `provider=${encodeURIComponent(linkDialogProvider.provider)}&platform=${encodeURIComponent(linkPlatform)}&role=${encodeURIComponent(linkRole)}`;
+      if (!useLegacyLink) {
+        qs += `&redirect_url=${encodeURIComponent(redirectTarget)}`;
+      }
+      const url = apiUrl(`/api/oauths/link?${qs}`);
       const res = await fetch(url, {
         headers: { 'X-Publishable-API-Key': savedPublishableKey },
       });
       const data = await res.json();
       if (data.success && data.data) {
-        setLinkResult(data.data);
+        const link = String(data.data);
+        setLinkResult(link);
+        try {
+          await navigator.clipboard.writeText(link);
+          showNotification(t('oauth.linkFetchedAndCopied'), 'success');
+        } catch {
+          showNotification(t('oauth.linkFetchedClipboardFail'), 'warning');
+        }
       } else {
         showNotification(data.error?.message || t('oauth.errorLink'), 'error');
       }
@@ -482,7 +740,7 @@ export default function OAuthProvidersPage() {
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+                <Button onClick={openCreateModal} className="gap-2">
                   <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
                 </Button>
               </TooltipTrigger>
@@ -515,6 +773,31 @@ export default function OAuthProvidersPage() {
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
               <ShieldCheck className="w-4 h-4" /> {t('oauth.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
+
+            {migrationPending && (
+              <div
+                role="status"
+                className="rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1.5 min-w-0">
+                  <p className="text-sm font-semibold text-red-100 flex items-center gap-2">
+                    <AlertTriangle className="size-4 shrink-0 text-red-400" />
+                    {t('oauth.migrationBannerTitle')}
+                  </p>
+                  <p className="text-xs text-red-200/80 leading-relaxed">{t('oauth.migrationV1Deprecation')}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="shrink-0 gap-2 w-full sm:w-auto"
+                  onClick={handleRunLegacyMigration}
+                  disabled={migrationApplyLoading}
+                >
+                  {migrationApplyLoading ? <Loader2 className="size-4 animate-spin" /> : <AlertTriangle className="size-4" />}
+                  {migrationApplyLoading ? t('notifications.migrating') : t('oauth.runMigration')}
+                </Button>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
               <div className="relative flex-1 min-w-[300px]">
@@ -582,7 +865,7 @@ export default function OAuthProvidersPage() {
                 <CardDescription className="mb-6">
                   {t('oauth.noProvidersDesc')}
                 </CardDescription>
-                <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+                <Button onClick={openCreateModal} className="gap-2">
                   <Plus className="w-4 h-4" /> {t('oauth.addProvider')}
                 </Button>
               </Card>
@@ -607,7 +890,22 @@ export default function OAuthProvidersPage() {
                           onClick={() => setSelectedProvider(p)}
                         >
                           <TableCell className="px-8 py-4">
-                            <OAuthProviderLogo provider={p.provider} size={28} className="rounded" />
+                            <div className="flex items-center gap-2 min-w-0">
+                              <OAuthProviderLogo provider={p.provider} size={28} className="rounded shrink-0" />
+                              {migrationPendingIds.has(p.id) ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className="inline-flex size-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-background"
+                                      aria-label={t('oauth.migrationRowTooltip')}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    {t('oauth.migrationRowTooltip')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : null}
+                            </div>
                           </TableCell>
                           <TableCell className="px-8 py-4 text-muted-foreground">{p.name || '—'}</TableCell>
                           <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={p.client_id}>
@@ -761,54 +1059,101 @@ export default function OAuthProvidersPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>{t('oauth.redirectWeb')}</Label>
-              <Input
-                required
-                placeholder={t('oauth.redirectWebPlaceholder')}
-                value={formData.redirect_uri_web}
-                onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_web: e.target.value }))}
-                className="font-mono text-sm"
-              />
+            <div className="space-y-3 rounded-lg border border-border/60 p-4">
+              <div>
+                <Label>{t('oauth.redirectWhitelist')}</Label>
+                <p className="text-xs text-muted-foreground mt-1">{t('oauth.redirectWhitelistHint')}</p>
+              </div>
+              <div className="space-y-3">
+                {formData.redirects.map((row, idx) => (
+                  <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="space-y-1.5 sm:w-[130px]">
+                      <Label className="text-xs text-muted-foreground">{t('oauth.platformLabel')}</Label>
+                      <Select
+                        value={row.platform}
+                        onValueChange={(v) => {
+                          setFormData((p) => {
+                            const next = [...p.redirects];
+                            next[idx] = { ...next[idx], platform: v as OAuthPlatform };
+                            return { ...p, redirects: next };
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {OAUTH_PLATFORMS.map((pl) => (
+                            <SelectItem key={pl.value} value={pl.value}>
+                              {pl.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      <Label className="text-xs text-muted-foreground">{t('oauth.redirectUrlRow')}</Label>
+                      <Input
+                        placeholder={t('oauth.redirectWebPlaceholder')}
+                        value={row.url}
+                        onChange={(e) => {
+                          setFormData((p) => {
+                            const next = [...p.redirects];
+                            next[idx] = { ...next[idx], url: e.target.value };
+                            return { ...p, redirects: next };
+                          });
+                        }}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1.5 min-w-0 sm:max-w-[200px]">
+                      <Label className="text-xs text-muted-foreground">{t('oauth.rowNameOptional')}</Label>
+                      <Input
+                        placeholder="—"
+                        value={row.name}
+                        onChange={(e) => {
+                          setFormData((p) => {
+                            const next = [...p.redirects];
+                            next[idx] = { ...next[idx], name: e.target.value };
+                            return { ...p, redirects: next };
+                          });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive"
+                      title={t('common.delete')}
+                      onClick={() => {
+                        setFormData((p) => ({
+                          ...p,
+                          redirects: p.redirects.filter((_, i) => i !== idx),
+                        }));
+                      }}
+                    >
+                      <MinusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  setFormData((p) => ({
+                    ...p,
+                    redirects: [...p.redirects, { url: '', platform: 'web', name: '' }],
+                  }));
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                {t('oauth.addRedirectUrl')}
+              </Button>
             </div>
-
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-              <CollapsibleTrigger asChild>
-                <Button type="button" variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground">
-                  <span>{t('oauth.redirectPlatform')}</span>
-                  {advancedOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>{t('oauth.redirectAndroid')}</Label>
-                  <Input
-                    placeholder={t('oauth.redirectAndroidPlaceholder')}
-                    value={formData.redirect_uri_android}
-                    onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_android: e.target.value }))}
-                    className="font-mono text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('oauth.redirectIos')}</Label>
-                  <Input
-                    placeholder={t('oauth.redirectIosPlaceholder')}
-                    value={formData.redirect_uri_ios}
-                    onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_ios: e.target.value }))}
-                    className="font-mono text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('oauth.redirectDesktop')}</Label>
-                  <Input
-                    placeholder={t('oauth.redirectDesktopPlaceholder')}
-                    value={formData.redirect_uri_desktop}
-                    onChange={(e) => setFormData((p) => ({ ...p, redirect_uri_desktop: e.target.value }))}
-                    className="font-mono text-sm"
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
 
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div>
@@ -1029,6 +1374,8 @@ export default function OAuthProvidersPage() {
                       setLinkDialogProvider(selectedProvider);
                       setLinkPlatform('web');
                       setLinkRole(roles.length > 0 ? roles[0].name : 'default');
+                      setLinkRedirectUrl('');
+                      setLinkRt('');
                       setLinkResult(null);
                     }
                   }}
@@ -1083,7 +1430,18 @@ export default function OAuthProvidersPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!linkDialogProvider} onOpenChange={(open) => !open && setLinkDialogProvider(null)}>
+      <Dialog
+        open={!!linkDialogProvider}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLinkDialogProvider(null);
+            setLinkRedirectUrl('');
+            setLinkRt('');
+            setLinkRedirectOptions([]);
+            setLinkLegacyDeprecation(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1121,18 +1479,78 @@ export default function OAuthProvidersPage() {
 
               <div className="space-y-2">
                 <Label>{t('oauth.roleLabel')}</Label>
-                <select
-                  value={linkRole}
-                  onChange={(e) => setLinkRole(e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                >
-                  <option value="default">default</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.name}>
-                      {r.name}{r.description ? ` — ${r.description}` : ''}
-                    </option>
-                  ))}
-                </select>
+                <Select value={linkRole} onValueChange={setLinkRole}>
+                  <SelectTrigger className="w-full h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.length === 0 ? (
+                      <SelectItem value="default">default</SelectItem>
+                    ) : (
+                      roles.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          {r.name}
+                          {r.description ? ` — ${r.description}` : ''}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('oauth.linkRedirectPick')}</Label>
+                {linkLegacyDeprecation?.active && (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 space-y-1">
+                    <p className="font-semibold">
+                      {t('oauth.redirectsLegacyDeprecationTitle', {
+                        version: linkLegacyDeprecation.deprecation_version || '1.0.0',
+                      })}
+                    </p>
+                    <p className="text-amber-100/90 leading-relaxed">{linkLegacyDeprecation.message}</p>
+                  </div>
+                )}
+                {!savedSecretKey ? (
+                  <p className="text-sm text-amber-400">{t('oauth.secretKeyRequiredForRedirects')}</p>
+                ) : linkRedirectsLoading ? (
+                  <p className="text-sm text-muted-foreground">{t('oauth.linkRedirectsLoading')}</p>
+                ) : linkRedirectsForPlatform.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('oauth.noRedirectsForPlatform')}</p>
+                ) : (
+                  <Select
+                    value={linkRedirectUrl || linkRedirectsForPlatform[0]?.url || ''}
+                    onValueChange={setLinkRedirectUrl}
+                  >
+                    <SelectTrigger className="w-full h-9 font-mono text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {linkRedirectsForPlatform.map((r, i) => (
+                        <SelectItem
+                          key={`${r.url}-${r.platform}-${i}`}
+                          value={r.url}
+                          className="font-mono text-xs"
+                        >
+                          {r.name ? `${r.name} — ${r.url}` : r.url}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('oauth.linkRtOptional')}</Label>
+                <Input
+                  placeholder={t('oauth.linkRtPlaceholder')}
+                  value={linkRt}
+                  onChange={(e) => setLinkRt(e.target.value)}
+                  disabled={linkRedirectsForPlatform.length > 0}
+                  className="font-mono text-sm disabled:opacity-60"
+                />
+                {linkRedirectsForPlatform.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{t('oauth.linkRtDisabledWhenRedirect')}</p>
+                )}
               </div>
 
               {!savedPublishableKey && (
@@ -1144,7 +1562,13 @@ export default function OAuthProvidersPage() {
                 </Button>
                 <Button
                   onClick={handleFetchOAuthLink}
-                  disabled={linkLoading || !savedPublishableKey}
+                  disabled={
+                    linkLoading ||
+                    !savedPublishableKey ||
+                    linkRedirectsLoading ||
+                    !savedSecretKey ||
+                    linkRedirectsForPlatform.length === 0
+                  }
                   className="gap-2"
                 >
                   {linkLoading && <Loader2 className="w-4 h-4 animate-spin" />}
