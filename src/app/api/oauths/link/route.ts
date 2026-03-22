@@ -14,6 +14,8 @@ export async function GET(request: Request) {
   const provider = searchParams.get('provider');
   const platform = searchParams.get('platform');
   const role = searchParams.get('role');
+  const redirectUrl = searchParams.get('redirect_url');
+  const rt = searchParams.get('rt');
 
   if (!provider || !platform) {
     return NextResponse.json(
@@ -27,6 +29,8 @@ export async function GET(request: Request) {
     url.searchParams.set('provider', provider);
     url.searchParams.set('platform', platform);
     if (role) url.searchParams.set('role', role);
+    if (redirectUrl) url.searchParams.set('redirect_url', redirectUrl);
+    if (rt) url.searchParams.set('rt', rt);
 
     const res = await fetch(url.toString(), {
       method: 'GET',
