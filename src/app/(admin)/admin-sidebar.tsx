@@ -74,7 +74,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-const ADMIN_VERSION = '0.1.0';
+const ADMIN_VERSION = '0.2.0';
 
 function buildHref(path: string) {
   return path === '/' ? `${BASE_PATH || '/'}` : `${BASE_PATH}${path}`.replace(/\/+/g, '/') || '/';
