@@ -40,7 +40,7 @@ function BulletList({ keys, prefix }: { keys: readonly string[]; prefix: string 
 export default function ReleaseNotesPage() {
   const { t } = useI18n();
 
-  const v020OAuthKeys = ['i1', 'i2', 'i3', 'i4'] as const;
+  const v020OAuthKeys = ['i1', 'i2', 'i3', 'i4', 'i5'] as const;
   const v020RedirectsKeys = ['i1', 'i2', 'i3'] as const;
   const v020AdminKeys = ['i1', 'i2', 'i3'] as const;
   const v020UsersKeys = ['i1', 'i2'] as const;

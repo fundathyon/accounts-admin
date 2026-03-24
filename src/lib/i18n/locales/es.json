@@ -40,15 +40,16 @@
     "v020Title": "v0.2.0",
     "v020Date": "Actual · Accounts Admin",
     "v020": {
-      "intro": "Esta versión mejora la gestión de redirects OAuth, da más visibilidad cuando hay migraciones pendientes y añade nuevas opciones de inicio de sesión en la API de Accounts. Las secciones siguientes resumen cada bloque.",
+      "intro": "Esta versión mejora la gestión de redirects OAuth, da más visibilidad cuando hay migraciones pendientes y añade nuevas opciones de inicio de sesión en la API de Accounts—incluido OAuth con Microsoft, Apple y GitHub. Las secciones siguientes resumen cada bloque.",
       "sections": {
         "oauthApi": {
-          "title": "OAuth Microsoft y Apple (API de Accounts)",
-          "lead": "Además de Google, la API de Accounts puede completar el mismo flujo de login con Microsoft (Entra ID / Azure AD) y con Sign in with Apple. Sigues registrando cada proveedor como hasta ahora; el callback y el “obtener link” se entienden igual.",
+          "title": "OAuth Microsoft, Apple y GitHub (API de Accounts)",
+          "lead": "Además de Google, la API de Accounts puede completar el mismo flujo de login con Microsoft (Entra ID / Azure AD), Sign in with Apple y OAuth Apps de GitHub. Sigues registrando cada proveedor como hasta ahora; el callback y el “obtener link” se entienden igual.",
           "i1": "Microsoft: usa la plataforma de identidad (multi-tenant `common`), intercambia el código de autorización por tokens y lee el perfil en Microsoft Graph.",
           "i2": "Apple: URL de autorización de Sign in with Apple; en el token Apple exige un `client_secret` en forma de JWT firmado (Team ID, Key ID y clave `.p8`—ver documentación de la API de Accounts).",
           "i3": "En el admin sigues eligiendo el proveedor al generar o probar links OAuth; no hay una pantalla aparte solo para Microsoft o Apple.",
-          "i4": "Por dentro, el perfil de usuario se normaliza igual que con Google para que tokens y registros sean coherentes entre proveedores."
+          "i4": "Por dentro, el perfil de usuario se normaliza igual que con Google para que tokens y registros sean coherentes entre proveedores.",
+          "i5": "GitHub: flujo de OAuth App (`github.com/login/oauth`), intercambio de token y perfil vía API REST de GitHub con scopes `read:user` y `user:email` (ver documentación de la API de Accounts para registrar la app y la callback URL)."
         },
         "redirects": {
           "title": "Redirects y migración",
