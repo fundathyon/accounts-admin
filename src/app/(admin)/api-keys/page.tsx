@@ -69,7 +69,7 @@ export default function ApiKeysPage() {
   const [loading, setLoading] = useState(true);
   const [keysLoading, setKeysLoading] = useState(true);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ app_id: '', name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKeyListItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -147,8 +147,12 @@ export default function ApiKeysPage() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.app_id || !formData.name.trim()) {
-      showNotification(t('apiKeys.selectAppAndName'), 'error');
+    if (!savedSecretKey) {
+      showNotification(t('apiKeys.secretKeyRequired'), 'error');
+      return;
+    }
+    if (!formData.name.trim()) {
+      showNotification(t('apiKeys.nameRequired') || 'Name is required', 'error');
       return;
     }
     setIsSubmitting(true);
@@ -156,9 +160,11 @@ export default function ApiKeysPage() {
     try {
       const res = await fetch(apiUrl('/api/api-keys/generate'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Secret-API-Key': savedSecretKey,
+        },
         body: JSON.stringify({
-          app_id: formData.app_id,
           name: formData.name.trim(),
           ...(formData.description.trim() && { description: formData.description.trim() }),
         }),
@@ -236,7 +242,7 @@ export default function ApiKeysPage() {
 
   const closeModal = () => {
     setIsGenerateModalOpen(false);
-    setFormData({ app_id: '', name: '', description: '' });
+    setFormData({ name: '', description: '' });
     setGeneratedKeys(null);
   };
 
@@ -257,7 +263,7 @@ export default function ApiKeysPage() {
               </Link>
             </Button>
           ) : (
-            <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2" disabled={loading || apps.length === 0}>
+            <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2" disabled={loading}>
               <Plus className="w-4 h-4" /> Generar API Keys
             </Button>
           )}
@@ -490,29 +496,17 @@ export default function ApiKeysPage() {
               )}
               <DialogFooter>
                 <Button onClick={closeModal}>{t('apiKeys.close')}</Button>
-                <Button variant="outline" onClick={() => { setGeneratedKeys(null); setFormData({ app_id: '', name: '', description: '' }); }}>
+                <Button variant="outline" onClick={() => { setGeneratedKeys(null); setFormData({ name: '', description: '' }); }}>
                   {t('apiKeys.generateAnother')}
                 </Button>
               </DialogFooter>
             </div>
           ) : (
             <form onSubmit={handleGenerate} className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('apiKeys.application')}</Label>
-                <select
-                  required
-                  value={formData.app_id}
-                  onChange={(e) => setFormData((p) => ({ ...p, app_id: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
-                >
-                  <option value="">{t('apiKeys.selectApp')}</option>
-                  {apps.map((app) => (
-                    <option key={app.id} value={app.id}>
-                      {app.name} ({truncateKey(app.id)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="text-sm text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                {t('apiKeys.generateUsesSecretApp') ||
+                  'Las claves se crearán para la aplicación asociada a tu Secret Key guardada en ajustes.'}
+              </p>
               <div className="space-y-2">
                 <Label>{t('apiKeys.name')} *</Label>
                 <Input
