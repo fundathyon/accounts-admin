@@ -131,6 +131,29 @@ export interface OAuthRedirectItem {
   legacy?: boolean;
 }
 
+/** Email access policy (GET/PUT /email-access/settings). */
+export interface EmailAccessSettingsView {
+  app_id: string;
+  signup_access_mode: string;
+  evaluate_blocklist_on_login: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** One allowlist or blocklist row. */
+export interface EmailAccessEntryView {
+  id: string;
+  app_id: string;
+  list_kind: string;
+  /** all | email | oauth provider id (google, apple, …) */
+  access_segment: string;
+  entry_type: string;
+  value_normalized: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OAuthConfig {
   id: string;
   app_id: string;

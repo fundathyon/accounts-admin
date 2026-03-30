@@ -27,6 +27,7 @@ import {
   Image as ImageIcon,
   Bell,
   ScrollText,
+  ListFilter,
 } from 'lucide-react';
 import { cn, BASE_PATH } from '@/lib/utils';
 import { useAdmin } from '@/context/admin-context';
@@ -90,6 +91,7 @@ const navItems = [
   { id: 'oauth_providers', path: '/oauth-providers', icon: LogIn, labelKey: 'sidebar.oauthProviders' },
   { id: 'behaviors', path: '/behaviors', icon: Puzzle, labelKey: 'sidebar.behaviors' },
   { id: 'email_templates', path: '/email-templates', icon: Mail, labelKey: 'sidebar.emailTemplates' },
+  { id: 'email_access', path: '/email-access', icon: ListFilter, labelKey: 'sidebar.emailAccess' },
   { id: 'tokens', path: '/tokens', icon: Ticket, labelKey: 'sidebar.tokens' },
   { id: 'settings', path: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
 ];
@@ -343,7 +345,7 @@ export function AdminSidebar() {
                 const usersActive = isUsersSection && (pathname === '/users' || pathname?.startsWith('/users/'));
                 const pathMatch = item.path === '/' ? (pathname === '/' || pathname === '') : (pathname === item.path || pathname?.startsWith(item.path + '/'));
                 const active = pathMatch || usersActive;
-                const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'oauth_providers'].includes(item.id);
+                const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'oauth_providers', 'email_access'].includes(item.id);
 
                 return (
                   <SidebarMenuItem key={item.id}>
