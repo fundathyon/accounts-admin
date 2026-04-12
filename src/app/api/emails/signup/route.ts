@@ -4,7 +4,7 @@ import { INTERNAL_API_URL } from '@/lib/utils';
 /**
  * Proxies signup to accounts API.
  * Requires X-Publishable-API-Key header (publishable key from app).
- * Body: { email, password, role, user_name? }
+ * Body: { email, password, user_name? }
  */
 export async function POST(request: Request) {
   const publishableKey = request.headers.get('X-Publishable-API-Key');

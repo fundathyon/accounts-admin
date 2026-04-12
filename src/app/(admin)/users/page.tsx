@@ -89,7 +89,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const [signupForm, setSignupForm] = useState({ email: '', password: '', role: 'default', user_name: '' });
+  const [signupForm, setSignupForm] = useState({ email: '', password: '', user_name: '' });
   const [isSignupSubmitting, setIsSignupSubmitting] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [signupResult, setSignupResult] = useState<{ access_token?: string; refresh_token?: string; message?: string } | null>(null);
@@ -262,7 +262,6 @@ export default function UsersPage() {
         body: JSON.stringify({
           email: signupForm.email.trim(),
           password: signupForm.password,
-          role: signupForm.role || 'default',
           ...(signupForm.user_name.trim() && { user_name: signupForm.user_name.trim() }),
         }),
       });
@@ -910,7 +909,7 @@ export default function UsersPage() {
         onOpenChange={(open) => {
           if (!open) {
             setIsSignupModalOpen(false);
-            setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
+            setSignupForm({ email: '', password: '', user_name: '' });
             setShowSignupPassword(false);
             setSignupResult(null);
             setNeedsVerification(false);
@@ -1070,7 +1069,7 @@ export default function UsersPage() {
                 <Button
                   onClick={() => {
                     setIsSignupModalOpen(false);
-                    setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
+                    setSignupForm({ email: '', password: '', user_name: '' });
                     setShowSignupPassword(false);
                     setSignupResult(null);
                     setNeedsVerification(false);
@@ -1130,15 +1129,6 @@ export default function UsersPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Rol</Label>
-                  <Input
-                    placeholder="default"
-                    value={signupForm.role}
-                    onChange={(e) => setSignupForm((p) => ({ ...p, role: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">Por defecto: default</p>
-                </div>
-                <div className="space-y-2">
                   <Label>Nombre de usuario (opcional)</Label>
                   <Input
                     placeholder="john_doe"
@@ -1167,7 +1157,7 @@ export default function UsersPage() {
                     variant="outline"
                     onClick={() => {
                       setIsSignupModalOpen(false);
-                      setSignupForm({ email: '', password: '', role: 'default', user_name: '' });
+                      setSignupForm({ email: '', password: '', user_name: '' });
                       setShowSignupPassword(false);
                       setSignupResult(null);
                       setNeedsVerification(false);
