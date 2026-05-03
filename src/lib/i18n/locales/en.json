@@ -601,7 +601,19 @@
     "migrationLater": "Later",
     "migrationSuccess": "Redirect URLs migrated to the whitelist.",
     "migrationError": "Could not migrate redirect URLs",
-    "redirectsLegacyDeprecationTitle": "Legacy redirects — migration required before v{version}"
+    "redirectsLegacyDeprecationTitle": "Legacy redirects — migration required before v{version}",
+    "hints": {
+      "provider": "Pick the external provider (Google, Microsoft, Apple, or GitHub). Once created it cannot be changed — you'd need to delete the config and create a new one.",
+      "clientId": "Public identifier issued by the provider when you registered your OAuth app. Find it in the provider's console (Google Cloud Console, Microsoft Entra, etc.).",
+      "clientSecret": "Secret credential issued by the provider. Used only server-side to exchange the code for a token. When editing, leave empty to keep the current one.",
+      "callback": "The backend generates a unique endpoint (Callback URI) that you must register in the provider's console as an «Authorized redirect URI». The Callback Key is the opaque part of that URL. Click «Generate» to mint a new pair.",
+      "scopes": "OAuth permissions your app requests from the provider (space-separated). The default «email profile openid» covers basic login. Check the provider's docs for additional scopes (Drive, Calendar, etc.).",
+      "redirectWhitelist": "Allowed redirect URLs after authentication. Each row gets a stable «rt» token that travels in OAuth links. Removing a row invalidates any previously shared link using that URL. You must include at least one with platform Web.",
+      "platform": "Determines what kind of URL is valid: «web» for https URLs, «android/ios» for deep links (custom scheme like app://), «desktop» typically localhost. Affects the OAuth flow (PKCE, token handling, etc.).",
+      "rowName": "Internal label to identify this row (e.g. «Production», «Staging», «Local»). Does not affect the OAuth flow — only helps you remember which environment this URL belongs to.",
+      "linkRtField": "Opaque identifier for the redirect row. Auto-filled from the URL chosen above; only manually editable when there are no whitelist redirects (legacy mode).",
+      "migrationBanner": "Some providers have redirects stored only in legacy columns (redirect_uri_*). Click «Run migration» to copy them into the current whitelist. In v1.0.0 the legacy fields will stop being used to issue links."
+    }
   },
   "behaviors": {
     "title": "Behaviors",

@@ -127,6 +127,8 @@ export interface OAuthRedirectItem {
   url: string;
   platform: 'web' | 'android' | 'ios' | 'desktop';
   name?: string;
+  rt?: string;
+  legacy?: boolean;
 }
 
 export interface OAuthConfig {
@@ -143,6 +145,5 @@ export interface OAuthConfig {
   redirect_uri_android?: string;
   redirect_uri_ios?: string;
   redirect_uri_desktop?: string;
-  /** Optional: returned if API includes whitelist rows in the future */
   redirects?: OAuthRedirectItem[];
 }

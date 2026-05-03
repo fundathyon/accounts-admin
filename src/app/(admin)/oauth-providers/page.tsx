@@ -40,9 +40,17 @@ interface RedirectsLegacyDeprecation {
 }
 
 interface RedirectFormRow {
+  id: string;
   url: string;
   platform: OAuthPlatform;
   name: string;
+}
+
+function newRowId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
 }
 
 function normalizeRedirectsPayload(rows: RedirectFormRow[]): OAuthRedirectItem[] {
@@ -59,16 +67,17 @@ function redirectsFromProvider(p: OAuthConfig): RedirectFormRow[] {
   const list = p.redirects;
   if (Array.isArray(list) && list.length > 0) {
     return list.map((r) => ({
+      id: r.rt || newRowId(),
       url: r.url ?? '',
       platform: (r.platform as OAuthPlatform) || 'web',
       name: r.name ?? '',
     }));
   }
   const rows: RedirectFormRow[] = [];
-  if (p.redirect_uri_web?.trim()) rows.push({ url: p.redirect_uri_web.trim(), platform: 'web', name: '' });
-  if (p.redirect_uri_android?.trim()) rows.push({ url: p.redirect_uri_android.trim(), platform: 'android', name: '' });
-  if (p.redirect_uri_ios?.trim()) rows.push({ url: p.redirect_uri_ios.trim(), platform: 'ios', name: '' });
-  if (p.redirect_uri_desktop?.trim()) rows.push({ url: p.redirect_uri_desktop.trim(), platform: 'desktop', name: '' });
+  if (p.redirect_uri_web?.trim()) rows.push({ id: newRowId(), url: p.redirect_uri_web.trim(), platform: 'web', name: '' });
+  if (p.redirect_uri_android?.trim()) rows.push({ id: newRowId(), url: p.redirect_uri_android.trim(), platform: 'android', name: '' });
+  if (p.redirect_uri_ios?.trim()) rows.push({ id: newRowId(), url: p.redirect_uri_ios.trim(), platform: 'ios', name: '' });
+  if (p.redirect_uri_desktop?.trim()) rows.push({ id: newRowId(), url: p.redirect_uri_desktop.trim(), platform: 'desktop', name: '' });
   return rows;
 }
 
@@ -117,6 +126,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { FieldHint } from '@/components/ui/field-hint';
 
 const ALLOWED_PROVIDERS = [
   { value: 'google', label: 'Google' },
@@ -783,6 +793,7 @@ export default function OAuthProvidersPage() {
                   <p className="text-sm font-semibold text-red-100 flex items-center gap-2">
                     <AlertTriangle className="size-4 shrink-0 text-red-400" />
                     {t('oauth.migrationBannerTitle')}
+                    <FieldHint text={t('oauth.hints.migrationBanner')} className="text-red-200/80 hover:text-red-100" />
                   </p>
                   <p className="text-xs text-red-200/80 leading-relaxed">{t('oauth.migrationV1Deprecation')}</p>
                 </div>
@@ -944,7 +955,10 @@ export default function OAuthProvidersPage() {
 
           <form onSubmit={editingProvider ? handleUpdate : handleCreate} className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('oauth.providerLabel')}</Label>
+              <Label className="flex items-center gap-1.5">
+                {t('oauth.providerLabel')}
+                <FieldHint text={t('oauth.hints.provider')} />
+              </Label>
               <div className="flex flex-wrap gap-3">
                 {ALLOWED_PROVIDERS.map((prov) => (
                   <button
@@ -974,7 +988,10 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Client ID *</Label>
+              <Label className="flex items-center gap-1.5">
+                Client ID *
+                <FieldHint text={t('oauth.hints.clientId')} />
+              </Label>
               <Input
                 required
                 placeholder={t('oauth.clientIdPlaceholder')}
@@ -985,7 +1002,10 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Client Secret {editingProvider ? '(optional)' : '*'}</Label>
+              <Label className="flex items-center gap-1.5">
+                Client Secret {editingProvider ? '(optional)' : '*'}
+                <FieldHint text={t('oauth.hints.clientSecret')} />
+              </Label>
               <Input
                 required={!editingProvider}
                 type="password"
@@ -998,7 +1018,10 @@ export default function OAuthProvidersPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>{t('oauth.callbackLabel')}</Label>
+                <Label className="flex items-center gap-1.5">
+                  {t('oauth.callbackLabel')}
+                  <FieldHint text={t('oauth.hints.callback')} />
+                </Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -1050,7 +1073,10 @@ export default function OAuthProvidersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>{t('oauth.scopesLabel')}</Label>
+              <Label className="flex items-center gap-1.5">
+                {t('oauth.scopesLabel')}
+                <FieldHint text={t('oauth.hints.scopes')} />
+              </Label>
               <Input
                 placeholder={t('oauth.scopesPlaceholder')}
                 value={formData.scopes}
@@ -1061,14 +1087,20 @@ export default function OAuthProvidersPage() {
 
             <div className="space-y-3 rounded-lg border border-border/60 p-4">
               <div>
-                <Label>{t('oauth.redirectWhitelist')}</Label>
+                <Label className="flex items-center gap-1.5">
+                  {t('oauth.redirectWhitelist')}
+                  <FieldHint text={t('oauth.hints.redirectWhitelist')} />
+                </Label>
                 <p className="text-xs text-muted-foreground mt-1">{t('oauth.redirectWhitelistHint')}</p>
               </div>
               <div className="space-y-3">
                 {formData.redirects.map((row, idx) => (
-                  <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <div key={row.id} className="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div className="space-y-1.5 sm:w-[130px]">
-                      <Label className="text-xs text-muted-foreground">{t('oauth.platformLabel')}</Label>
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        {t('oauth.platformLabel')}
+                        {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted-foreground/60" />}
+                      </Label>
                       <Select
                         value={row.platform}
                         onValueChange={(v) => {
@@ -1107,7 +1139,10 @@ export default function OAuthProvidersPage() {
                       />
                     </div>
                     <div className="flex-1 space-y-1.5 min-w-0 sm:max-w-[200px]">
-                      <Label className="text-xs text-muted-foreground">{t('oauth.rowNameOptional')}</Label>
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        {t('oauth.rowNameOptional')}
+                        {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted-foreground/60" />}
+                      </Label>
                       <Input
                         placeholder="—"
                         value={row.name}
@@ -1146,7 +1181,7 @@ export default function OAuthProvidersPage() {
                 onClick={() => {
                   setFormData((p) => ({
                     ...p,
-                    redirects: [...p.redirects, { url: '', platform: 'web', name: '' }],
+                    redirects: [...p.redirects, { id: newRowId(), url: '', platform: 'web', name: '' }],
                   }));
                 }}
               >
@@ -1540,7 +1575,10 @@ export default function OAuthProvidersPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>{t('oauth.linkRtOptional')}</Label>
+                <Label className="flex items-center gap-1.5">
+                  {t('oauth.linkRtOptional')}
+                  <FieldHint text={t('oauth.hints.linkRtField')} />
+                </Label>
                 <Input
                   placeholder={t('oauth.linkRtPlaceholder')}
                   value={linkRt}
