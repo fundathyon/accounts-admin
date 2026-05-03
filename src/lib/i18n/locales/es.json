@@ -601,7 +601,19 @@
     "migrationLater": "Más tarde",
     "migrationSuccess": "URLs de redirección migradas a la whitelist.",
     "migrationError": "No se pudieron migrar las URLs de redirección",
-    "redirectsLegacyDeprecationTitle": "Redirects legacy — migración necesaria antes de v{version}"
+    "redirectsLegacyDeprecationTitle": "Redirects legacy — migración necesaria antes de v{version}",
+    "hints": {
+      "provider": "Selecciona el proveedor externo (Google, Microsoft, Apple o GitHub). Una vez creado no se puede cambiar — debes eliminar la configuración y crear una nueva.",
+      "clientId": "Identificador público de tu app en el proveedor. Lo obtienes en la consola del proveedor (Google Cloud Console, Microsoft Entra, etc.) tras registrar la aplicación OAuth.",
+      "clientSecret": "Credencial secreta emitida por el proveedor al registrar la app. Solo se usa server-side para intercambiar el code por un token. Al editar puedes dejarlo vacío para conservar el actual.",
+      "callback": "El backend genera un endpoint único (Callback URI) que tienes que registrar en la consola del proveedor como «Authorized redirect URI». La Callback Key es la parte opaca de esa URL. Pulsa «Generar» para emitir un par nuevo.",
+      "scopes": "Permisos OAuth que la app solicita al proveedor (separados por espacio). El default «email profile openid» cubre login básico. Consulta la doc del proveedor para scopes adicionales (Drive, Calendar, etc.).",
+      "redirectWhitelist": "Lista de URLs permitidas tras autenticar. Cada fila genera un token «rt» estable que viaja en los links OAuth. Borrar una fila invalida los links que ya se hayan compartido y usen esa URL. Debes incluir al menos una con plataforma Web.",
+      "platform": "Determina qué tipo de URL es válida: «web» para URLs https, «android/ios» para deep links (esquema custom como app://), «desktop» típicamente localhost. Afecta el flujo OAuth (uso de PKCE, manejo del token, etc.).",
+      "rowName": "Etiqueta interna para identificar esta fila (ej. «Producción», «Staging», «Local»). No afecta el flujo OAuth — solo te ayuda a recordar de qué entorno es esta URL.",
+      "linkRtField": "Identificador opaco de la fila de redirección. Se autocompleta a partir de la URL elegida arriba; solo se edita manualmente si no hay redirects en la whitelist (modo legacy).",
+      "migrationBanner": "Tienes proveedores con redirects almacenados solo en columnas antiguas (redirect_uri_*). Pulsa «Ejecutar migración» para copiarlos al whitelist actual. En v1.0.0 los campos antiguos dejarán de usarse para emitir links."
+    }
   },
   "behaviors": {
     "title": "Behaviors",
