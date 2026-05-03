@@ -648,6 +648,40 @@ export default function OAuthProvidersPage() {
     }
   };
 
+  const [rowLinkLoadingKey, setRowLinkLoadingKey] = useState<string | null>(null);
+
+  const handleCopyLinkForRedirectRow = async (row: OAuthRedirectItem) => {
+    if (!selectedProvider) return;
+    if (!savedPublishableKey) {
+      showNotification(t('oauth.publishableKeyRequiredForCopy'), 'error');
+      return;
+    }
+    const rowKey = `${row.platform}-${row.url}`;
+    setRowLinkLoadingKey(rowKey);
+    try {
+      const role = roles.length > 0 ? roles[0].name : 'default';
+      const qs =
+        `provider=${encodeURIComponent(selectedProvider.provider)}` +
+        `&platform=${encodeURIComponent(row.platform)}` +
+        `&role=${encodeURIComponent(role)}` +
+        `&redirect_url=${encodeURIComponent(row.url)}`;
+      const res = await fetch(apiUrl(`/api/oauths/link?${qs}`), {
+        headers: { 'X-Publishable-API-Key': savedPublishableKey },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        await navigator.clipboard.writeText(String(data.data));
+        showNotification(t('oauth.copyOAuthLinkSuccess'), 'success');
+      } else {
+        showNotification(data.error?.message || t('oauth.copyOAuthLinkError'), 'error');
+      }
+    } catch {
+      showNotification(t('oauth.copyOAuthLinkError'), 'error');
+    } finally {
+      setRowLinkLoadingKey(null);
+    }
+  };
+
   const handleCopyLink = () => {
     if (linkResult) {
       navigator.clipboard.writeText(linkResult);
@@ -1312,92 +1346,144 @@ export default function OAuthProvidersPage() {
                 <p className="text-sm font-mono">{selectedProvider.scopes || '—'}</p>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('oauth.redirectWebLabel')}</Label>
-                <div className="flex gap-2 items-start">
-                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.redirect_uri_web}</p>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 h-9 w-9"
-                    title={t('common.copy')}
-                    onClick={() => {
-                      navigator.clipboard.writeText(selectedProvider.redirect_uri_web);
-                      showNotification(t('oauth.redirectUriCopied'), 'success');
-                    }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs flex items-center gap-1.5">
+                    {t('oauth.detailsRedirects')}
+                    <FieldHint text={t('oauth.hints.detailsRedirects')} />
+                  </Label>
+                  {selectedProvider.redirects && selectedProvider.redirects.length > 0 && (
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      {selectedProvider.redirects.length}
+                    </Badge>
+                  )}
                 </div>
-              </div>
 
-              {(selectedProvider.redirect_uri_android || selectedProvider.redirect_uri_ios || selectedProvider.redirect_uri_desktop) && (
-                <div className="space-y-3 pt-2 border-t">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.platformUris')}</Label>
-                  <div className="space-y-2">
-                    {selectedProvider.redirect_uri_android && (
-                      <div className="flex gap-2 items-start">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">{t('oauth.android')}</span>
-                          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_android}</p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-9 w-9 mt-5"
-                          title={t('common.copy')}
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedProvider.redirect_uri_android!);
-                            showNotification(t('oauth.redirectUriCopied'), 'success');
-                          }}
+                {selectedProvider.redirects && selectedProvider.redirects.length > 0 ? (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {selectedProvider.redirects.map((row, idx) => {
+                      const rowKey = `${row.platform}-${row.url}`;
+                      const isLoading = rowLinkLoadingKey === rowKey;
+                      return (
+                        <div
+                          key={`${rowKey}-${idx}`}
+                          className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2"
                         >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                    {selectedProvider.redirect_uri_ios && (
-                      <div className="flex gap-2 items-start">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">{t('oauth.ios')}</span>
-                          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_ios}</p>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="secondary" className="capitalize text-xs shrink-0">
+                                {row.platform}
+                              </Badge>
+                              {row.name?.trim() && (
+                                <span className="text-xs text-muted-foreground truncate">{row.name}</span>
+                              )}
+                              {row.legacy && (
+                                <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300">
+                                  legacy
+                                </Badge>
+                              )}
+                            </div>
+                            {row.rt && (
+                              <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                                rt: {row.rt.slice(0, 6)}…
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2 items-start">
+                            <p className="text-xs font-mono break-all bg-background rounded-md p-2 flex-1 min-w-0">
+                              {row.url}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="shrink-0 h-8 w-8"
+                              title={t('common.copy')}
+                              onClick={() => {
+                                navigator.clipboard.writeText(row.url);
+                                showNotification(t('oauth.redirectUriCopied'), 'success');
+                              }}
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="shrink-0 h-8 w-8"
+                                  disabled={isLoading || !savedPublishableKey}
+                                  onClick={() => handleCopyLinkForRedirectRow(row)}
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Link2 className="w-3.5 h-3.5" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {savedPublishableKey
+                                  ? t('oauth.copyOAuthLink')
+                                  : t('oauth.publishableKeyRequiredForCopy')}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-9 w-9 mt-5"
-                          title={t('common.copy')}
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedProvider.redirect_uri_ios!);
-                            showNotification(t('oauth.redirectUriCopied'), 'success');
-                          }}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                    {selectedProvider.redirect_uri_desktop && (
-                      <div className="flex gap-2 items-start">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">{t('oauth.desktop')}</span>
-                          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-2">{selectedProvider.redirect_uri_desktop}</p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-9 w-9 mt-5"
-                          title={t('common.copy')}
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedProvider.redirect_uri_desktop!);
-                            showNotification(t('oauth.redirectUriCopied'), 'success');
-                          }}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">
+                    {t('oauth.detailsRedirectsEmpty')}
+                  </p>
+                )}
+
+                {(selectedProvider.redirect_uri_web ||
+                  selectedProvider.redirect_uri_android ||
+                  selectedProvider.redirect_uri_ios ||
+                  selectedProvider.redirect_uri_desktop) &&
+                  (!selectedProvider.redirects || selectedProvider.redirects.length === 0) && (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                      <p className="text-xs text-amber-300 font-medium">
+                        {t('oauth.legacyValues')}
+                      </p>
+                      <p className="text-[11px] text-amber-200/80">
+                        {t('oauth.detailsRedirectsLegacyOnly')}
+                      </p>
+                      <div className="space-y-1.5 pt-1">
+                        {[
+                          { key: 'web', label: t('oauth.redirectWebLabel'), value: selectedProvider.redirect_uri_web },
+                          { key: 'android', label: t('oauth.android'), value: selectedProvider.redirect_uri_android },
+                          { key: 'ios', label: t('oauth.ios'), value: selectedProvider.redirect_uri_ios },
+                          { key: 'desktop', label: t('oauth.desktop'), value: selectedProvider.redirect_uri_desktop },
+                        ]
+                          .filter((r) => r.value?.trim())
+                          .map((r) => (
+                            <div key={r.key} className="flex gap-2 items-center">
+                              <span className="text-[10px] uppercase tracking-wide text-amber-200/60 w-16 shrink-0">
+                                {r.label}
+                              </span>
+                              <p className="text-xs font-mono break-all bg-background/60 rounded p-1.5 flex-1 min-w-0">
+                                {r.value}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="shrink-0 h-7 w-7"
+                                title={t('common.copy')}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(r.value!);
+                                  showNotification(t('oauth.redirectUriCopied'), 'success');
+                                }}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+              </div>
 
               <DialogFooter className="pt-4 gap-2 flex-wrap">
                 <Button
