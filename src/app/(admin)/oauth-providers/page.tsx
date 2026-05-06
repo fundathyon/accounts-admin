@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
+import { OAuthNativeAudiences } from '@/components/oauth-native-audiences';
 import type { OAuthConfig, OAuthRedirectItem, Role } from '@/lib/admin-types';
 
 type OAuthPlatform = OAuthRedirectItem['platform'];
@@ -1484,6 +1485,12 @@ export default function OAuthProvidersPage() {
                     </div>
                   )}
               </div>
+
+              <OAuthNativeAudiences
+                key={selectedProvider.id}
+                configId={selectedProvider.id}
+                provider={selectedProvider.provider}
+              />
 
               <DialogFooter className="pt-4 gap-2 flex-wrap">
                 <Button

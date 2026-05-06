@@ -147,3 +147,16 @@ export interface OAuthConfig {
   redirect_uri_desktop?: string;
   redirects?: OAuthRedirectItem[];
 }
+
+export type OAuthNativePlatform = 'ios' | 'android' | 'web';
+
+/** Whitelisted JWT `aud` accepted for `POST /auth/social` (native SDK login). */
+export interface OAuthNativeAudience {
+  id: string;
+  oauth_config_id: string;
+  app_id: string;
+  platform: OAuthNativePlatform;
+  audience: string;
+  label?: string;
+  created_at?: string;
+}
