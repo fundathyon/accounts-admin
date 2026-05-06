@@ -28,6 +28,17 @@ import { EmailAuthConfigForm } from '@/components/behaviors/email-auth-config-fo
 import { cn } from '@/lib/utils';
 import type { AppBehaviorDetail } from '@/lib/admin-types';
 
+const SCOPE_TO_I18N: Record<string, string> = {
+  'app_behaviors.activate_verification.code_strategy_fixed_not_allowed_in_environment':
+    'emailAuth.errors.fixedNotAllowedHere',
+  'app_behaviors.activate_verification.fixed_code_required':
+    'emailAuth.errors.fixedCodeRequired',
+  'app_behaviors.activate_verification.fixed_code_length_mismatch':
+    'emailAuth.errors.fixedCodeLengthMismatch',
+  'app_behaviors.activate_verification.fixed_code_character_class_mismatch':
+    'emailAuth.errors.fixedCodeCharClassMismatch',
+};
+
 export default function BehaviorDetailPage() {
   const params = useParams();
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
@@ -104,7 +115,10 @@ export default function BehaviorDetailPage() {
         setIsEditing(false);
         await loadBehavior();
       } else {
-        showNotification(data.error?.message || t('behaviors.updateError'), 'error');
+        const scope: string | undefined = data?.error?.scope;
+        const scopeKey = scope && SCOPE_TO_I18N[scope];
+        const message = scopeKey ? t(scopeKey) : (data.error?.message || t('behaviors.updateError'));
+        showNotification(message, 'error');
       }
     } catch {
       showNotification(t('behaviors.updateError'), 'error');

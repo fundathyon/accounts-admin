@@ -707,7 +707,36 @@
     "codeSize": "Code size",
     "codeType": "Code type",
     "deactivateVerification": "Deactivate verification",
-    "activateVerification": "Activate verification"
+    "activateVerification": "Activate verification",
+    "codeStrategy": "Code strategy",
+    "fixedCode": "Fixed code",
+    "strategy": {
+      "random": "Random (recommended)",
+      "fixed": "Fixed (testing only)",
+      "helper": "Default is Random. Switch to Fixed only when you need a predictable code for QA or automated testing.",
+      "fixedWarning": "Every user who signs up will receive this exact code in their email. Not allowed in production."
+    },
+    "tooltips": {
+      "verificationActive": "When active, the user must confirm a code sent to their email before signing in.",
+      "codeSize": "Number of characters in the code (typical: 6).",
+      "ttlSec": "Lifetime in seconds for the code. After that the user must request a new one.",
+      "codeType": "Alphabet of the code. 'numeric' = digits 0-9 only. 'alphanumeric' = digits + letters a-z and A-Z.",
+      "codeStrategy": "How the code is generated. 'Random' uses a cryptographic RNG (recommended and required in production). 'Fixed' always returns the same value — only allowed in testing environments: local, development, staging, qa, test.",
+      "fixedCode": "Value returned literally as the verification code. Must match the configured size and alphabet. Only allowed when ENVIRONMENT is local, development, staging, qa, or test. In production the backend rejects activation with HTTP 422."
+    },
+    "confirmFixed": {
+      "title": "Switch to FIXED code?",
+      "warning": "You are about to make EVERY user of this app receive the same verification code. This is a security risk — only use it for testing.",
+      "allowedEnvs": "Only allowed in environments:",
+      "typeToConfirm": "To confirm, type the following phrase exactly:",
+      "confirm": "Yes, use fixed code"
+    },
+    "errors": {
+      "fixedNotAllowedHere": "Fixed code is not allowed in this environment. Only: local, development, staging, qa, test.",
+      "fixedCodeRequired": "'Fixed code' is required when strategy is 'fixed'.",
+      "fixedCodeLengthMismatch": "'Fixed code' must have the same length as 'Code size'.",
+      "fixedCodeCharClassMismatch": "'Fixed code' contains characters not allowed by the selected code type."
+    }
   },
   "emailTemplates": {
     "title": "Email Templates",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Link2, Lock, ShieldCheck } from 'lucide-react';
+import { Mail, Link2, Lock, ShieldCheck, Info, AlertTriangle } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +19,18 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import type { EmailAuthConfig } from './email-auth-config-view';
+import { FIXED_CODE_ALLOWED_ENVS, type EmailAuthConfig } from './email-auth-config-view';
+
+const FIXED_CODE_CONFIRM_PHRASE = 'USAR CODIGO FIJO PARA TESTING';
 
 interface EmailAuthConfigFormProps {
     initialConfig: EmailAuthConfig;
@@ -38,6 +48,8 @@ export function EmailAuthConfigForm({
     const { t } = useI18n();
     const [config, setConfig] = useState<EmailAuthConfig>(JSON.parse(JSON.stringify(initialConfig)));
     const [activeTab, setActiveTab] = useState<'email' | 'password' | 'magic' | 'verification'>('email');
+    const [pendingFixed, setPendingFixed] = useState(false);
+    const [confirmInput, setConfirmInput] = useState('');
 
     const updateSubConfig = (section: keyof EmailAuthConfig, field: string, value: any) => {
         setConfig((prev) => ({
@@ -47,6 +59,29 @@ export function EmailAuthConfigForm({
                 [field]: value,
             },
         }));
+    };
+
+    const handleStrategyChange = (next: 'random' | 'fixed') => {
+        const current = config.verification?.code_strategy ?? 'random';
+        if (next === 'fixed' && current !== 'fixed') {
+            setConfirmInput('');
+            setPendingFixed(true);
+            return;
+        }
+        setConfig((prev) => ({
+            ...prev,
+            verification: {
+                ...prev.verification,
+                code_strategy: next,
+                ...(next === 'random' ? { fixed_code: '' } : {}),
+            },
+        }));
+    };
+
+    const confirmSwitchToFixed = () => {
+        if (confirmInput.trim() !== FIXED_CODE_CONFIRM_PHRASE) return;
+        updateSubConfig('verification', 'code_strategy', 'fixed');
+        setPendingFixed(false);
     };
 
     const updatePolicy = (field: string, value: any) => {
@@ -294,7 +329,17 @@ export function EmailAuthConfigForm({
                     <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
                             <div className="space-y-0.5">
-                                <Label>{t('emailAuth.active')}</Label>
+                                <div className="flex items-center gap-2">
+                                    <Label>{t('emailAuth.active')}</Label>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                            {t('emailAuth.tooltips.verificationActive')}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
                                 <p className="text-xs text-muted-foreground">Obliga a verificar el email antes de entrar</p>
                             </div>
                             <Switch
@@ -305,7 +350,17 @@ export function EmailAuthConfigForm({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>{t('emailAuth.codeSize')}</Label>
+                                <div className="flex items-center gap-2">
+                                    <Label>{t('emailAuth.codeSize')}</Label>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                            {t('emailAuth.tooltips.codeSize')}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
                                 <Input
                                     type="number"
                                     value={config.verification?.code_size || ''}
@@ -313,7 +368,17 @@ export function EmailAuthConfigForm({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>{t('emailAuth.ttlSec')}</Label>
+                                <div className="flex items-center gap-2">
+                                    <Label>{t('emailAuth.ttlSec')}</Label>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                            {t('emailAuth.tooltips.ttlSec')}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
                                 <Input
                                     type="number"
                                     value={config.verification?.ttl_seconds || ''}
@@ -323,7 +388,17 @@ export function EmailAuthConfigForm({
                         </div>
 
                         <div className="space-y-2">
-                            <Label>{t('emailAuth.codeType')}</Label>
+                            <div className="flex items-center gap-2">
+                                <Label>{t('emailAuth.codeType')}</Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                        {t('emailAuth.tooltips.codeType')}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
                             <Select
                                 value={config.verification?.code_type || 'numeric'}
                                 onValueChange={(val) => updateSubConfig('verification', 'code_type', val)}
@@ -337,6 +412,63 @@ export function EmailAuthConfigForm({
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Label>{t('emailAuth.codeStrategy')}</Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                        {t('emailAuth.tooltips.codeStrategy')}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                            <Select
+                                value={config.verification?.code_strategy ?? 'random'}
+                                onValueChange={(val) => handleStrategyChange(val as 'random' | 'fixed')}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="random">{t('emailAuth.strategy.random')}</SelectItem>
+                                    <SelectItem value="fixed">{t('emailAuth.strategy.fixed')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                {t('emailAuth.strategy.helper')}
+                            </p>
+                        </div>
+
+                        {config.verification?.code_strategy === 'fixed' && (
+                            <div className="space-y-2 p-4 rounded-xl border border-amber-500/40 bg-amber-500/5">
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-amber-700 dark:text-amber-400">
+                                        {t('emailAuth.fixedCode')}
+                                    </Label>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="w-3.5 h-3.5 text-amber-600 cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-sm">
+                                            {t('emailAuth.tooltips.fixedCode')}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                                <Input
+                                    value={config.verification?.fixed_code ?? ''}
+                                    onChange={(e) => updateSubConfig('verification', 'fixed_code', e.target.value)}
+                                    placeholder="123456"
+                                    className="font-mono"
+                                />
+                                <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
+                                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                    <span>{t('emailAuth.strategy.fixedWarning')}</span>
+                                </p>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label>{t('emailAuth.mode')}</Label>
@@ -365,6 +497,55 @@ export function EmailAuthConfigForm({
                     </TooltipContent>
                 </Tooltip>
             </div>
+
+            <Dialog open={pendingFixed} onOpenChange={(open) => { if (!open) setPendingFixed(false); }}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-5 h-5" />
+                            {t('emailAuth.confirmFixed.title')}
+                        </DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="space-y-3 pt-2">
+                                <p>{t('emailAuth.confirmFixed.warning')}</p>
+                                <p className="font-medium">
+                                    {t('emailAuth.confirmFixed.allowedEnvs')}{' '}
+                                    <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                                        {FIXED_CODE_ALLOWED_ENVS.join(', ')}
+                                    </code>
+                                </p>
+                                <p>
+                                    {t('emailAuth.confirmFixed.typeToConfirm')}{' '}
+                                    <code className="font-mono font-semibold text-xs bg-muted px-1.5 py-0.5 rounded">
+                                        {FIXED_CODE_CONFIRM_PHRASE}
+                                    </code>
+                                </p>
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <Input
+                        autoFocus
+                        value={confirmInput}
+                        onChange={(e) => setConfirmInput(e.target.value)}
+                        placeholder={FIXED_CODE_CONFIRM_PHRASE}
+                        className="font-mono"
+                    />
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setPendingFixed(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button
+                            onClick={confirmSwitchToFixed}
+                            disabled={confirmInput.trim() !== FIXED_CODE_CONFIRM_PHRASE}
+                            className="bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-500"
+                        >
+                            {t('emailAuth.confirmFixed.confirm')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
