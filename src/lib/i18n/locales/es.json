@@ -707,7 +707,36 @@
     "codeSize": "Tamaño del código",
     "codeType": "Tipo de código",
     "deactivateVerification": "Desactivar verificación",
-    "activateVerification": "Activar verificación"
+    "activateVerification": "Activar verificación",
+    "codeStrategy": "Estrategia del código",
+    "fixedCode": "Código fijo",
+    "strategy": {
+      "random": "Aleatorio (recomendado)",
+      "fixed": "Fijo (solo testing)",
+      "helper": "El default es Aleatorio. Cámbialo a Fijo solo si necesitas un código predecible para QA o pruebas automatizadas.",
+      "fixedWarning": "Todos los usuarios que se registren recibirán este código en su email. No funciona en producción."
+    },
+    "tooltips": {
+      "verificationActive": "Si está activo, el usuario debe confirmar un código que llega a su email antes de poder iniciar sesión.",
+      "codeSize": "Cantidad de caracteres del código (típico: 6).",
+      "ttlSec": "Tiempo en segundos durante el cual el código es válido. Pasado ese tiempo, hay que pedir uno nuevo.",
+      "codeType": "Alfabeto del código. 'numeric' = solo dígitos 0-9. 'alphanumeric' = dígitos + letras a-z y A-Z.",
+      "codeStrategy": "Cómo se genera el código. 'Aleatorio' lo genera con un RNG criptográfico (recomendado y obligatorio en producción). 'Fijo' devuelve siempre el mismo valor — solo permitido en ambientes de testing: local, development, staging, qa, test.",
+      "fixedCode": "Valor que se devolverá literalmente como código de verificación. Debe respetar el tamaño y alfabeto configurados arriba. Solo se permite cuando ENVIRONMENT es local, development, staging, qa o test. En producción el backend rechaza la activación con HTTP 422."
+    },
+    "confirmFixed": {
+      "title": "¿Cambiar a código FIJO?",
+      "warning": "Estás a punto de hacer que TODOS los usuarios de esta app reciban siempre el mismo código de verificación. Esto es un riesgo de seguridad — solo úsalo para testing.",
+      "allowedEnvs": "Solo se permite en los ambientes:",
+      "typeToConfirm": "Para confirmar, escribe la siguiente frase tal cual:",
+      "confirm": "Sí, usar código fijo"
+    },
+    "errors": {
+      "fixedNotAllowedHere": "El código fijo no está permitido en este ambiente. Solo: local, development, staging, qa, test.",
+      "fixedCodeRequired": "El campo 'Código fijo' es obligatorio cuando la estrategia es 'fixed'.",
+      "fixedCodeLengthMismatch": "El 'Código fijo' debe tener la misma longitud que 'Tamaño del código'.",
+      "fixedCodeCharClassMismatch": "El 'Código fijo' contiene caracteres no permitidos por el tipo de código seleccionado."
+    }
   },
   "emailTemplates": {
     "title": "Templates de Email",

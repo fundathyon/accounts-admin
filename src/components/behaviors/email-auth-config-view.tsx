@@ -46,8 +46,12 @@ export interface EmailAuthConfig {
     enabled?: boolean;
     mode?: string;
     ttl_seconds?: number;
+    code_strategy?: 'random' | 'fixed';
+    fixed_code?: string;
   };
 }
+
+export const FIXED_CODE_ALLOWED_ENVS = ['local', 'development', 'staging', 'qa', 'test'] as const;
 
 interface ConfigSectionProps {
   icon: React.ReactNode;
@@ -184,6 +188,28 @@ export function EmailAuthConfigView({ config, onToggleVerification, togglingVeri
           <ConfigRow label={t('emailAuth.codeSize')} value={<span className="font-mono">{verification.code_size ?? '—'}</span>} />
           <ConfigRow label={t('emailAuth.codeType')} value={<span className="font-mono">{verification.code_type ?? '—'}</span>} />
           <ConfigRow label={t('emailAuth.ttlSec')} value={<span className="font-mono">{verification.ttl_seconds ?? '—'}</span>} />
+          <ConfigRow
+            label={t('emailAuth.codeStrategy')}
+            value={
+              <Badge
+                variant="outline"
+                className={cn(
+                  'font-mono text-xs',
+                  (verification.code_strategy ?? 'random') === 'fixed'
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                )}
+              >
+                {verification.code_strategy ?? 'random'}
+              </Badge>
+            }
+          />
+          {verification.code_strategy === 'fixed' && (
+            <ConfigRow
+              label={t('emailAuth.fixedCode')}
+              value={<span className="font-mono text-amber-400">{verification.fixed_code || '—'}</span>}
+            />
+          )}
           {onToggleVerification && (
             <div className="pt-3 mt-2 border-t border-border/50">
               <Tooltip>
