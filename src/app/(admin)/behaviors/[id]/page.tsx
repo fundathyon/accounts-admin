@@ -49,6 +49,7 @@ export default function BehaviorDetailPage() {
   const id = params.id as string;
   const behaviorsHref = `${BASE_PATH}/behaviors`.replace(/\/+/g, '/') || '/behaviors';
   const [toggling, setToggling] = useState(false);
+  const [togglingMagicLink, setTogglingMagicLink] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -94,6 +95,35 @@ export default function BehaviorDetailPage() {
       showNotification(t('behaviors.errorServer'), 'error');
     } finally {
       setToggling(false);
+    }
+  };
+
+  const toggleMagicLink = async () => {
+    if (!savedSecretKey || behavior?.behavior_code !== 'email_auth') return;
+    const emailConfig = behavior.config as { magic_link?: { enabled?: boolean } };
+    const isEnabled = emailConfig?.magic_link?.enabled ?? false;
+    const endpoint = isEnabled ? '/api/behaviors/email/magic-link/deactivate' : '/api/behaviors/email/magic-link/activate';
+    setTogglingMagicLink(true);
+    try {
+      const res = await fetch(apiUrl(endpoint), {
+        method: 'POST',
+        headers: {
+          'X-Secret-API-Key': savedSecretKey,
+          ...(!isEnabled && { 'Content-Type': 'application/json' }),
+        },
+        ...(!isEnabled && { body: JSON.stringify({}) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(isEnabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated'), 'success');
+        await loadBehavior();
+      } else {
+        showNotification(data.error?.message || t('behaviors.errorUpdate'), 'error');
+      }
+    } catch {
+      showNotification(t('behaviors.errorServer'), 'error');
+    } finally {
+      setTogglingMagicLink(false);
     }
   };
 
@@ -218,6 +248,8 @@ export default function BehaviorDetailPage() {
               config={behavior.config as EmailAuthConfig}
               onToggleVerification={toggleEmailVerification}
               togglingVerification={toggling}
+              onToggleMagicLink={toggleMagicLink}
+              togglingMagicLink={togglingMagicLink}
             />
           ) : (
             <div className="bg-muted/50 rounded-2xl p-4 border font-mono text-sm overflow-x-auto">

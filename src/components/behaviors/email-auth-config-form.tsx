@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Mail, Link2, Lock, ShieldCheck, Info, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Mail, Link2, Lock, ShieldCheck, Info, AlertTriangle, Palette } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +83,37 @@ export function EmailAuthConfigForm({
         updateSubConfig('verification', 'code_strategy', 'fixed');
         setPendingFixed(false);
     };
+
+    type BrandingField = keyof NonNullable<NonNullable<EmailAuthConfig['magic_link']>['email_branding']>;
+    const updateBranding = (field: BrandingField, value: string) => {
+        setConfig((prev) => ({
+            ...prev,
+            magic_link: {
+                ...prev.magic_link,
+                email_branding: {
+                    ...(prev.magic_link?.email_branding ?? {}),
+                    [field]: value,
+                },
+            },
+        }));
+    };
+
+    const baseUrl = config.magic_link?.redirect_base_url ?? '';
+    const baseUrlError = useMemo(() => {
+        if (!baseUrl) return null;
+        return /^https:\/\/[^/\s]+$/.test(baseUrl) ? null : t('emailAuth.errors.invalidBaseUrl');
+    }, [baseUrl, t]);
+
+    const defaultPath = config.magic_link?.default_redirect_path ?? '';
+    const defaultPathError = useMemo(() => {
+        if (!defaultPath) return null;
+        const ok =
+            defaultPath.startsWith('/') &&
+            !defaultPath.startsWith('//') &&
+            !defaultPath.includes(':') &&
+            defaultPath.length <= 512;
+        return ok ? null : t('emailAuth.errors.invalidRedirectPath');
+    }, [defaultPath, t]);
 
     const updatePolicy = (field: string, value: any) => {
         setConfig((prev) => ({
@@ -255,12 +286,87 @@ export function EmailAuthConfigForm({
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
                             <div className="space-y-0.5">
                                 <Label>{t('emailAuth.active')}</Label>
-                                <p className="text-xs text-muted-foreground">Habilita inicio de sesión sin contraseña vía email</p>
+                                <p className="text-xs text-muted-foreground">{t('emailAuth.helpers.magicLinkActive')}</p>
                             </div>
                             <Switch
                                 checked={config.magic_link?.enabled}
                                 onCheckedChange={(val) => updateSubConfig('magic_link', 'enabled', val)}
                             />
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+                            <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                    <Label>{t('emailAuth.autoSignup')}</Label>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                            {t('emailAuth.tooltips.autoSignup')}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                                <p className="text-xs text-muted-foreground">{t('emailAuth.helpers.autoSignup')}</p>
+                            </div>
+                            <Switch
+                                checked={config.magic_link?.auto_signup ?? false}
+                                onCheckedChange={(val) => updateSubConfig('magic_link', 'auto_signup', val)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Label>{t('emailAuth.redirectBaseUrl')}</Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                        {t('emailAuth.tooltips.redirectBaseUrl')}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                            <Input
+                                value={config.magic_link?.redirect_base_url ?? ''}
+                                onChange={(e) => updateSubConfig('magic_link', 'redirect_base_url', e.target.value)}
+                                placeholder="https://lyron.lat"
+                                className="font-mono"
+                            />
+                            {baseUrlError && (
+                                <p className="text-xs text-rose-400 flex items-start gap-1">
+                                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                    <span>{baseUrlError}</span>
+                                </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">{t('emailAuth.helpers.redirectBaseUrl')}</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Label>{t('emailAuth.defaultRedirectPath')}</Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                        {t('emailAuth.tooltips.defaultRedirectPath')}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                            <Input
+                                value={config.magic_link?.default_redirect_path ?? ''}
+                                onChange={(e) => updateSubConfig('magic_link', 'default_redirect_path', e.target.value)}
+                                placeholder="/"
+                                className="font-mono"
+                            />
+                            {defaultPathError && (
+                                <p className="text-xs text-rose-400 flex items-start gap-1">
+                                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                    <span>{defaultPathError}</span>
+                                </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">{t('emailAuth.helpers.defaultRedirectPath')}</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -289,6 +395,10 @@ export function EmailAuthConfigForm({
                                 />
                             </div>
                         </div>
+                        <p className="text-xs text-amber-400 flex items-start gap-1">
+                            <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            <span>{t('emailAuth.helpers.rateLimit')}</span>
+                        </p>
 
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
                             <div className="space-y-0.5">
@@ -304,7 +414,7 @@ export function EmailAuthConfigForm({
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
                             <div className="space-y-0.5">
                                 <Label>{t('emailAuth.bindToIp')}</Label>
-                                <p className="text-xs text-muted-foreground">El link solo funciona en la misma IP que lo solicitó</p>
+                                <p className="text-xs text-muted-foreground">{t('emailAuth.helpers.bindToIp')}</p>
                             </div>
                             <Switch
                                 checked={config.magic_link?.bind_to_ip}
@@ -315,12 +425,67 @@ export function EmailAuthConfigForm({
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
                             <div className="space-y-0.5">
                                 <Label>{t('emailAuth.bindToUserAgent')}</Label>
-                                <p className="text-xs text-muted-foreground">Vincular al navegador (User Agent)</p>
+                                <p className="text-xs text-muted-foreground">{t('emailAuth.helpers.bindToUserAgent')}</p>
                             </div>
                             <Switch
                                 checked={config.magic_link?.bind_to_user_agent}
                                 onCheckedChange={(val) => updateSubConfig('magic_link', 'bind_to_user_agent', val)}
                             />
+                        </div>
+
+                        <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Palette className="w-4 h-4 text-violet-400" />
+                                <Label className="text-sm font-semibold">{t('emailAuth.branding')}</Label>
+                            </div>
+                            <p className="text-xs text-muted-foreground -mt-2">{t('emailAuth.helpers.branding')}</p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>{t('emailAuth.fromName')}</Label>
+                                    <Input
+                                        value={config.magic_link?.email_branding?.from_name ?? ''}
+                                        onChange={(e) => updateBranding('from_name', e.target.value)}
+                                        placeholder="Lyron"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t('emailAuth.subject')}</Label>
+                                    <Input
+                                        value={config.magic_link?.email_branding?.subject ?? ''}
+                                        onChange={(e) => updateBranding('subject', e.target.value)}
+                                        placeholder="Tu acceso a Lyron"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{t('emailAuth.logoUrl')}</Label>
+                                <Input
+                                    value={config.magic_link?.email_branding?.logo_url ?? ''}
+                                    onChange={(e) => updateBranding('logo_url', e.target.value)}
+                                    placeholder="https://lyron.lat/logo.png"
+                                    className="font-mono"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{t('emailAuth.buttonColor')}</Label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="color"
+                                        value={config.magic_link?.email_branding?.button_color ?? '#7c3aed'}
+                                        onChange={(e) => updateBranding('button_color', e.target.value)}
+                                        className="w-12 h-9 rounded-md border border-border bg-background cursor-pointer p-0"
+                                    />
+                                    <Input
+                                        value={config.magic_link?.email_branding?.button_color ?? ''}
+                                        onChange={(e) => updateBranding('button_color', e.target.value)}
+                                        placeholder="#7c3aed"
+                                        className="font-mono w-32"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
