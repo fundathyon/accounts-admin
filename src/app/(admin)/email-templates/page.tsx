@@ -37,6 +37,12 @@ const DEFAULT_VALUES: Record<string, string> = {
   activation_code: '123456',
   token: 'sample-token-abc123',
   new_email: 'nuevo@ejemplo.com',
+  magic_link_url: 'https://lyron.lat/auth/verify?token=sample-token-abc123',
+  redirect_path: '/',
+  expires_in_minutes: '15',
+  from_name: 'Lyron',
+  logo_url: 'https://lyron.lat/logo.png',
+  button_color: '#7c3aed',
 };
 
 export default function EmailTemplatesPage() {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Link2, Lock, ShieldCheck, Loader2 } from 'lucide-react';
+import { Mail, Link2, Link2Off, Lock, ShieldCheck, Loader2, Palette } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,15 @@ export interface EmailAuthConfig {
     single_use?: boolean;
     ttl_seconds?: number;
     window_seconds?: number;
+    auto_signup?: boolean;
+    redirect_base_url?: string;
+    default_redirect_path?: string;
+    email_branding?: {
+      from_name?: string;
+      subject?: string;
+      logo_url?: string;
+      button_color?: string;
+    };
   };
   password?: {
     enabled?: boolean;
@@ -99,9 +108,17 @@ interface EmailAuthConfigViewProps {
   config: EmailAuthConfig;
   onToggleVerification?: () => void;
   togglingVerification?: boolean;
+  onToggleMagicLink?: () => void;
+  togglingMagicLink?: boolean;
 }
 
-export function EmailAuthConfigView({ config, onToggleVerification, togglingVerification }: EmailAuthConfigViewProps) {
+export function EmailAuthConfigView({
+  config,
+  onToggleVerification,
+  togglingVerification,
+  onToggleMagicLink,
+  togglingMagicLink,
+}: EmailAuthConfigViewProps) {
   const { t } = useI18n();
   const email = config.email ?? {};
   const magic = config.magic_link ?? {};
@@ -142,6 +159,7 @@ export function EmailAuthConfigView({ config, onToggleVerification, togglingVeri
 
         <ConfigSection icon={<Link2 className="w-4 h-4 text-violet-400" />} title={t('emailAuth.magicLink')}>
           <ConfigRow label={t('emailAuth.active')} value={<BoolBadge value={magic.enabled} />} />
+          <ConfigRow label={t('emailAuth.autoSignup')} value={<BoolBadge value={magic.auto_signup} />} />
           <ConfigRow label={t('emailAuth.singleUse')} value={<BoolBadge value={magic.single_use} />} />
           <ConfigRow label={t('emailAuth.bindToIp')} value={<BoolBadge value={magic.bind_to_ip} />} />
           <ConfigRow label={t('emailAuth.bindToUserAgent')} value={<BoolBadge value={magic.bind_to_user_agent} />} />
@@ -151,6 +169,85 @@ export function EmailAuthConfigView({ config, onToggleVerification, togglingVeri
           />
           <ConfigRow label={t('emailAuth.ttlSec')} value={<span className="font-mono">{magic.ttl_seconds ?? '—'}</span>} />
           <ConfigRow label={t('emailAuth.windowSec')} value={<span className="font-mono">{magic.window_seconds ?? '—'}</span>} />
+          <ConfigRow
+            label={t('emailAuth.redirectBaseUrl')}
+            value={
+              magic.redirect_base_url
+                ? <span className="font-mono text-xs truncate max-w-[220px] inline-block align-bottom">{magic.redirect_base_url}</span>
+                : <span className="text-muted-foreground">—</span>
+            }
+          />
+          <ConfigRow
+            label={t('emailAuth.defaultRedirectPath')}
+            value={<span className="font-mono text-xs">{magic.default_redirect_path || '—'}</span>}
+          />
+
+          {magic.email_branding && (
+            <div className="pt-3 mt-2 border-t border-border/50 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider">
+                <Palette className="w-3.5 h-3.5" />
+                {t('emailAuth.branding')}
+              </div>
+              <ConfigRow
+                label={t('emailAuth.fromName')}
+                value={<span className="font-mono text-xs">{magic.email_branding.from_name || '—'}</span>}
+              />
+              <ConfigRow
+                label={t('emailAuth.subject')}
+                value={<span className="font-mono text-xs">{magic.email_branding.subject || '—'}</span>}
+              />
+              <ConfigRow
+                label={t('emailAuth.logoUrl')}
+                value={
+                  magic.email_branding.logo_url
+                    ? <span className="font-mono text-xs truncate max-w-[200px] inline-block align-bottom">{magic.email_branding.logo_url}</span>
+                    : <span className="text-muted-foreground">—</span>
+                }
+              />
+              <ConfigRow
+                label={t('emailAuth.buttonColor')}
+                value={
+                  magic.email_branding.button_color ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="w-4 h-4 rounded border border-border"
+                        style={{ backgroundColor: magic.email_branding.button_color }}
+                      />
+                      <span className="font-mono text-xs">{magic.email_branding.button_color}</span>
+                    </span>
+                  ) : <span className="text-muted-foreground">—</span>
+                }
+              />
+            </div>
+          )}
+
+          {onToggleMagicLink && (
+            <div className="pt-3 mt-2 border-t border-border/50">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onToggleMagicLink}
+                    disabled={togglingMagicLink}
+                    className="gap-2"
+                  >
+                    {togglingMagicLink ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : magic.enabled ? (
+                      <Link2Off className="w-4 h-4" />
+                    ) : (
+                      <Link2 className="w-4 h-4" />
+                    )}
+                    {magic.enabled ? t('emailAuth.deactivateMagicLink') : t('emailAuth.activateMagicLink')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {magic.enabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated')}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </ConfigSection>
 
         <ConfigSection icon={<Lock className="w-4 h-4 text-amber-400" />} title={t('emailAuth.password')}>

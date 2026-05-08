@@ -683,6 +683,8 @@
     "updateError": "Error updating behavior",
     "verificationDeactivated": "Email verification deactivated",
     "verificationActivated": "Email verification activated",
+    "magicLinkDeactivated": "Magic Link deactivated",
+    "magicLinkActivated": "Magic Link activated",
     "errorLoadDetails": "Error loading details",
     "errorUpdate": "Error updating",
     "errorServer": "Error contacting server"
@@ -736,6 +738,26 @@
     "codeType": "Code type",
     "deactivateVerification": "Deactivate verification",
     "activateVerification": "Activate verification",
+    "deactivateMagicLink": "Deactivate Magic Link",
+    "activateMagicLink": "Activate Magic Link",
+    "autoSignup": "Auto-signup",
+    "redirectBaseUrl": "Redirect base URL",
+    "defaultRedirectPath": "Default redirect path",
+    "branding": "Email branding",
+    "fromName": "From name",
+    "subject": "Subject",
+    "logoUrl": "Logo URL",
+    "buttonColor": "Button color",
+    "helpers": {
+      "magicLinkActive": "Enables passwordless sign-in via email link",
+      "autoSignup": "When the email is unknown at request time, the account is created automatically. When off, the API still returns 200 (anti-enumeration) but no email is sent.",
+      "redirectBaseUrl": "Immutable origin of the email link. The client cannot override it — protects against open-redirect.",
+      "defaultRedirectPath": "Path the user is redirected to after claiming, when the app does not pass an explicit one.",
+      "rateLimit": "Rate-limit applies per (app_id, email_id), not per IP. For per-IP anti-bot, use a CDN/WAF in front of the Accounts API.",
+      "bindToIp": "If on, the link only works from the same IP that requested it. Breaks the 'request on laptop, open on phone' flow.",
+      "bindToUserAgent": "Binds the link to the requesting User-Agent. Default off for cross-device flows.",
+      "branding": "Customize the email the user receives. Leave fields empty to fall back to global defaults."
+    },
     "codeStrategy": "Code strategy",
     "fixedCode": "Fixed code",
     "strategy": {
@@ -750,7 +772,10 @@
       "ttlSec": "Lifetime in seconds for the code. After that the user must request a new one.",
       "codeType": "Alphabet of the code. 'numeric' = digits 0-9 only. 'alphanumeric' = digits + letters a-z and A-Z.",
       "codeStrategy": "How the code is generated. 'Random' uses a cryptographic RNG (recommended and required in production). 'Fixed' always returns the same value — only allowed in testing environments: local, development, staging, qa, test.",
-      "fixedCode": "Value returned literally as the verification code. Must match the configured size and alphabet. Only allowed when ENVIRONMENT is local, development, staging, qa, or test. In production the backend rejects activation with HTTP 422."
+      "fixedCode": "Value returned literally as the verification code. Must match the configured size and alphabet. Only allowed when ENVIRONMENT is local, development, staging, qa, or test. In production the backend rejects activation with HTTP 422.",
+      "autoSignup": "When on, a magic link to an unknown email creates the account. When off, only existing accounts can sign in.",
+      "redirectBaseUrl": "Origin of the email link (e.g. https://lyron.lat). The final path is concatenated server-side.",
+      "defaultRedirectPath": "Must start with '/'. No '//', no ':' (schemes), max 512 chars."
     },
     "confirmFixed": {
       "title": "Switch to FIXED code?",
@@ -763,7 +788,9 @@
       "fixedNotAllowedHere": "Fixed code is not allowed in this environment. Only: local, development, staging, qa, test.",
       "fixedCodeRequired": "'Fixed code' is required when strategy is 'fixed'.",
       "fixedCodeLengthMismatch": "'Fixed code' must have the same length as 'Code size'.",
-      "fixedCodeCharClassMismatch": "'Fixed code' contains characters not allowed by the selected code type."
+      "fixedCodeCharClassMismatch": "'Fixed code' contains characters not allowed by the selected code type.",
+      "invalidBaseUrl": "Must be an https:// URL with no path (e.g. https://lyron.lat).",
+      "invalidRedirectPath": "Must start with '/', without '//' or ':', max 512 chars."
     }
   },
   "emailTemplates": {

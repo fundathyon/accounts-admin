@@ -683,6 +683,8 @@
     "updateError": "Error al actualizar el comportamiento",
     "verificationDeactivated": "Verificación de email desactivada",
     "verificationActivated": "Verificación de email activada",
+    "magicLinkDeactivated": "Magic Link desactivado",
+    "magicLinkActivated": "Magic Link activado",
     "errorLoadDetails": "Error al cargar detalles",
     "errorUpdate": "Error al actualizar",
     "errorServer": "Error al contactar el servidor"
@@ -736,6 +738,26 @@
     "codeType": "Tipo de código",
     "deactivateVerification": "Desactivar verificación",
     "activateVerification": "Activar verificación",
+    "deactivateMagicLink": "Desactivar Magic Link",
+    "activateMagicLink": "Activar Magic Link",
+    "autoSignup": "Auto-signup",
+    "redirectBaseUrl": "URL base de redirect",
+    "defaultRedirectPath": "Path de redirect por defecto",
+    "branding": "Branding del email",
+    "fromName": "Nombre del remitente",
+    "subject": "Asunto",
+    "logoUrl": "URL del logo",
+    "buttonColor": "Color del botón",
+    "helpers": {
+      "magicLinkActive": "Habilita inicio de sesión sin contraseña vía email",
+      "autoSignup": "Si el email no existe al pedir un link, se crea la cuenta automáticamente. Si está apagado, la API sigue respondiendo 200 (anti-enumeration) pero no envía email.",
+      "redirectBaseUrl": "Base inmutable del link en el email. El cliente no puede sobrescribirla — protege contra open-redirect.",
+      "defaultRedirectPath": "Path al que se redirige al usuario tras canjear el link, si la app no envía uno explícito.",
+      "rateLimit": "El rate-limit aplica por (app_id, email_id), no por IP. Para anti-bot por IP usa CDN/WAF antes del Accounts API.",
+      "bindToIp": "Si se activa, el link sólo funciona desde la misma IP que lo solicitó. Rompe el caso 'pido en laptop, abro en teléfono'.",
+      "bindToUserAgent": "Vincula el link al User-Agent del solicitante. Default off para flujos cross-device.",
+      "branding": "Personaliza el email que recibe el usuario. Si lo dejas vacío se usan defaults globales."
+    },
     "codeStrategy": "Estrategia del código",
     "fixedCode": "Código fijo",
     "strategy": {
@@ -750,7 +772,10 @@
       "ttlSec": "Tiempo en segundos durante el cual el código es válido. Pasado ese tiempo, hay que pedir uno nuevo.",
       "codeType": "Alfabeto del código. 'numeric' = solo dígitos 0-9. 'alphanumeric' = dígitos + letras a-z y A-Z.",
       "codeStrategy": "Cómo se genera el código. 'Aleatorio' lo genera con un RNG criptográfico (recomendado y obligatorio en producción). 'Fijo' devuelve siempre el mismo valor — solo permitido en ambientes de testing: local, development, staging, qa, test.",
-      "fixedCode": "Valor que se devolverá literalmente como código de verificación. Debe respetar el tamaño y alfabeto configurados arriba. Solo se permite cuando ENVIRONMENT es local, development, staging, qa o test. En producción el backend rechaza la activación con HTTP 422."
+      "fixedCode": "Valor que se devolverá literalmente como código de verificación. Debe respetar el tamaño y alfabeto configurados arriba. Solo se permite cuando ENVIRONMENT es local, development, staging, qa o test. En producción el backend rechaza la activación con HTTP 422.",
+      "autoSignup": "Cuando está activo, un magic link a un email desconocido crea la cuenta. Cuando está apagado, sólo loguea cuentas existentes.",
+      "redirectBaseUrl": "Origen del link enviado por email (ej. https://lyron.lat). El path final se concatena en el server.",
+      "defaultRedirectPath": "Debe empezar con '/'. No se permite '//', no se permite ':' (esquemas), máximo 512 caracteres."
     },
     "confirmFixed": {
       "title": "¿Cambiar a código FIJO?",
@@ -763,7 +788,9 @@
       "fixedNotAllowedHere": "El código fijo no está permitido en este ambiente. Solo: local, development, staging, qa, test.",
       "fixedCodeRequired": "El campo 'Código fijo' es obligatorio cuando la estrategia es 'fixed'.",
       "fixedCodeLengthMismatch": "El 'Código fijo' debe tener la misma longitud que 'Tamaño del código'.",
-      "fixedCodeCharClassMismatch": "El 'Código fijo' contiene caracteres no permitidos por el tipo de código seleccionado."
+      "fixedCodeCharClassMismatch": "El 'Código fijo' contiene caracteres no permitidos por el tipo de código seleccionado.",
+      "invalidBaseUrl": "Debe ser una URL https:// sin path (ej. https://lyron.lat).",
+      "invalidRedirectPath": "Debe empezar con '/', sin '//' ni ':', máximo 512 caracteres."
     }
   },
   "emailTemplates": {
