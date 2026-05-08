@@ -33,7 +33,7 @@ import {
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
+import { BASE_PATH, IS_PRODUCTION } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
@@ -121,6 +121,15 @@ export default function UsersPage() {
   const [revokeByIdValue, setRevokeByIdValue] = useState('');
   const [revokeLoading, setRevokeLoading] = useState(false);
   const [revokeMode, setRevokeMode] = useState<'token' | 'id'>('token');
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [bulkConfirmPhrase, setBulkConfirmPhrase] = useState('');
+  const [bulkProgress, setBulkProgress] = useState<{
+    running: boolean;
+    finished: boolean;
+    done: number;
+    total: number;
+    errors: { id: string; email?: string; message: string }[];
+  } | null>(null);
 
   const handleRevokeByToken = async () => {
     const token = revokeByTokenValue.trim();
@@ -411,6 +420,69 @@ export default function UsersPage() {
     }
   };
 
+  const handleBulkDeleteUsers = async () => {
+    if (IS_PRODUCTION || !savedSecretKey) return;
+    const targets = users.slice();
+    if (targets.length === 0) {
+      showNotification(t('users.deleteAllNoUsers'), 'error');
+      return;
+    }
+
+    setBulkProgress({
+      running: true,
+      finished: false,
+      done: 0,
+      total: targets.length,
+      errors: [],
+    });
+
+    const CONCURRENCY = 5;
+    let cursor = 0;
+    let done = 0;
+    const errors: { id: string; email?: string; message: string }[] = [];
+
+    const worker = async () => {
+      while (true) {
+        const i = cursor++;
+        if (i >= targets.length) return;
+        const user = targets[i];
+        const email = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
+        try {
+          const res = await fetch(apiUrl(`/api/users/${user.id}`), {
+            method: 'DELETE',
+            headers: { 'X-Secret-API-Key': savedSecretKey },
+          });
+          const data = await res.json().catch(() => ({}));
+          const isOk = res.ok && (data?.status === 200 || data?.success || data?.data?.message);
+          if (!isOk) {
+            const errObj = Array.isArray(data?.errors) ? data.errors[0] : data?.error;
+            errors.push({ id: user.id, email, message: errObj?.message || `HTTP ${res.status}` });
+          }
+        } catch {
+          errors.push({ id: user.id, email, message: t('users.errorConnection') });
+        } finally {
+          done++;
+          setBulkProgress((prev) =>
+            prev ? { ...prev, done, errors: errors.slice() } : prev
+          );
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker)
+    );
+
+    setBulkProgress({
+      running: false,
+      finished: true,
+      done,
+      total: targets.length,
+      errors,
+    });
+    await fetchUsers();
+  };
+
   const handleSignin = async () => {
     if (!keyForAuth) {
       showNotification(t('users.configPublishableKey'), 'error');
@@ -596,6 +668,24 @@ export default function UsersPage() {
                     {t('users.export')}
                   </TooltipContent>
                 </Tooltip>
+                {!IS_PRODUCTION && users.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setBulkConfirmPhrase('');
+                          setBulkProgress(null);
+                          setIsBulkDeleteOpen(true);
+                        }}
+                        className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" /> {t('users.deleteAll')}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('users.deleteAllTooltip')}</TooltipContent>
+                  </Tooltip>
+                )}
               </>
             )}
             <Tooltip>
@@ -1476,6 +1566,160 @@ export default function UsersPage() {
               {t('common.delete')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isBulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (bulkProgress?.running) return;
+          setIsBulkDeleteOpen(open);
+          if (!open) {
+            setBulkConfirmPhrase('');
+            setBulkProgress(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" />
+              {t('users.deleteAllTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('users.deleteAllDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!bulkProgress ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                <p className="text-muted-foreground">{t('users.deleteAllConfirmHint')}</p>
+                <p className="mt-1 font-mono font-semibold text-destructive">
+                  {t('users.deleteAllConfirmPhrase')}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bulk-delete-phrase">
+                  {t('users.deleteAllPhrasePlaceholder')}
+                </Label>
+                <Input
+                  id="bulk-delete-phrase"
+                  value={bulkConfirmPhrase}
+                  onChange={(e) => setBulkConfirmPhrase(e.target.value)}
+                  placeholder={t('users.deleteAllConfirmPhrase')}
+                  className="font-mono"
+                  autoComplete="off"
+                />
+                {bulkConfirmPhrase.length > 0 &&
+                  bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase') && (
+                    <p className="text-xs text-destructive">
+                      {t('users.deleteAllPhraseMismatch')}
+                    </p>
+                  )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsBulkDeleteOpen(false);
+                    setBulkConfirmPhrase('');
+                  }}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={
+                    bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase') ||
+                    users.length === 0
+                  }
+                  onClick={handleBulkDeleteUsers}
+                  className="gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {t('users.deleteAllConfirmButton', { count: users.length })}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    {bulkProgress.running && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {bulkProgress.finished
+                      ? t('users.deleteAllDone')
+                      : t('users.deleteAllInProgress')}
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {t('users.deleteAllProgress', {
+                      done: bulkProgress.done,
+                      total: bulkProgress.total,
+                    })}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn(
+                      'h-full transition-all',
+                      bulkProgress.errors.length > 0
+                        ? 'bg-amber-500'
+                        : 'bg-destructive'
+                    )}
+                    style={{
+                      width: `${bulkProgress.total === 0
+                        ? 0
+                        : Math.round((bulkProgress.done / bulkProgress.total) * 100)
+                        }%`,
+                    }}
+                  />
+                </div>
+                {bulkProgress.finished && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('users.deleteAllDoneSummary', {
+                      ok: bulkProgress.done - bulkProgress.errors.length,
+                      failed: bulkProgress.errors.length,
+                    })}
+                  </p>
+                )}
+              </div>
+
+              {bulkProgress.errors.length > 0 && (
+                <div className="max-h-48 overflow-auto rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs space-y-1">
+                  <p className="font-semibold text-amber-500">
+                    {t('users.deleteAllErrors', { count: bulkProgress.errors.length })}
+                  </p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    {bulkProgress.errors.slice(0, 50).map((err) => (
+                      <li key={err.id} className="font-mono">
+                        <span className="text-foreground">{err.email || err.id}</span>
+                        {' — '}
+                        <span className="text-amber-500">{err.message}</span>
+                      </li>
+                    ))}
+                    {bulkProgress.errors.length > 50 && (
+                      <li className="italic">…+{bulkProgress.errors.length - 50}</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsBulkDeleteOpen(false);
+                    setBulkConfirmPhrase('');
+                    setBulkProgress(null);
+                  }}
+                  disabled={bulkProgress.running}
+                >
+                  {t('common.close')}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

@@ -9,6 +9,9 @@ const basePath = rawBasePath && !rawBasePath.includes("PLACEHOLDER") ? rawBasePa
 const nextConfig: NextConfig = {
   output: "standalone",
   ...(basePath ? { basePath } : {}),
+  env: {
+    NEXT_PUBLIC_ENVIRONMENT: process.env.ENVIRONMENT || "",
+  },
 };
 
 export default nextConfig;

@@ -20,3 +20,6 @@ export function buildAdminHref(path: string): string {
 
 export const INTERNAL_API_URL = process.env.INTERNAL_API_URL || 'http://localhost:8000/accounts'
 export const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'secret'
+
+export const ENVIRONMENT = process.env.NEXT_PUBLIC_ENVIRONMENT || ''
+export const IS_PRODUCTION = ENVIRONMENT === 'production'
