@@ -279,7 +279,7 @@ export default function BehaviorDetailPage() {
       </div>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-6">
+        <DialogContent className="w-[min(95vw,1000px)] max-h-[90vh] overflow-hidden flex flex-col p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-primary" />
