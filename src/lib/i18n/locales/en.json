@@ -322,6 +322,10 @@
     "register": "Register",
     "registering": "Registering…",
     "close": "Close",
+    "optional": "Optional",
+    "metadataFields": "Additional user data",
+    "metadataSelect": "Select…",
+    "metadataOptional": "Optional",
     "resendCode": "Already signed up? Resend code",
     "verificationCode": "Verification code",
     "verify": "Verify",
@@ -783,7 +787,12 @@
     "clickToCopyEmail": "Click to copy email",
     "clickToCopy": "Click to copy",
     "loginMethods": "Login methods",
-    "noLoginMethods": "No login methods registered"
+    "noLoginMethods": "No login methods registered",
+    "metadata": "Metadata",
+    "noMetadata": "This user has no metadata",
+    "metadataSaved": "Metadata updated",
+    "metadataError": "Error updating metadata",
+    "metadataInvalidJson": "Invalid JSON. Must be an object."
   },
   "emailAuth": {
     "identifier": "Identifier",
@@ -869,7 +878,26 @@
       "fixedCodeCharClassMismatch": "'Fixed code' contains characters not allowed by the selected code type.",
       "invalidBaseUrl": "Must be an https:// URL with no path (e.g. https://lyron.lat).",
       "invalidRedirectPath": "Must start with '/', without '//' or ':', max 512 chars."
-    }
+    },
+    "metadataSchema": "Metadata Schema",
+    "metadataSchemaHelp": "If enabled, validates extra user data against the defined schema at signup.",
+    "metadataAdditionalProps": "Additional properties",
+    "metadataAdditionalPropsHelp": "If disabled, any field not defined in the schema is rejected.",
+    "metadataFields": "Schema fields",
+    "metadataAddField": "Add field",
+    "metadataNoFields": "No fields defined. Add one to get started.",
+    "metadataField": "Field",
+    "metadataFieldName": "Name",
+    "metadataFieldType": "Type",
+    "metadataRequired": "Required",
+    "metadataMinLength": "Min length",
+    "metadataMaxLength": "Max length",
+    "metadataMinimum": "Minimum",
+    "metadataMaximum": "Maximum",
+    "metadataEnum": "Allowed values (enum)",
+    "metadataEnumHelp": "Comma-separated. Leave empty to allow any value.",
+    "configureMetadataSchema": "Configure schema",
+    "configureMetadataSchemaTooltip": "Opens the edit form on the Metadata Schema tab."
   },
   "emailTemplates": {
     "title": "Email Templates",

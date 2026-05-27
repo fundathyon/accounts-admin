@@ -322,6 +322,10 @@
     "register": "Registrar",
     "registering": "Registrando…",
     "close": "Cerrar",
+    "optional": "Opcional",
+    "metadataFields": "Datos adicionales del usuario",
+    "metadataSelect": "Seleccionar…",
+    "metadataOptional": "Opcional",
     "resendCode": "¿Ya te registraste? Reenviar código",
     "verificationCode": "Código de verificación",
     "verify": "Verificar",
@@ -783,7 +787,12 @@
     "clickToCopyEmail": "Clic para copiar email",
     "clickToCopy": "Clic para copiar",
     "loginMethods": "Métodos de login",
-    "noLoginMethods": "No hay métodos de login registrados"
+    "noLoginMethods": "No hay métodos de login registrados",
+    "metadata": "Metadatos",
+    "noMetadata": "Este usuario no tiene metadatos",
+    "metadataSaved": "Metadatos actualizados",
+    "metadataError": "Error al actualizar los metadatos",
+    "metadataInvalidJson": "El JSON no es válido. Debe ser un objeto."
   },
   "emailAuth": {
     "identifier": "Identificador",
@@ -869,7 +878,26 @@
       "fixedCodeCharClassMismatch": "El 'Código fijo' contiene caracteres no permitidos por el tipo de código seleccionado.",
       "invalidBaseUrl": "Debe ser una URL https:// sin path (ej. https://lyron.lat).",
       "invalidRedirectPath": "Debe empezar con '/', sin '//' ni ':', máximo 512 caracteres."
-    }
+    },
+    "metadataSchema": "Metadata Schema",
+    "metadataSchemaHelp": "Si está activo, valida que los datos extra del usuario sigan el esquema definido al registrarse.",
+    "metadataAdditionalProps": "Propiedades adicionales",
+    "metadataAdditionalPropsHelp": "Si está desactivado, se rechaza cualquier campo no definido en el esquema.",
+    "metadataFields": "Campos del esquema",
+    "metadataAddField": "Añadir campo",
+    "metadataNoFields": "Sin campos definidos. Añade uno para empezar.",
+    "metadataField": "Campo",
+    "metadataFieldName": "Nombre",
+    "metadataFieldType": "Tipo",
+    "metadataRequired": "Requerido",
+    "metadataMinLength": "Long. mín.",
+    "metadataMaxLength": "Long. máx.",
+    "metadataMinimum": "Mínimo",
+    "metadataMaximum": "Máximo",
+    "metadataEnum": "Valores permitidos (enum)",
+    "metadataEnumHelp": "Separados por coma. Deja vacío para no restringir.",
+    "configureMetadataSchema": "Configurar esquema",
+    "configureMetadataSchemaTooltip": "Abre el formulario de edición en la pestaña Metadata Schema."
   },
   "emailTemplates": {
     "title": "Templates de Email",
