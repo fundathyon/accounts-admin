@@ -38,6 +38,25 @@ export interface User {
   updated_at: string;
   role_details?: RoleDetails;
   login_methods?: LoginMethod[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface MetadataFieldSchema {
+  name: string;
+  type: 'string' | 'number' | 'boolean';
+  required: boolean;
+  format?: string;
+  enum?: string[];
+  minimum?: number;
+  maximum?: number;
+  min_length?: number;
+  max_length?: number;
+}
+
+export interface MetadataSchemaConfig {
+  enabled: boolean;
+  scheme: MetadataFieldSchema[];
+  additional_properties: boolean;
 }
 
 export interface WebhookItem {

@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Mail, Link2, Lock, ShieldCheck, Info, AlertTriangle, Palette } from 'lucide-react';
+import { Mail, Link2, Lock, ShieldCheck, Info, AlertTriangle, Palette, Database, Plus, Trash2 } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import type { MetadataFieldSchema } from '@/lib/admin-types';
 import {
     Select,
     SelectContent,
@@ -47,7 +48,7 @@ export function EmailAuthConfigForm({
 }: EmailAuthConfigFormProps) {
     const { t } = useI18n();
     const [config, setConfig] = useState<EmailAuthConfig>(JSON.parse(JSON.stringify(initialConfig)));
-    const [activeTab, setActiveTab] = useState<'email' | 'password' | 'magic' | 'verification'>('email');
+    const [activeTab, setActiveTab] = useState<'email' | 'password' | 'magic' | 'verification' | 'metadata'>('email');
     const [pendingFixed, setPendingFixed] = useState(false);
     const [confirmInput, setConfirmInput] = useState('');
 
@@ -133,7 +134,39 @@ export function EmailAuthConfigForm({
         { id: 'password', icon: Lock, label: t('emailAuth.password') },
         { id: 'magic', icon: Link2, label: t('emailAuth.magicLink') },
         { id: 'verification', icon: ShieldCheck, label: t('emailAuth.verification') },
+        { id: 'metadata', icon: Database, label: t('emailAuth.metadataSchema') },
     ];
+
+    const metadataSchema = config.metadata_schema ?? { enabled: false, scheme: [], additional_properties: false };
+
+    const updateMetadataSchema = (field: string, value: unknown) => {
+        setConfig((prev) => ({
+            ...prev,
+            metadata_schema: {
+                enabled: prev.metadata_schema?.enabled ?? false,
+                scheme: prev.metadata_schema?.scheme ?? [],
+                additional_properties: prev.metadata_schema?.additional_properties ?? false,
+                [field]: value,
+            },
+        }));
+    };
+
+    const addMetadataField = () => {
+        const newField: MetadataFieldSchema = { name: '', type: 'string', required: false };
+        updateMetadataSchema('scheme', [...(metadataSchema.scheme ?? []), newField]);
+    };
+
+    const removeMetadataField = (idx: number) => {
+        const updated = (metadataSchema.scheme ?? []).filter((_, i) => i !== idx);
+        updateMetadataSchema('scheme', updated);
+    };
+
+    const updateMetadataField = (idx: number, field: keyof MetadataFieldSchema, value: unknown) => {
+        const updated = (metadataSchema.scheme ?? []).map((f, i) =>
+            i === idx ? { ...f, [field]: value } : f
+        );
+        updateMetadataSchema('scheme', updated);
+    };
 
     return (
         <div className="flex flex-col h-full max-h-[70vh]">
@@ -143,13 +176,13 @@ export function EmailAuthConfigForm({
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap",
+                            "flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap",
                             activeTab === tab.id
                                 ? "border-primary text-primary"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                         )}
                     >
-                        <tab.icon className="w-4 h-4" />
+                        <tab.icon className="w-3.5 h-3.5 shrink-0" />
                         {tab.label}
                     </button>
                 ))}
@@ -642,6 +675,160 @@ export function EmailAuthConfigForm({
                                 readOnly
                                 className="bg-muted/50 text-muted-foreground cursor-not-allowed"
                             />
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'metadata' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
+                        <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+                            <div className="space-y-0.5">
+                                <Label>{t('emailAuth.active')}</Label>
+                                <p className="text-xs text-muted-foreground">{t('emailAuth.metadataSchemaHelp')}</p>
+                            </div>
+                            <Switch
+                                checked={metadataSchema.enabled}
+                                onCheckedChange={(val) => updateMetadataSchema('enabled', val)}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+                            <div className="space-y-0.5">
+                                <Label>{t('emailAuth.metadataAdditionalProps')}</Label>
+                                <p className="text-xs text-muted-foreground">{t('emailAuth.metadataAdditionalPropsHelp')}</p>
+                            </div>
+                            <Switch
+                                checked={metadataSchema.additional_properties}
+                                onCheckedChange={(val) => updateMetadataSchema('additional_properties', val)}
+                            />
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t('emailAuth.metadataFields')}</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addMetadataField} className="gap-2">
+                                    <Plus className="w-3.5 h-3.5" />
+                                    {t('emailAuth.metadataAddField')}
+                                </Button>
+                            </div>
+
+                            {(metadataSchema.scheme ?? []).length === 0 && (
+                                <p className="text-xs text-muted-foreground text-center py-6 border rounded-xl border-dashed">
+                                    {t('emailAuth.metadataNoFields')}
+                                </p>
+                            )}
+
+                            {(metadataSchema.scheme ?? []).map((field, idx) => (
+                                <div key={idx} className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                            {t('emailAuth.metadataField')} #{idx + 1}
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeMetadataField(idx)}
+                                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 h-7 w-7 p-0"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs">{t('emailAuth.metadataFieldName')}</Label>
+                                            <Input
+                                                value={field.name}
+                                                onChange={(e) => updateMetadataField(idx, 'name', e.target.value)}
+                                                placeholder="phone_number"
+                                                className="font-mono h-8 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs">{t('emailAuth.metadataFieldType')}</Label>
+                                            <Select
+                                                value={field.type}
+                                                onValueChange={(val) => updateMetadataField(idx, 'type', val as MetadataFieldSchema['type'])}
+                                            >
+                                                <SelectTrigger className="h-8 text-sm">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="string">string</SelectItem>
+                                                    <SelectItem value="number">number</SelectItem>
+                                                    <SelectItem value="boolean">boolean</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs">{t('emailAuth.metadataRequired')}</Label>
+                                        <Switch
+                                            checked={field.required}
+                                            onCheckedChange={(val) => updateMetadataField(idx, 'required', val)}
+                                        />
+                                    </div>
+                                    {field.type === 'string' && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs">{t('emailAuth.metadataMinLength')}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={field.min_length ?? ''}
+                                                    onChange={(e) => updateMetadataField(idx, 'min_length', e.target.value ? parseInt(e.target.value) : undefined)}
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs">{t('emailAuth.metadataMaxLength')}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={field.max_length ?? ''}
+                                                    onChange={(e) => updateMetadataField(idx, 'max_length', e.target.value ? parseInt(e.target.value) : undefined)}
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {field.type === 'number' && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs">{t('emailAuth.metadataMinimum')}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={field.minimum ?? ''}
+                                                    onChange={(e) => updateMetadataField(idx, 'minimum', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs">{t('emailAuth.metadataMaximum')}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={field.maximum ?? ''}
+                                                    onChange={(e) => updateMetadataField(idx, 'maximum', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {field.type === 'string' && (
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs">{t('emailAuth.metadataEnum')}</Label>
+                                            <Input
+                                                value={(field.enum ?? []).join(', ')}
+                                                onChange={(e) => {
+                                                    const vals = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
+                                                    updateMetadataField(idx, 'enum', vals.length > 0 ? vals : undefined);
+                                                }}
+                                                placeholder="value1, value2, value3"
+                                                className="font-mono h-8 text-sm"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">{t('emailAuth.metadataEnumHelp')}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

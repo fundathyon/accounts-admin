@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Link2, Link2Off, Lock, ShieldCheck, Loader2, Palette } from 'lucide-react';
+import { Mail, Link2, Link2Off, Lock, ShieldCheck, Loader2, Palette, Database } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { MetadataSchemaConfig } from '@/lib/admin-types';
 
 export interface EmailAuthConfig {
   identifier?: string;
@@ -58,6 +59,7 @@ export interface EmailAuthConfig {
     code_strategy?: 'random' | 'fixed';
     fixed_code?: string;
   };
+  metadata_schema?: MetadataSchemaConfig;
 }
 
 export const FIXED_CODE_ALLOWED_ENVS = ['local', 'development', 'staging', 'qa', 'test'] as const;
@@ -110,6 +112,8 @@ interface EmailAuthConfigViewProps {
   togglingVerification?: boolean;
   onToggleMagicLink?: () => void;
   togglingMagicLink?: boolean;
+  onActivateMetadataSchema?: () => void;
+  activatingMetadataSchema?: boolean;
 }
 
 export function EmailAuthConfigView({
@@ -118,6 +122,8 @@ export function EmailAuthConfigView({
   togglingVerification,
   onToggleMagicLink,
   togglingMagicLink,
+  onActivateMetadataSchema,
+  activatingMetadataSchema,
 }: EmailAuthConfigViewProps) {
   const { t } = useI18n();
   const email = config.email ?? {};
@@ -125,6 +131,7 @@ export function EmailAuthConfigView({
   const password = config.password ?? {};
   const policy = password.policy ?? {};
   const verification = config.verification ?? {};
+  const metadataSchema = config.metadata_schema;
 
   return (
     <div className="space-y-6">
@@ -334,6 +341,66 @@ export function EmailAuthConfigView({
           )}
         </ConfigSection>
       </div>
+
+      {metadataSchema && (
+        <ConfigSection icon={<Database className="w-4 h-4 text-indigo-400" />} title={t('emailAuth.metadataSchema')}>
+          <ConfigRow label={t('emailAuth.active')} value={<BoolBadge value={metadataSchema.enabled} />} />
+          <ConfigRow
+            label={t('emailAuth.metadataAdditionalProps')}
+            value={<BoolBadge value={metadataSchema.additional_properties} />}
+          />
+          {metadataSchema.scheme && metadataSchema.scheme.length > 0 && (
+            <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
+              <div className="text-xs text-muted-foreground mb-2">{t('emailAuth.metadataFields')}</div>
+              {metadataSchema.scheme.map((field) => (
+                <div key={field.name} className="flex items-center justify-between gap-2 py-1 pl-2 border-l-2 border-indigo-500/30">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs text-foreground truncate">{field.name}</span>
+                    <Badge variant="outline" className="text-[10px] font-mono shrink-0">{field.type}</Badge>
+                    {field.required && (
+                      <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 shrink-0">
+                        {t('emailAuth.metadataRequired')}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 text-[10px] text-muted-foreground">
+                    {field.enum && field.enum.length > 0 && (
+                      <span className="font-mono">[{field.enum.join(', ')}]</span>
+                    )}
+                    {field.min_length != null && <span>min:{field.min_length}</span>}
+                    {field.max_length != null && <span>max:{field.max_length}</span>}
+                    {field.minimum != null && <span>≥{field.minimum}</span>}
+                    {field.maximum != null && <span>≤{field.maximum}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {onActivateMetadataSchema && (
+            <div className="pt-3 mt-2 border-t border-border/50">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onActivateMetadataSchema}
+                    disabled={activatingMetadataSchema}
+                    className="gap-2"
+                  >
+                    {activatingMetadataSchema ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Database className="w-4 h-4" />
+                    )}
+                    {t('emailAuth.configureMetadataSchema')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('emailAuth.configureMetadataSchemaTooltip')}</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+        </ConfigSection>
+      )}
     </div>
   );
 }
