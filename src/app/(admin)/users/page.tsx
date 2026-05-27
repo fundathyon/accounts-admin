@@ -29,6 +29,7 @@ import {
   ArrowDownAZ,
   ArrowUpAZ,
   ShieldOff,
+  Database,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -75,7 +76,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
-import type { User, Role } from '@/lib/admin-types';
+import type { User, Role, MetadataFieldSchema } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
@@ -123,6 +124,8 @@ export default function UsersPage() {
   const [revokeMode, setRevokeMode] = useState<'token' | 'id'>('token');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [bulkConfirmPhrase, setBulkConfirmPhrase] = useState('');
+  const [metadataSchema, setMetadataSchema] = useState<MetadataFieldSchema[] | null>(null);
+  const [metadataValues, setMetadataValues] = useState<Record<string, string>>({});
   const [bulkProgress, setBulkProgress] = useState<{
     running: boolean;
     finished: boolean;
@@ -254,6 +257,34 @@ export default function UsersPage() {
 
   const keyForAuth = savedPublishableKey;
 
+  const openSignupModal = async () => {
+    setMetadataValues({});
+    setMetadataSchema(null);
+    setIsSignupModalOpen(true);
+    if (savedSecretKey) {
+      try {
+        const behRes = await fetch(apiUrl('/api/behaviors'), {
+          headers: { 'X-Secret-API-Key': savedSecretKey },
+        });
+        const behData = await behRes.json();
+        const emailAuth = (behData.data || []).find((b: { behavior_code?: string }) => b.behavior_code === 'email_auth');
+        if (emailAuth?.id) {
+          const detailRes = await fetch(apiUrl(`/api/behaviors/${emailAuth.id}`), {
+            headers: { 'X-Secret-API-Key': savedSecretKey },
+          });
+          const detailData = await detailRes.json();
+          const schema = detailData.data?.config?.metadata_schema;
+          if (schema?.enabled && Array.isArray(schema.scheme) && schema.scheme.length > 0) {
+            setMetadataSchema(schema.scheme);
+            const defaults: Record<string, string> = {};
+            schema.scheme.forEach((f: MetadataFieldSchema) => { defaults[f.name] = ''; });
+            setMetadataValues(defaults);
+          }
+        }
+      } catch { /* skip, metadata schema is optional */ }
+    }
+  };
+
   const handleSignup = async () => {
     if (!keyForAuth) {
       showNotification(t('users.configPublishableKey'), 'error');
@@ -265,6 +296,20 @@ export default function UsersPage() {
     }
     setIsSignupSubmitting(true);
     try {
+      const metadataPayload: Record<string, unknown> = {};
+      if (metadataSchema && metadataSchema.length > 0) {
+        metadataSchema.forEach((field) => {
+          const raw = metadataValues[field.name] ?? '';
+          if (raw === '' && !field.required) return;
+          if (field.type === 'number') {
+            metadataPayload[field.name] = raw !== '' ? Number(raw) : undefined;
+          } else if (field.type === 'boolean') {
+            metadataPayload[field.name] = raw === 'true';
+          } else {
+            metadataPayload[field.name] = raw;
+          }
+        });
+      }
       const res = await fetch(apiUrl('/api/emails/signup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Publishable-API-Key': keyForAuth },
@@ -272,6 +317,7 @@ export default function UsersPage() {
           email: signupForm.email.trim(),
           password: signupForm.password,
           ...(signupForm.user_name.trim() && { user_name: signupForm.user_name.trim() }),
+          ...(Object.keys(metadataPayload).length > 0 && { metadata: metadataPayload }),
         }),
       });
       const data = await res.json();
@@ -627,7 +673,7 @@ export default function UsersPage() {
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
+                    <Button onClick={openSignupModal} className="gap-2">
                       <Plus className="w-4 h-4" /> {t('users.registerUser')}
                     </Button>
                   </TooltipTrigger>
@@ -1165,6 +1211,8 @@ export default function UsersPage() {
                     setNeedsVerification(false);
                     setVerificationCode('');
                     setResendCodeMode(false);
+                    setMetadataValues({});
+                    setMetadataSchema(null);
                   }}
                 >
                   {t('users.close')}
@@ -1226,6 +1274,59 @@ export default function UsersPage() {
                     onChange={(e) => setSignupForm((p) => ({ ...p, user_name: e.target.value }))}
                   />
                 </div>
+                {metadataSchema && metadataSchema.length > 0 && (
+                  <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-3">
+                    <Label className="text-xs text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                      <Database className="w-3.5 h-3.5" />
+                      {t('users.metadataFields')}
+                    </Label>
+                    {metadataSchema.map((field) => (
+                      <div key={field.name} className="space-y-1.5">
+                        <Label className="text-sm">
+                          {field.name}
+                          {field.required && <span className="text-rose-400 ml-1">*</span>}
+                          <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
+                        </Label>
+                        {field.type === 'boolean' ? (
+                          <Select
+                            value={metadataValues[field.name] ?? ''}
+                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">true</SelectItem>
+                              <SelectItem value="false">false</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : field.enum && field.enum.length > 0 ? (
+                          <Select
+                            value={metadataValues[field.name] ?? ''}
+                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.enum.map((opt) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            type={field.type === 'number' ? 'number' : 'text'}
+                            required={field.required}
+                            placeholder={field.required ? field.name : `${field.name} (${t('users.optional')})`}
+                            value={metadataValues[field.name] ?? ''}
+                            onChange={(e) => setMetadataValues((p) => ({ ...p, [field.name]: e.target.value }))}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex justify-end">
                   <Button
                     type="button"
