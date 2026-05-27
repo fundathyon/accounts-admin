@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle, Loader2, Copy } from 'lucide-react';
+import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle, Loader2, Copy, Database, Pencil, Save, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -31,6 +32,10 @@ export default function UserDetailPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [editingMetadata, setEditingMetadata] = useState(false);
+  const [metadataInput, setMetadataInput] = useState('');
+  const [metadataError, setMetadataError] = useState('');
+  const [savingMetadata, setSavingMetadata] = useState(false);
 
   const id = params.id as string;
 
@@ -42,16 +47,22 @@ export default function UserDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [usersRes, rolesRes] = await Promise.all([
-          fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } }),
+        const [userRes, rolesRes] = await Promise.all([
+          fetch(apiUrl(`/api/users/${id}`), { headers: { 'X-Secret-API-Key': savedSecretKey } }),
           fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } }),
         ]);
-        const usersData = await usersRes.json();
+        const userData = await userRes.json();
         const rolesData = await rolesRes.json();
-        if (usersData.data && (usersData.status === 200 || usersData.success)) {
-          const users: User[] = usersData.data || [];
-          const found = users.find((u) => u.id === id);
-          setUser(found || null);
+        if (userData.success && userData.data) {
+          setUser(userData.data);
+        } else {
+          // fallback: scan list
+          const listRes = await fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
+          const listData = await listRes.json();
+          if (listData.data && (listData.status === 200 || listData.success)) {
+            const users: User[] = listData.data || [];
+            setUser(users.find((u) => u.id === id) || null);
+          }
         }
         if (rolesData.success && rolesData.data) {
           const list = Array.isArray(rolesData.data) ? rolesData.data : (rolesData.data?.data || []);
@@ -67,6 +78,43 @@ export default function UserDetailPage() {
   }, [id, savedSecretKey, apiUrl]);
 
   const usersHref = `${BASE_PATH}/users`.replace(/\/+/g, '/') || '/users';
+
+  const startEditMetadata = () => {
+    setMetadataInput(JSON.stringify(user?.metadata ?? {}, null, 2));
+    setMetadataError('');
+    setEditingMetadata(true);
+  };
+
+  const handleSaveMetadata = async () => {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(metadataInput);
+      if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('object');
+    } catch {
+      setMetadataError(t('userDetail.metadataInvalidJson'));
+      return;
+    }
+    setSavingMetadata(true);
+    try {
+      const res = await fetch(apiUrl(`/api/users/${id}/metadata`), {
+        method: 'PATCH',
+        headers: { 'X-Secret-API-Key': savedSecretKey!, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: parsed }),
+      });
+      const data = await res.json();
+      if (res.ok && (data.success !== false)) {
+        setUser((prev) => prev ? { ...prev, metadata: parsed } : null);
+        setEditingMetadata(false);
+        showNotification(t('userDetail.metadataSaved'), 'success');
+      } else {
+        showNotification(data.error?.message || t('userDetail.metadataError'), 'error');
+      }
+    } catch {
+      showNotification(t('userDetail.metadataError'), 'error');
+    } finally {
+      setSavingMetadata(false);
+    }
+  };
 
   const handleRoleChange = async (newRoleName: string) => {
     if (!user || newRoleName === (user.role_details?.name ?? '')) return;
@@ -220,6 +268,49 @@ export default function UserDetailPage() {
                 <dd>{new Date(user.updated_at).toLocaleString('es')}</dd>
               </div>
             </dl>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Database className="w-4 h-4" /> {t('userDetail.metadata')}
+              </CardTitle>
+              {!editingMetadata ? (
+                <Button variant="ghost" size="sm" onClick={startEditMetadata} className="gap-1.5 h-8">
+                  <Pencil className="w-3.5 h-3.5" />
+                  {t('common.edit')}
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditingMetadata(false)} className="h-8 w-8 p-0">
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" onClick={handleSaveMetadata} disabled={savingMetadata} className="gap-1.5 h-8">
+                    {savingMetadata ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {t('common.save')}
+                  </Button>
+                </div>
+              )}
+            </div>
+            {editingMetadata ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={metadataInput}
+                  onChange={(e) => { setMetadataInput(e.target.value); setMetadataError(''); }}
+                  className="font-mono text-xs min-h-[180px] resize-y"
+                  spellCheck={false}
+                />
+                {metadataError && (
+                  <p className="text-xs text-rose-400">{metadataError}</p>
+                )}
+              </div>
+            ) : user?.metadata && Object.keys(user.metadata).length > 0 ? (
+              <pre className="text-xs font-mono bg-muted/40 rounded-lg p-3 overflow-x-auto text-sky-300 whitespace-pre-wrap break-all">
+                {JSON.stringify(user.metadata, null, 2)}
+              </pre>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('userDetail.noMetadata')}</p>
+            )}
           </Card>
 
           <Card className="p-6">
