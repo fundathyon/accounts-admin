@@ -5,12 +5,14 @@ import Link from 'next/link';
 import {
   Key,
   ShieldCheck,
+  ShieldOff,
   Loader2,
   ListFilter,
   Plus,
   Trash2,
   ChevronLeft,
   ChevronRight,
+  PlayCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/context/admin-context';
@@ -94,6 +96,58 @@ export default function EmailAccessPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: 'allow' | 'block'; id: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Test dialog (POST /api/email-access/test)
+  const [testOpen, setTestOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testSegment, setTestSegment] = useState<'email' | 'google' | 'apple' | 'microsoft' | 'github'>('email');
+  const [testFlow, setTestFlow] = useState<'registration' | 'login'>('registration');
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    allowed: boolean;
+    scope?: string;
+    reason?: string;
+  } | null>(null);
+
+  const openTestDialog = () => {
+    setTestEmail('');
+    setTestSegment('email');
+    setTestFlow('registration');
+    setTestResult(null);
+    setTestOpen(true);
+  };
+
+  const runEmailAccessTest = async () => {
+    const email = testEmail.trim();
+    if (!email) {
+      showNotification('Email requerido', 'error');
+      return;
+    }
+    if (!savedSecretKey) {
+      showNotification(t('emailAccess.secretKeyRequired'), 'error');
+      return;
+    }
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/email-access/test'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Secret-API-Key': savedSecretKey },
+        body: JSON.stringify({ email, access_segment: testSegment, flow: testFlow }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        showNotification(data?.error?.message || 'No se pudo evaluar', 'error');
+        return;
+      }
+      const r = data.data ?? {};
+      setTestResult({ allowed: Boolean(r.allowed), scope: r.scope, reason: r.reason });
+    } catch {
+      showNotification('Error al conectar con el servidor', 'error');
+    } finally {
+      setTestLoading(false);
+    }
+  };
 
   const loadSettings = useCallback(async () => {
     if (!savedSecretKey) return;
@@ -438,13 +492,21 @@ export default function EmailAccessPage() {
             <p className="text-muted-foreground text-sm mt-1">{t('emailAccess.desc')}</p>
             <p className="text-muted-foreground text-xs mt-2 max-w-2xl">{t('emailAccess.descSeg')}</p>
           </div>
-          {!savedSecretKey && (
-            <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-              <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> {t('emailAccess.configSecretKey')}
-              </Link>
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {savedSecretKey && (
+              <Button variant="outline" className="gap-2" onClick={openTestDialog}>
+                <PlayCircle className="w-4 h-4" />
+                Probar email
+              </Button>
+            )}
+            {!savedSecretKey && (
+              <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
+                <Link href={settingsHref}>
+                  <Key className="w-4 h-4" /> {t('emailAccess.configSecretKey')}
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         {!savedSecretKey ? (
@@ -666,6 +728,106 @@ export default function EmailAccessPage() {
             </Button>
             <Button type="button" variant="destructive" onClick={confirmDelete} disabled={deleteLoading}>
               {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('emailAccess.deleteEntry')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Probar email</DialogTitle>
+            <DialogDescription>
+              Simula la evaluación contra las reglas actuales sin tocar usuarios reales.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="ea-test-email">Email</Label>
+              <Input
+                id="ea-test-email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="user@example.com"
+                className="font-mono text-sm"
+                disabled={testLoading}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Canal</Label>
+                <Select
+                  value={testSegment}
+                  onValueChange={(v) => setTestSegment(v as typeof testSegment)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">Email/password</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="microsoft">Microsoft</SelectItem>
+                    <SelectItem value="apple">Apple</SelectItem>
+                    <SelectItem value="github">GitHub</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Flujo</Label>
+                <Select
+                  value={testFlow}
+                  onValueChange={(v) => setTestFlow(v as typeof testFlow)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="registration">Registro (signup)</SelectItem>
+                    <SelectItem value="login">Login (existente)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {testResult && (
+              <div
+                className={cn(
+                  'rounded-md border p-3 text-sm',
+                  testResult.allowed
+                    ? 'border-emerald-500/40 bg-emerald-500/5'
+                    : 'border-red-500/40 bg-red-500/5',
+                )}
+              >
+                <div className="flex items-center gap-2 font-medium">
+                  {testResult.allowed ? (
+                    <>
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      Permitido
+                    </>
+                  ) : (
+                    <>
+                      <ShieldOff className="h-4 w-4 text-red-500" />
+                      Bloqueado
+                    </>
+                  )}
+                </div>
+                {testResult.scope && (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    scope: <code className="font-mono">{testResult.scope}</code>
+                  </div>
+                )}
+                {testResult.reason && (
+                  <div className="mt-1 text-xs text-muted-foreground">{testResult.reason}</div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setTestOpen(false)} disabled={testLoading}>
+              Cerrar
+            </Button>
+            <Button type="button" onClick={runEmailAccessTest} disabled={testLoading} className="gap-2">
+              {testLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Evaluar
             </Button>
           </DialogFooter>
         </DialogContent>
