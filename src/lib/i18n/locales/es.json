@@ -276,11 +276,20 @@
     "securityNote3": "El endpoint de entorno requiere EXPOSE_ENV=true en el servidor.",
     "securityNote4": "Nunca actives EXPOSE_ENV=true en producción."
   },
+  "authBrand": {
+    "feature1": "Gestiona usuarios, roles y permisos",
+    "feature2": "Configura proveedores OAuth y SSO",
+    "feature3": "Audita sesiones y accesos activos"
+  },
   "login": {
     "title": "Foundathyon Admin",
     "subtitle": "Inicia sesión para continuar",
+    "brandHeadline": "Bienvenido de nuevo",
+    "brandTagline": "Inicia sesión para administrar tu organización.",
     "user": "Usuario",
     "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
     "enter": "Entrar",
     "entering": "Entrando…",
     "errorLogin": "Error al iniciar sesión",
@@ -922,6 +931,7 @@
   },
   "onboarding": {
     "branding": "Autenticación y gestión de usuarios para tus aplicaciones.",
+    "brandHeadline": "Configura tu organización",
     "setupTitle": "Configura tu primera aplicación",
     "setupDesc": "Ingresa el email del administrador y el nombre de tu aplicación para comenzar.",
     "appName": "Nombre de la aplicación",
