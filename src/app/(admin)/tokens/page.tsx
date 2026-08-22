@@ -4,7 +4,6 @@ import { useState, useMemo, useRef, useEffect, forwardRef } from 'react';
 import type { ComponentProps, UIEvent, ReactNode } from 'react';
 import {
   Key,
-  Loader2,
   Copy,
   Check,
   RefreshCw,
@@ -12,25 +11,28 @@ import {
   Trash2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import {
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Inline,
+  Text,
   Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  Spinner,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
 import { cn } from '@/lib/utils';
 
 const JSON_KEY_CLASS = 'text-blue-600 dark:text-blue-400';
@@ -292,7 +294,7 @@ function TokenSection({
   function ClaimsTable({ data, contentMinHeight }: { data: Record<string, unknown>; contentMinHeight?: string }) {
     const entries = Object.entries(data);
     return (
-      <TooltipProvider delayDuration={300}>
+      <>
         <div className={cn('overflow-x-auto overflow-y-auto rounded-lg border bg-muted/50', contentMinHeight || 'min-h-[120px] max-h-[200px]')}>
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-muted border-b">
@@ -310,19 +312,21 @@ function TokenSection({
                     <td className="px-3 py-2 font-mono text-muted-foreground">{key}</td>
                     <td className="px-3 py-2 font-mono break-all">
                       {expTooltip ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help underline decoration-dotted decoration-muted-foreground underline-offset-2">
-                              {displayValue}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[320px] text-left">
-                            <div className="flex flex-col gap-0.5">
+                        <Tooltip
+                          side="top"
+                          delay={300}
+                          className="max-w-[320px] whitespace-normal text-left"
+                          content={
+                            <span className="flex flex-col gap-0.5">
                               <span>{expTooltip.dateStr}</span>
                               <span>{expTooltip.timeStr}</span>
-                              {expTooltip.tzName && <span className="text-muted-foreground">{expTooltip.tzName}</span>}
-                            </div>
-                          </TooltipContent>
+                              {expTooltip.tzName && <span className="text-text-muted">{expTooltip.tzName}</span>}
+                            </span>
+                          }
+                        >
+                          <span className="cursor-help underline decoration-dotted decoration-muted-foreground underline-offset-2">
+                            {displayValue}
+                          </span>
                         </Tooltip>
                       ) : (
                         displayValue
@@ -334,7 +338,7 @@ function TokenSection({
             </tbody>
           </table>
         </div>
-      </TooltipProvider>
+      </>
     );
   }
 
@@ -348,19 +352,22 @@ function TokenSection({
             const expTooltip = formatExpirationTooltip(value);
             if (!expTooltip) return null;
             return (
-              <Tooltip key={key}>
-                <TooltipTrigger asChild>
-                  <span className={cn(JSON_NUMBER_CLASS, 'cursor-help underline decoration-dotted decoration-muted-foreground underline-offset-2')}>
-                    {value}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[320px] text-left">
-                  <div className="flex flex-col gap-0.5">
+              <Tooltip
+                key={key}
+                side="top"
+                delay={300}
+                className="max-w-[320px] whitespace-normal text-left"
+                content={
+                  <span className="flex flex-col gap-0.5">
                     <span>{expTooltip.dateStr}</span>
                     <span>{expTooltip.timeStr}</span>
                     {expTooltip.tzName && <span className="opacity-90">{expTooltip.tzName}</span>}
-                  </div>
-                </TooltipContent>
+                  </span>
+                }
+              >
+                <span className={cn(JSON_NUMBER_CLASS, 'cursor-help underline decoration-dotted decoration-muted-foreground underline-offset-2')}>
+                  {value}
+                </span>
               </Tooltip>
             );
           },
@@ -403,11 +410,11 @@ function TokenSection({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5" />
+        <Heading level={2} visual="h3" className="flex items-center gap-2">
+          <Icon icon={ShieldCheck} size={16} />
           {sectionTitle}
-        </h2>
-        <p className="text-muted-foreground text-sm mt-0.5">{sectionDesc}</p>
+        </Heading>
+        <Text variant="body-sm" tone="secondary" as="p" className="mt-0.5">{sectionDesc}</Text>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:min-h-[480px]">
@@ -415,73 +422,55 @@ function TokenSection({
         <div className="lg:col-span-5 flex flex-col min-h-[320px] lg:min-h-0">
           <Card className="flex flex-col flex-1 min-h-0">
             <CardHeader className="pb-2 shrink-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              <Text variant="overline" tone="secondary" as="div">
                 {t('tokens.encodedValue')}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">{t('tokens.jwtSubheading')}</p>
+              </Text>
+              <Text variant="caption" tone="secondary" as="p" className="mt-0.5">{t('tokens.jwtSubheading')}</Text>
             </CardHeader>
-            <CardContent className="flex flex-col flex-1 min-h-0 gap-3">
-              <Label className="text-xs sr-only">{tokenLabel}</Label>
+            <CardBody className="flex flex-col flex-1 min-h-0 gap-3">
               <JwtTextarea
                 placeholder="eyJhbGciOiJSUzI1NiIs..."
+                aria-label={tokenLabel}
                 value={tokenValue}
                 onChange={onTokenChange}
                 className="w-full flex-1 min-h-[200px]"
               />
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => onValidate(tokenValue.trim())}
-                      disabled={loading || !tokenValue.trim()}
-                      className="gap-1.5"
-                    >
-                      {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      {loading ? t('tokens.validating') : t('tokens.validate')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.validateToken')}
-                  </TooltipContent>
+              <Inline gap={2} wrap className="shrink-0">
+                <Tooltip content={t('tooltips.validateToken')}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => onValidate(tokenValue.trim())}
+                    disabled={!tokenValue.trim() || loading}
+                    leading={loading ? <Spinner size={14} /> : undefined}
+                  >
+                    {loading ? t('tokens.validating') : t('tokens.validate')}
+                  </Button>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onCopy(tokenValue, copyFieldId)}
-                      disabled={!tokenValue.trim()}
-                    >
-                      {copiedField === copyFieldId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      {t('common.copy')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.copyId')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.copyId')}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => onCopy(tokenValue, copyFieldId)}
+                    disabled={!tokenValue.trim()}
+                    leading={<Icon icon={copiedField === copyFieldId ? Check : Copy} size={14} />}
+                  >
+                    {t('common.copy')}
+                  </Button>
                 </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onTokenChange('')}
-                      disabled={!tokenValue.trim()}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {t('tokens.clear')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.clearInput')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.clearInput')}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => onTokenChange('')}
+                    disabled={!tokenValue.trim()}
+                    leading={<Icon icon={Trash2} size={14} />}
+                  >
+                    {t('tokens.clear')}
+                  </Button>
                 </Tooltip>
-              </div>
+              </Inline>
               <div className="shrink-0 space-y-1">
                 {tokenValue.trim() && (
                   <p className={cn(
@@ -503,32 +492,33 @@ function TokenSection({
                 )}
                 {error && <p className="text-xs text-destructive">{error}</p>}
               </div>
-            </CardContent>
+            </CardBody>
           </Card>
         </div>
 
         {/* Right: Decoded header + payload stacked (fixed heights to avoid layout shift) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {t('tokens.decodedHeader')}
-              </CardTitle>
-              <CardAction>
+            <CardHeader
+              className="pb-2"
+              actions={
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
+                  size="xs"
                   disabled={!decoded}
                   onClick={() => decoded && onCopy(JSON.stringify(decoded.header, null, 2), `${copyFieldId}-header`)}
+                  leading={<Icon icon={copiedField === `${copyFieldId}-header` ? Check : Copy} size={12} />}
                 >
-                  {copiedField === `${copyFieldId}-header` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   {t('common.copy')}
                 </Button>
-              </CardAction>
+              }
+            >
+              <Text variant="overline" tone="secondary" as="div">
+                {t('tokens.decodedHeader')}
+              </Text>
             </CardHeader>
-            <CardContent>
+            <CardBody>
               <TabBar active={headerTab} onSelect={setHeaderTab} />
               <div className="min-h-[120px] rounded-lg border bg-muted/50 overflow-hidden">
                 {decoded ? (
@@ -545,36 +535,35 @@ function TokenSection({
                   </p>
                 )}
               </div>
-            </CardContent>
+            </CardBody>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {t('tokens.decodedPayload')}
-              </CardTitle>
-              <CardAction>
+            <CardHeader
+              className="pb-2"
+              actions={
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
+                  size="xs"
                   disabled={!decoded}
                   onClick={() => decoded && onCopy(JSON.stringify(decoded.payload, null, 2), `${copyFieldId}-payload`)}
+                  leading={<Icon icon={copiedField === `${copyFieldId}-payload` ? Check : Copy} size={12} />}
                 >
-                  {copiedField === `${copyFieldId}-payload` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   {t('common.copy')}
                 </Button>
-              </CardAction>
+              }
+            >
+              <Text variant="overline" tone="secondary" as="div">
+                {t('tokens.decodedPayload')}
+              </Text>
             </CardHeader>
-            <CardContent>
+            <CardBody>
               <TabBar active={payloadTab} onSelect={setPayloadTab} />
               <div className="min-h-[220px] rounded-lg border bg-muted/50 overflow-hidden">
                 {decoded ? (
                   payloadTab === 'json' ? (
-                    <TooltipProvider delayDuration={300}>
-                      <PayloadJsonWithExpTooltip data={decoded.payload} />
-                    </TooltipProvider>
+                    <PayloadJsonWithExpTooltip data={decoded.payload} />
                   ) : (
                     <ClaimsTable data={decoded.payload} contentMinHeight="min-h-[220px] max-h-[280px]" />
                   )
@@ -584,7 +573,7 @@ function TokenSection({
                   </p>
                 )}
               </div>
-            </CardContent>
+            </CardBody>
           </Card>
         </div>
       </div>
@@ -744,48 +733,43 @@ export default function TokensPage() {
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Heading level={1} className="flex items-center gap-2">
             <Key className="w-8 h-8 text-primary" />
             {t('tokens.title')}
-          </h1>
-          <p className="text-muted-foreground mt-1">{t('tokens.subtitle')}</p>
+          </Heading>
+          <Text tone="secondary" as="p" className="mt-1">{t('tokens.subtitle')}</Text>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button onClick={openGetAccessDialog} className="gap-2 shrink-0">
-              <RefreshCw className="w-4 h-4" />
-              {t('tokens.getAccessToken')}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t('tooltips.getToken')}
-          </TooltipContent>
+        <Tooltip content={t('tooltips.getToken')}>
+          <Button
+            variant="primary"
+            onClick={openGetAccessDialog}
+            className="shrink-0"
+            leading={<Icon icon={RefreshCw} size={14} />}
+          >
+            {t('tokens.getAccessToken')}
+          </Button>
         </Tooltip>
       </div>
 
       <div className="space-y-4">
-        <div className="flex gap-1 p-1 rounded-lg bg-muted/50 w-fit">
+        <Inline gap={1} className="p-1 rounded-lg bg-muted/50 w-fit">
           <Button
             type="button"
             variant={activeTab === 'access' ? 'secondary' : 'ghost'}
-            size="sm"
             onClick={() => setActiveTab('access')}
-            className="gap-1.5"
+            leading={<Icon icon={ShieldCheck} size={14} />}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
             {t('tokens.tabAccess')}
           </Button>
           <Button
             type="button"
             variant={activeTab === 'refresh' ? 'secondary' : 'ghost'}
-            size="sm"
             onClick={() => setActiveTab('refresh')}
-            className="gap-1.5"
+            leading={<Icon icon={RefreshCw} size={14} />}
           >
-            <RefreshCw className="w-3.5 h-3.5" />
             {t('tokens.tabRefresh')}
           </Button>
-        </div>
+        </Inline>
 
         {activeTab === 'access' && (
           <TokenSection
@@ -825,19 +809,19 @@ export default function TokensPage() {
 
       <Dialog open={getAccessOpen} onOpenChange={setGetAccessOpen}>
         <DialogContent
+          size="lg"
           className="sm:max-w-2xl"
           style={{ minHeight: 'min(560px, 85vh)' }}
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="w-5 h-5" />
+              <Icon icon={RefreshCw} size={16} />
               {t('tokens.getAccessToken')}
             </DialogTitle>
             <DialogDescription>{t('tokens.getAccessTokenDialogDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
-            <div className="space-y-2">
-              <Label>{t('tokens.refreshTokenInput')}</Label>
+            <FormField label={t('tokens.refreshTokenInput')}>
               <div className="flex gap-2">
                 <JwtTextarea
                   ref={dialogRefreshTextareaRef}
@@ -847,18 +831,17 @@ export default function TokensPage() {
                   wrapperClassName="flex-1 min-w-0 min-h-[180px] max-h-[50vh]"
                   className="min-h-[180px]"
                 />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 h-9"
+                <IconButton
+                  icon={copiedField === 'dialog-refresh' ? Check : Copy}
+                  label={t('common.copy')}
+                  variant="secondary"
+                  size="lg"
+                  className="shrink-0"
                   onClick={() => copyToClipboard(dialogRefreshInput, 'dialog-refresh')}
                   disabled={!dialogRefreshInput.trim()}
-                  title={t('common.copy')}
-                >
-                  {copiedField === 'dialog-refresh' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
+                />
               </div>
-            </div>
+            </FormField>
             {dialogError && (
               <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{dialogError}</p>
             )}
@@ -872,25 +855,23 @@ export default function TokensPage() {
                   <div className="flex-1 min-w-0 min-h-[140px] max-h-[220px] overflow-auto rounded-md border bg-muted/30 px-3 py-2">
                     <JwtColoredView value={dialogResult.jwt} className="block" />
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 h-9"
+                  <IconButton
+                    icon={copiedField === 'dialog-jwt' ? Check : Copy}
+                    label={t('common.copy')}
+                    variant="secondary"
+                    size="lg"
+                    className="shrink-0"
                     onClick={() => copyToClipboard(dialogResult.jwt, 'dialog-jwt')}
-                    title={t('common.copy')}
-                  >
-                    {copiedField === 'dialog-jwt' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </Button>
+                  />
                 </div>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGetAccessOpen(false)}>
+            <Button variant="secondary" onClick={() => setGetAccessOpen(false)}>
               {t('common.close')}
             </Button>
-            <Button onClick={handleGetAccessInDialog} disabled={dialogLoading} className="gap-2">
-              {dialogLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            <Button variant="primary" onClick={handleGetAccessInDialog} disabled={dialogLoading} leading={dialogLoading ? <Spinner size={14} /> : undefined}>
               {dialogLoading ? t('tokens.refreshing') : t('tokens.getAccessToken')}
             </Button>
           </DialogFooter>

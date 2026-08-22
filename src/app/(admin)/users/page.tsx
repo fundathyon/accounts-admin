@@ -25,55 +25,51 @@ import {
   Download,
   FileCode,
   Search,
-  Filter,
   ArrowDownAZ,
   ArrowUpAZ,
   ShieldOff,
   Database,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH, IS_PRODUCTION } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Inline,
+  Input,
+  RoleBadge,
+  Select,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import {
+  Text,
+  Textarea,
   Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Spinner,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, IS_PRODUCTION } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import type { User, Role, MetadataFieldSchema } from '@/lib/admin-types';
@@ -666,214 +662,188 @@ export default function UsersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">{t('users.title')}</h1>
-          <div className="flex gap-2">
+        <Inline justify="between" className="mb-6">
+          <Heading level={1}>{t('users.title')}</Heading>
+          <Inline gap={2}>
             {savedSecretKey && (
               <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={openSignupModal} className="gap-2">
-                      <Plus className="w-4 h-4" /> {t('users.registerUser')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.registerUser')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.registerUser')}>
+                  <Button variant="primary" onClick={openSignupModal} leading={<Icon icon={Plus} size={14} />}>
+                    {t('users.registerUser')}
+                  </Button>
                 </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
-                      <Lock className="w-4 h-4" /> {t('users.testLogin')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.testLogin')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.testLogin')}>
+                  <Button variant="secondary" onClick={() => setIsSigninModalOpen(true)} leading={<Icon icon={Lock} size={14} />}>
+                    {t('users.testLogin')}
+                  </Button>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2">
-                          <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
-                          <Download className="w-4 h-4" /> CSV
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
-                          <FileCode className="w-4 h-4" /> JSON
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('users.export')}
-                  </TooltipContent>
-                </Tooltip>
-                {!IS_PRODUCTION && users.length > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
                       <Button
-                        variant="outline"
-                        onClick={() => {
-                          setBulkConfirmPhrase('');
-                          setBulkProgress(null);
-                          setIsBulkDeleteOpen(true);
-                        }}
-                        className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        variant="secondary"
+                        leading={<Icon icon={Download} size={14} />}
+                        trailing={<Icon icon={ChevronDown} size={12} className="opacity-50" />}
                       >
-                        <Trash2 className="w-4 h-4" /> {t('users.deleteAll')}
+                        {t('users.export')}
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('users.deleteAllTooltip')}</TooltipContent>
+                    }
+                  />
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportCSV} icon={Download} className="cursor-pointer text-emerald-500 data-[highlighted]:text-emerald-500 data-[highlighted]:bg-emerald-500/10">
+                      CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportJSON} icon={FileCode} className="cursor-pointer text-sky-500 data-[highlighted]:text-sky-500 data-[highlighted]:bg-sky-500/10">
+                      JSON
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {!IS_PRODUCTION && users.length > 0 && (
+                  <Tooltip content={t('users.deleteAllTooltip')}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setBulkConfirmPhrase('');
+                        setBulkProgress(null);
+                        setIsBulkDeleteOpen(true);
+                      }}
+                      leading={<Icon icon={Trash2} size={14} />}
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      {t('users.deleteAll')}
+                    </Button>
                   </Tooltip>
                 )}
               </>
             )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsRevokeRefreshOpen(true)}
-                  className="gap-2"
-                >
-                  <ShieldOff className="w-4 h-4" /> Revocar refresh token
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Revocar un refresh token por JWT o por ID (cierre de sesión en un dispositivo).
-              </TooltipContent>
+            <Tooltip content="Revocar un refresh token por JWT o por ID (cierre de sesión en un dispositivo).">
+              <Button
+                variant="secondary"
+                onClick={() => setIsRevokeRefreshOpen(true)}
+                leading={<Icon icon={ShieldOff} size={14} />}
+              >
+                Revocar refresh token
+              </Button>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={fetchPublicKeyJWT}
-                  className="gap-2"
-                >
-                  <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}
-              </TooltipContent>
+            <Tooltip content={t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}>
+              <Button
+                variant="secondary"
+                onClick={fetchPublicKeyJWT}
+                leading={<Icon icon={KeyRound} size={14} />}
+              >
+                {t('users.publicKeyJwt')}
+              </Button>
             </Tooltip>
             {!savedSecretKey && (
-              <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-                <Link href={settingsHref}>
-                  <Key className="w-4 h-4" /> {t('users.configSecretKey')}
-                </Link>
-              </Button>
+              <Link
+                href={settingsHref}
+                className={cn(
+                  buttonVariants({ variant: 'secondary', size: 'sm' }),
+                  'border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                )}
+              >
+                <Icon icon={Key} size={14} /> {t('users.configSecretKey')}
+              </Link>
             )}
-          </div>
-        </div>
+          </Inline>
+        </Inline>
 
         {savedSecretKey && (
           <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
-            <div className="relative flex-1 min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="flex-1 min-w-[300px]">
               <Input
+                leading={<Icon icon={Search} size={14} />}
+                aria-label={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
                 placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                wrapperClassName="h-10 border-none bg-background shadow-none"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</span>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[160px] h-9 bg-background border-none shadow-none focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="All Roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('users.allRoles') || "All Roles"}</SelectItem>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Inline gap={2}>
+              <Text variant="overline" tone="secondary">{t('users.role')}</Text>
+              <Select
+                value={roleFilter}
+                onValueChange={(v) => setRoleFilter(v ?? 'all')}
+                placeholder="All Roles"
+                aria-label={t('users.role')}
+                items={[
+                  { value: 'all', label: t('users.allRoles') || "All Roles" },
+                  ...roles.map((role) => ({ value: role.id, label: role.name })),
+                ]}
+                className="w-[160px] h-9 bg-background border-none shadow-none"
+              />
+            </Inline>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.loginType')}</span>
-              <Select value={loginFilter} onValueChange={setLoginFilter}>
-                <SelectTrigger className="w-[160px] h-9 bg-background border-none shadow-none focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="Any Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('users.allTypes') || "Any Type"}</SelectItem>
-                  <SelectItem value="email">Email / Password</SelectItem>
-                  <SelectItem value="oauth">Any OAuth</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="apple">Apple</SelectItem>
-                  <SelectItem value="microsoft">Microsoft</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Inline gap={2}>
+              <Text variant="overline" tone="secondary">{t('users.loginType')}</Text>
+              <Select
+                value={loginFilter}
+                onValueChange={(v) => setLoginFilter(v ?? 'all')}
+                placeholder="Any Type"
+                aria-label={t('users.loginType')}
+                items={[
+                  { value: 'all', label: t('users.allTypes') || "Any Type" },
+                  { value: 'email', label: 'Email / Password' },
+                  { value: 'oauth', label: 'Any OAuth' },
+                  { value: 'google', label: 'Google' },
+                  { value: 'apple', label: 'Apple' },
+                  { value: 'microsoft', label: 'Microsoft' },
+                ]}
+                className="w-[160px] h-9 bg-background border-none shadow-none"
+              />
+            </Inline>
 
-            <div className="flex items-center gap-2 ml-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('tooltips.sortBy')}
-                </TooltipContent>
+            <Inline gap={2} className="ml-auto">
+              <Tooltip content={t('tooltips.sortBy')}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                  leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={14} />}
+                  className="h-9 text-muted-foreground hover:text-foreground"
+                >
+                  {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
+                </Button>
               </Tooltip>
               <div className="w-px h-4 bg-border" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsGroupedByRole(!isGroupedByRole)}
-                    className={cn(
-                      "h-9 gap-2 text-xs font-medium",
-                      isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
-                    )}
-                  >
-                    <Users className="w-4 h-4" />
-                    {t('users.groupByRole') || "Group by Role"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('tooltips.groupByRole')}
-                </TooltipContent>
+              <Tooltip content={t('tooltips.groupByRole')}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsGroupedByRole(!isGroupedByRole)}
+                  leading={<Icon icon={Users} size={14} />}
+                  className={cn(
+                    "h-9",
+                    isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
+                  )}
+                >
+                  {t('users.groupByRole') || "Group by Role"}
+                </Button>
               </Tooltip>
-            </div>
+            </Inline>
           </div>
         )}
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('users.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">{t('users.secretKeyRequiredDesc')}</CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
-            </Button>
+          <Card className="border-amber-500/20">
+            <CardBody className="p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-amber-400" />
+              </div>
+              <Heading level={2} visual="h4" className="text-amber-300 mb-2">{t('users.secretKeyRequired')}</Heading>
+              <Text tone="secondary" as="p" className="mb-6">{t('users.secretKeyRequiredDesc')}</Text>
+              <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+                {t('users.goToSettings')}
+              </Link>
+            </CardBody>
           </Card>
         ) : (
           <Card className="overflow-hidden">
             <div className="px-6 py-3 bg-emerald-500/5 border-b border-emerald-500/10 flex items-center gap-2 text-xs text-emerald-400">
               <ShieldCheck className="w-4 h-4 shrink-0" /> {t('users.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
-            <CardContent className="p-0">
+            <CardBody className="p-0">
               {loading ? (
                 <div className="py-20 text-center">
                   <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
@@ -892,8 +862,8 @@ export default function UsersPage() {
                         </span>
                       </div>
                     )}
-                    <Table>
-                      <TableHeader className={cn(isGroupedByRole ? "hidden" : "")}>
+                    <Table className="rounded-none border-0 bg-transparent">
+                      <TableHeader className={cn('bg-transparent', isGroupedByRole ? "hidden" : "")}>
                         <TableRow className="border-b hover:bg-transparent">
                           <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.user')}</TableHead>
                           <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.provider')}</TableHead>
@@ -910,7 +880,8 @@ export default function UsersPage() {
                           return (
                             <TableRow
                               key={user.id}
-                              className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                              interactive
+                              className="group hover:bg-muted/50 transition-colors"
                               onClick={() => router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'))}
                             >
                               <TableCell className="px-6 py-3">
@@ -958,7 +929,8 @@ export default function UsersPage() {
                                       <Badge
                                         key={lm.id}
                                         variant="outline"
-                                        className="text-[10px] px-1.5 py-0 font-medium border-orange-500/40 text-orange-400 bg-orange-500/5"
+                                        tone="warning"
+                                        className="px-1.5"
                                       >
                                         {lm.entity_type}
                                         {lm.is_verify ? (
@@ -973,9 +945,7 @@ export default function UsersPage() {
                               </TableCell>
                               <TableCell className="px-6 py-3">
                                 {user.role_details ? (
-                                  <Badge variant="secondary" className="text-xs font-normal">
-                                    {user.role_details.name}
-                                  </Badge>
+                                  <RoleBadge role={user.role_details.name} />
                                 ) : (
                                   <span className="text-muted-foreground text-xs">—</span>
                                 )}
@@ -994,34 +964,35 @@ export default function UsersPage() {
                               </TableCell>
                               <TableCell className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
+                                  <DropdownMenuTrigger
+                                    render={
+                                      <Button
+                                        variant="ghost"
+                                        className="h-8 w-8 px-0 text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Icon icon={MoreVertical} size={14} />
+                                      </Button>
+                                    }
+                                  />
                                   <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                     <DropdownMenuItem
+                                      icon={ChevronRight}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
                                       }}
                                     >
-                                      <ChevronRight className="w-4 h-4" />
                                       {t('users.viewDetail')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      className="text-rose-500 focus:text-rose-500"
+                                      icon={Trash2}
+                                      destructive
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setUserToDelete(user);
                                       }}
                                     >
-                                      <Trash2 className="w-4 h-4" />
                                       Eliminar cuenta
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -1035,7 +1006,7 @@ export default function UsersPage() {
                   </div>
                 ))
               )}
-            </CardContent>
+            </CardBody>
           </Card>
         )}
       </motion.div>
@@ -1054,7 +1025,7 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
@@ -1084,8 +1055,7 @@ export default function UsersPage() {
               }}
               className="space-y-4"
             >
-              <div className="space-y-2">
-                <Label>Email</Label>
+              <FormField label="Email">
                 <Input
                   type="email"
                   required
@@ -1093,13 +1063,12 @@ export default function UsersPage() {
                   value={resendEmail}
                   onChange={(e) => setResendEmail(e.target.value)}
                 />
-              </div>
+              </FormField>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setResendCodeMode(false)}>
+                <Button type="button" variant="secondary" onClick={() => setResendCodeMode(false)}>
                   Volver
                 </Button>
-                <Button type="submit" disabled={isResendSubmitting} className="gap-2">
-                  {isResendSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button type="submit" variant="primary" loading={isResendSubmitting}>
                   Reenviar código
                 </Button>
               </DialogFooter>
@@ -1112,8 +1081,10 @@ export default function UsersPage() {
               }}
               className="space-y-4"
             >
-              <div className="space-y-2">
-                <Label>Código de verificación</Label>
+              <FormField
+                label="Código de verificación"
+                description={`Código de ${verificationCodeSize} dígitos enviado a tu correo`}
+              >
                 <Input
                   type="text"
                   inputMode="numeric"
@@ -1125,29 +1096,25 @@ export default function UsersPage() {
                   className="font-mono text-center text-lg tracking-[0.5em]"
                   autoFocus
                 />
-                <p className="text-xs text-muted-foreground">
-                  Código de {verificationCodeSize} dígitos enviado a tu correo
-                </p>
-              </div>
-              <div className="flex justify-end">
+              </FormField>
+              <Inline justify="end">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground gap-2"
+                  className="text-muted-foreground"
+                  leading={<Icon icon={RefreshCw} size={14} />}
                   onClick={() => {
                     setResendEmail(signupForm.email);
                     setResendCodeMode(true);
                   }}
                 >
-                  <RefreshCw className="w-4 h-4" />
                   Reenviar código
                 </Button>
-              </div>
+              </Inline>
               <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setNeedsVerification(false);
                     setVerificationCode('');
@@ -1155,8 +1122,12 @@ export default function UsersPage() {
                 >
                   Volver
                 </Button>
-                <Button type="submit" disabled={isVerificationSubmitting || verificationCode.length !== verificationCodeSize} className="gap-2">
-                  {isVerificationSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={verificationCode.length !== verificationCodeSize}
+                  loading={isVerificationSubmitting}
+                >
                   Verificar
                 </Button>
               </DialogFooter>
@@ -1164,45 +1135,40 @@ export default function UsersPage() {
           ) : signupResult ? (
             <div className="space-y-4">
               {signupResult.access_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Access Token (JWT)</Label>
+                <FormField label="Access Token (JWT)">
                   <div className="flex gap-2">
                     <Input readOnly value={signupResult.access_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
+                    <IconButton
+                      icon={Copy}
+                      label={t('common.copy')}
+                      variant="secondary"
                       onClick={() => {
                         navigator.clipboard.writeText(signupResult!.access_token!);
                         showNotification('Token copiado', 'success');
                       }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                    />
                   </div>
-                </div>
+                </FormField>
               )}
               {signupResult.refresh_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Refresh Token</Label>
+                <FormField label="Refresh Token">
                   <div className="flex gap-2">
                     <Input readOnly value={signupResult.refresh_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
+                    <IconButton
+                      icon={Copy}
+                      label={t('common.copy')}
+                      variant="secondary"
                       onClick={() => {
                         navigator.clipboard.writeText(signupResult!.refresh_token!);
                         showNotification('Token copiado', 'success');
                       }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                    />
                   </div>
-                </div>
+                </FormField>
               )}
               <DialogFooter>
                 <Button
+                  variant="primary"
                   onClick={() => {
                     setIsSignupModalOpen(false);
                     setSignupForm({ email: '', password: '', user_name: '' });
@@ -1234,8 +1200,7 @@ export default function UsersPage() {
                 }}
                 className="space-y-4"
               >
-                <div className="space-y-2">
-                  <Label>Email *</Label>
+                <FormField label="Email *">
                   <Input
                     type="email"
                     required
@@ -1243,77 +1208,66 @@ export default function UsersPage() {
                     value={signupForm.email}
                     onChange={(e) => setSignupForm((p) => ({ ...p, email: e.target.value }))}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contraseña *</Label>
-                  <div className="relative">
-                    <Input
-                      type={showSignupPassword ? 'text' : 'password'}
-                      required
-                      placeholder="SecurePass123!"
-                      value={signupForm.password}
-                      onChange={(e) => setSignupForm((p) => ({ ...p, password: e.target.value }))}
-                      className="pr-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                      onClick={() => setShowSignupPassword((v) => !v)}
-                    >
-                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Nombre de usuario (opcional)</Label>
+                </FormField>
+                <FormField label="Contraseña *">
+                  <Input
+                    type={showSignupPassword ? 'text' : 'password'}
+                    required
+                    placeholder="SecurePass123!"
+                    value={signupForm.password}
+                    onChange={(e) => setSignupForm((p) => ({ ...p, password: e.target.value }))}
+                    trailing={
+                      <IconButton
+                        icon={showSignupPassword ? EyeOff : Eye}
+                        label={showSignupPassword ? t('login.hidePassword') : t('login.showPassword')}
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setShowSignupPassword((v) => !v)}
+                      />
+                    }
+                  />
+                </FormField>
+                <FormField label="Nombre de usuario (opcional)">
                   <Input
                     placeholder="john_doe"
                     value={signupForm.user_name}
                     onChange={(e) => setSignupForm((p) => ({ ...p, user_name: e.target.value }))}
                   />
-                </div>
+                </FormField>
                 {metadataSchema && metadataSchema.length > 0 && (
-                  <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-3">
-                    <Label className="text-xs text-indigo-400 uppercase tracking-wider flex items-center gap-2">
-                      <Database className="w-3.5 h-3.5" />
+                  <Stack gap={3} className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                    <Text variant="overline" as="div" className="text-indigo-400 flex items-center gap-2">
+                      <Icon icon={Database} size={12} />
                       {t('users.metadataFields')}
-                    </Label>
+                    </Text>
                     {metadataSchema.map((field) => (
-                      <div key={field.name} className="space-y-1.5">
-                        <Label className="text-sm">
-                          {field.name}
-                          {field.required && <span className="text-rose-400 ml-1">*</span>}
-                          <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
-                        </Label>
+                      <FormField
+                        key={field.name}
+                        required={field.required}
+                        label={
+                          <>
+                            {field.name}
+                            <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
+                          </>
+                        }
+                      >
                         {field.type === 'boolean' ? (
                           <Select
-                            value={metadataValues[field.name] ?? ''}
-                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="true">true</SelectItem>
-                              <SelectItem value="false">false</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            value={metadataValues[field.name] || null}
+                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v ?? '' }))}
+                            placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')}
+                            items={[
+                              { value: 'true', label: 'true' },
+                              { value: 'false', label: 'false' },
+                            ]}
+                          />
                         ) : field.enum && field.enum.length > 0 ? (
                           <Select
-                            value={metadataValues[field.name] ?? ''}
-                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {field.enum.map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            value={metadataValues[field.name] || null}
+                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v ?? '' }))}
+                            placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')}
+                            items={field.enum.map((opt) => ({ value: opt, label: opt }))}
+                          />
                         ) : (
                           <Input
                             type={field.type === 'number' ? 'number' : 'text'}
@@ -1323,29 +1277,28 @@ export default function UsersPage() {
                             onChange={(e) => setMetadataValues((p) => ({ ...p, [field.name]: e.target.value }))}
                           />
                         )}
-                      </div>
+                      </FormField>
                     ))}
-                  </div>
+                  </Stack>
                 )}
-                <div className="flex justify-end">
+                <Inline justify="end">
                   <Button
                     type="button"
-                    variant="link"
-                    size="sm"
-                    className="text-muted-foreground h-auto p-0 gap-2"
+                    variant="ghost"
+                    className="text-muted-foreground"
+                    leading={<Icon icon={RefreshCw} size={14} />}
                     onClick={() => {
                       setResendEmail(signupForm.email || '');
                       setResendCodeMode(true);
                     }}
                   >
-                    <RefreshCw className="w-4 h-4" />
                     ¿Ya te registraste? Reenviar código
                   </Button>
-                </div>
+                </Inline>
                 <DialogFooter className="gap-4 pt-4">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => {
                       setIsSignupModalOpen(false);
                       setSignupForm({ email: '', password: '', user_name: '' });
@@ -1359,8 +1312,7 @@ export default function UsersPage() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isSignupSubmitting} className="flex-1 gap-2">
-                    {isSignupSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Button type="submit" variant="primary" disabled={isSignupSubmitting} leading={isSignupSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
                     {isSignupSubmitting ? t('users.registering') : t('users.register')}
                   </Button>
                 </DialogFooter>
@@ -1381,7 +1333,7 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5 text-primary" />
@@ -1394,45 +1346,40 @@ export default function UsersPage() {
           {signinResult ? (
             <div className="space-y-4">
               {signinResult.access_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Access Token (JWT)</Label>
+                <FormField label="Access Token (JWT)">
                   <div className="flex gap-2">
                     <Input readOnly value={signinResult.access_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
+                    <IconButton
+                      icon={Copy}
+                      label={t('common.copy')}
+                      variant="secondary"
                       onClick={() => {
                         navigator.clipboard.writeText(signinResult!.access_token!);
                         showNotification('Token copiado', 'success');
                       }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                    />
                   </div>
-                </div>
+                </FormField>
               )}
               {signinResult.refresh_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Refresh Token</Label>
+                <FormField label="Refresh Token">
                   <div className="flex gap-2">
                     <Input readOnly value={signinResult.refresh_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
+                    <IconButton
+                      icon={Copy}
+                      label={t('common.copy')}
+                      variant="secondary"
                       onClick={() => {
                         navigator.clipboard.writeText(signinResult!.refresh_token!);
                         showNotification('Token copiado', 'success');
                       }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                    />
                   </div>
-                </div>
+                </FormField>
               )}
               <DialogFooter>
                 <Button
+                  variant="primary"
                   onClick={() => {
                     setIsSigninModalOpen(false);
                     setSigninForm({ email: '', password: '' });
@@ -1459,8 +1406,7 @@ export default function UsersPage() {
                 }}
                 className="space-y-4"
               >
-                <div className="space-y-2">
-                  <Label>Email *</Label>
+                <FormField label="Email *">
                   <Input
                     type="email"
                     required
@@ -1468,33 +1414,29 @@ export default function UsersPage() {
                     value={signinForm.email}
                     onChange={(e) => setSigninForm((p) => ({ ...p, email: e.target.value }))}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contraseña *</Label>
-                  <div className="relative">
-                    <Input
-                      type={showSigninPassword ? 'text' : 'password'}
-                      required
-                      placeholder="SecurePass123!"
-                      value={signinForm.password}
-                      onChange={(e) => setSigninForm((p) => ({ ...p, password: e.target.value }))}
-                      className="pr-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                      onClick={() => setShowSigninPassword((v) => !v)}
-                    >
-                      {showSigninPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
+                </FormField>
+                <FormField label="Contraseña *">
+                  <Input
+                    type={showSigninPassword ? 'text' : 'password'}
+                    required
+                    placeholder="SecurePass123!"
+                    value={signinForm.password}
+                    onChange={(e) => setSigninForm((p) => ({ ...p, password: e.target.value }))}
+                    trailing={
+                      <IconButton
+                        icon={showSigninPassword ? EyeOff : Eye}
+                        label={showSigninPassword ? t('login.hidePassword') : t('login.showPassword')}
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setShowSigninPassword((v) => !v)}
+                      />
+                    }
+                  />
+                </FormField>
                 <DialogFooter className="gap-4 pt-4">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => {
                       setIsSigninModalOpen(false);
                       setSigninForm({ email: '', password: '' });
@@ -1505,8 +1447,7 @@ export default function UsersPage() {
                   >
                     {t('common.cancel')}
                   </Button>
-                  <Button type="submit" disabled={isSigninSubmitting} className="flex-1 gap-2">
-                    {isSigninSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Button type="submit" variant="primary" disabled={isSigninSubmitting} leading={isSigninSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
                     {isSigninSubmitting ? t('users.signingIn') : t('users.testLogin')}
                   </Button>
                 </DialogFooter>
@@ -1517,7 +1458,7 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={isPublicKeyModalOpen} onOpenChange={(open) => !open && setIsPublicKeyModalOpen(false)}>
-        <DialogContent className="sm:max-w-2xl max-w-full max-h-[85vh] overflow-y-auto">
+        <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-primary" />
@@ -1533,29 +1474,26 @@ export default function UsersPage() {
               {t('common.loading')}
             </div>
           ) : publicKeyValue ? (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">{t('users.publicKey')}</Label>
+            <FormField label={t('users.publicKey')}>
               <div className="flex gap-2">
-                <textarea
+                <Textarea
                   readOnly
                   value={publicKeyValue}
                   rows={10}
-                  className="flex-1 font-mono text-xs p-3 rounded-md border bg-muted/30 min-w-0 resize-none"
+                  className="flex-1 font-mono text-xs p-3 min-w-0 resize-none"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
+                <IconButton
+                  icon={Copy}
+                  label={t('common.copy')}
+                  variant="secondary"
                   className="shrink-0"
                   onClick={() => {
                     navigator.clipboard.writeText(publicKeyValue);
                     showNotification(t('common.copied'), 'success');
                   }}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
+                />
               </div>
-            </div>
+            </FormField>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -1570,7 +1508,7 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldOff className="w-5 h-5 text-primary" />
@@ -1581,11 +1519,10 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="flex gap-2 border-b border-border pb-2">
+            <Inline gap={2} className="border-b border-border pb-2">
               <Button
                 type="button"
                 variant={revokeMode === 'token' ? 'secondary' : 'ghost'}
-                size="sm"
                 onClick={() => setRevokeMode('token')}
               >
                 Por JWT
@@ -1593,53 +1530,54 @@ export default function UsersPage() {
               <Button
                 type="button"
                 variant={revokeMode === 'id' ? 'secondary' : 'ghost'}
-                size="sm"
                 onClick={() => setRevokeMode('id')}
               >
                 Por ID
               </Button>
-            </div>
+            </Inline>
             {revokeMode === 'token' ? (
-              <div className="space-y-2">
-                <Label>Refresh token (JWT)</Label>
-                <Input
-                  placeholder="eyJhbGciOiJSUzI1NiIs..."
-                  value={revokeByTokenValue}
-                  onChange={(e) => setRevokeByTokenValue(e.target.value)}
-                  className="font-mono text-xs"
-                />
+              <Stack gap={2}>
+                <FormField label="Refresh token (JWT)">
+                  <Input
+                    placeholder="eyJhbGciOiJSUzI1NiIs..."
+                    value={revokeByTokenValue}
+                    onChange={(e) => setRevokeByTokenValue(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </FormField>
                 <Button
                   type="button"
+                  variant="primary"
                   onClick={handleRevokeByToken}
-                  disabled={revokeLoading}
-                  className="gap-2 w-full"
+                  loading={revokeLoading}
+                  className="w-full"
                 >
-                  {revokeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                   Revocar por token
                 </Button>
-              </div>
+              </Stack>
             ) : (
-              <div className="space-y-2">
-                <Label>ID del refresh token</Label>
-                <Input
-                  placeholder="uuid-del-token"
-                  value={revokeByIdValue}
-                  onChange={(e) => setRevokeByIdValue(e.target.value)}
-                  className="font-mono text-xs"
-                />
-                <p className="text-xs text-muted-foreground">
-                  El ID es el claim &quot;id&quot; del JWT del refresh token.
-                </p>
+              <Stack gap={2}>
+                <FormField
+                  label="ID del refresh token"
+                  description={'El ID es el claim "id" del JWT del refresh token.'}
+                >
+                  <Input
+                    placeholder="uuid-del-token"
+                    value={revokeByIdValue}
+                    onChange={(e) => setRevokeByIdValue(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </FormField>
                 <Button
                   type="button"
+                  variant="primary"
                   onClick={handleRevokeById}
-                  disabled={revokeLoading}
-                  className="gap-2 w-full"
+                  loading={revokeLoading}
+                  className="w-full"
                 >
-                  {revokeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                   Revocar por ID
                 </Button>
-              </div>
+              </Stack>
             )}
           </div>
         </DialogContent>
@@ -1659,11 +1597,10 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUserToDelete(null)}>
+            <Button variant="secondary" onClick={() => setUserToDelete(null)}>
               {t('common.cancel')}
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting} className="gap-2">
-              {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+            <Button variant="destructive" onClick={handleDeleteUser} loading={isDeleting}>
               {t('common.delete')}
             </Button>
           </DialogFooter>
@@ -1681,7 +1618,7 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent size="md" className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="w-5 h-5" />
@@ -1700,10 +1637,15 @@ export default function UsersPage() {
                   {t('users.deleteAllConfirmPhrase')}
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bulk-delete-phrase">
-                  {t('users.deleteAllPhrasePlaceholder')}
-                </Label>
+              <FormField
+                label={t('users.deleteAllPhrasePlaceholder')}
+                error={
+                  bulkConfirmPhrase.length > 0 &&
+                    bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase')
+                    ? t('users.deleteAllPhraseMismatch')
+                    : undefined
+                }
+              >
                 <Input
                   id="bulk-delete-phrase"
                   value={bulkConfirmPhrase}
@@ -1712,16 +1654,10 @@ export default function UsersPage() {
                   className="font-mono"
                   autoComplete="off"
                 />
-                {bulkConfirmPhrase.length > 0 &&
-                  bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase') && (
-                    <p className="text-xs text-destructive">
-                      {t('users.deleteAllPhraseMismatch')}
-                    </p>
-                  )}
-              </div>
+              </FormField>
               <DialogFooter>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setIsBulkDeleteOpen(false);
                     setBulkConfirmPhrase('');
@@ -1736,9 +1672,8 @@ export default function UsersPage() {
                     users.length === 0
                   }
                   onClick={handleBulkDeleteUsers}
-                  className="gap-2"
+                  leading={<Icon icon={Trash2} size={14} />}
                 >
-                  <Trash2 className="w-4 h-4" />
                   {t('users.deleteAllConfirmButton', { count: users.length })}
                 </Button>
               </DialogFooter>
@@ -1808,7 +1743,7 @@ export default function UsersPage() {
 
               <DialogFooter>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setIsBulkDeleteOpen(false);
                     setBulkConfirmPhrase('');

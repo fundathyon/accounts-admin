@@ -4,9 +4,20 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, FileJson, Loader2, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
+  CardHeader,
+  FormField,
+  Heading,
+  Icon,
+  Inline,
+  Stack,
+  Text,
+  Spinner,
+} from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
@@ -170,31 +181,31 @@ export default function WebhookTestPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+      <Stack gap={4} align="center" className="justify-center min-h-[50vh]">
         <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{t('webhooks.testPage.loadingWebhook')}</p>
-      </div>
+        <Text tone="secondary">{t('webhooks.testPage.loadingWebhook')}</Text>
+      </Stack>
     );
   }
 
   if (!webhook) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" asChild className="gap-2">
-          <Link href={webhooksHref}>
-            <ArrowLeft className="w-4 h-4" /> {t('webhooks.testPage.backToWebhooks')}
-          </Link>
-        </Button>
-        <Card className="border-destructive/30">
+        <Link href={webhooksHref} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <Icon icon={ArrowLeft} size={14} /> {t('webhooks.testPage.backToWebhooks')}
+        </Link>
+        <Card className="border-danger-border">
           <CardHeader>
-            <CardTitle>{t('webhooks.testPage.webhookNotFound')}</CardTitle>
-            <CardDescription>{t('webhooks.testPage.webhookNotFoundDesc')}</CardDescription>
+            <Stack gap={1}>
+              <Heading level={2} visual="h5">{t('webhooks.testPage.webhookNotFound')}</Heading>
+              <Text tone="secondary">{t('webhooks.testPage.webhookNotFoundDesc')}</Text>
+            </Stack>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href={webhooksHref}>{t('webhooks.testPage.goToWebhooks')}</Link>
-            </Button>
-          </CardContent>
+          <CardBody>
+            <Link href={webhooksHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+              {t('webhooks.testPage.goToWebhooks')}
+            </Link>
+          </CardBody>
         </Card>
       </div>
     );
@@ -202,13 +213,11 @@ export default function WebhookTestPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" asChild className="gap-2">
-          <Link href={webhooksHref}>
-            <ArrowLeft className="w-4 h-4" /> {t('webhooks.testPage.backToWebhooks')}
-          </Link>
-        </Button>
-      </div>
+      <Inline justify="between">
+        <Link href={webhooksHref} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <Icon icon={ArrowLeft} size={14} /> {t('webhooks.testPage.backToWebhooks')}
+        </Link>
+      </Inline>
 
       <div className="space-y-6">
         <Collapsible defaultOpen className="rounded-xl border border-input bg-muted/30 group/collapse">
@@ -249,27 +258,32 @@ export default function WebhookTestPage() {
           </CollapsibleContent>
         </Collapsible>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <FileJson className="w-4 h-4" /> {t('webhooks.testPage.payloadJson')}
-            </Label>
+          <FormField
+            label={
+              <>
+                <Icon icon={FileJson} size={14} /> {t('webhooks.testPage.payloadJson')}
+              </>
+            }
+          >
             <JsonEditor
               value={testEventPayload}
               onChange={setTestEventPayload}
               minHeight="200px"
               maxHeight="70vh"
             />
-          </div>
+          </FormField>
 
-        <div className="flex gap-3 pt-2">
-            <Button variant="outline" asChild className="flex-1">
-            <Link href={webhooksHref}>{t('webhooks.testPage.cancel')}</Link>
-          </Button>
-          <Button onClick={sendTestEvent} disabled={testEventSending} className="flex-1 gap-2">
-            {testEventSending && <Loader2 className="w-4 h-4 animate-spin" />}
+        <Inline gap={3} className="pt-2">
+          <Link
+            href={webhooksHref}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'flex-1')}
+          >
+            {t('webhooks.testPage.cancel')}
+          </Link>
+          <Button variant="primary" onClick={sendTestEvent} disabled={testEventSending} leading={testEventSending ? <Spinner size={14} /> : undefined} className="flex-1">
             {testEventSending ? t('webhooks.testPage.sending') : t('webhooks.testPage.sendEvent')}
           </Button>
-        </div>
+        </Inline>
       </div>
     </div>
   );
