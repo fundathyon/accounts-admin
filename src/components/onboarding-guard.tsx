@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
-import { OnboardingScreen } from './onboarding-screen';
 import { useAdmin } from '@/context/admin-context';
+
+// Dynamically imported so its community-ui stylesheet (which shares utility
+// class names like `.rounded-md` with the shadcn styles the rest of the admin
+// uses) never lands in the shared (admin) layout chunk — only fetched for the
+// rare first-run screen itself.
+const OnboardingScreen = dynamic(() => import('./onboarding-screen').then((m) => m.OnboardingScreen), {
+  ssr: false,
+});
 
 export function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { apiUrl: getApiUrl } = useAdmin();
