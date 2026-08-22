@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { errorResponse, proxyToAccounts, requirePublishableKey } from '@/lib/accounts-api';
 
 /**
  * Proxies signup to accounts API.
@@ -7,31 +6,22 @@ import { INTERNAL_API_URL } from '@/lib/utils';
  * Body: { email, password, user_name? } — role is assigned by the API (default app role).
  */
 export async function POST(request: Request) {
-  const publishableKey = request.headers.get('X-Publishable-API-Key');
-  if (!publishableKey) {
-    return NextResponse.json(
-      { success: false, error: { message: 'Publishable API Key es requerida. Configúrala en Ajustes.' } },
-      { status: 401 }
-    );
-  }
+  const auth = requirePublishableKey(request);
+  if (auth.error) return auth.error;
 
   try {
     const body = await request.json();
-    const res = await fetch(`${INTERNAL_API_URL}/api/v1/emails/signup`, {
+    return await proxyToAccounts('/api/v1/emails/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': publishableKey,
+        'X-API-Key': auth.key,
         Accept: 'application/json',
       },
       body: JSON.stringify(body),
+      errorMessage: 'Error al conectar con la API',
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
   } catch {
-    return NextResponse.json(
-      { success: false, error: { message: 'Error al conectar con la API' } },
-      { status: 500 }
-    );
+    return errorResponse('Error al conectar con la API', 500);
   }
 }

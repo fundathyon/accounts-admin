@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { proxyToAccounts, requirePublishableKey } from '@/lib/accounts-api';
 
 export async function GET(request: Request) {
-  const publishableKey = request.headers.get('X-Publishable-API-Key') ?? request.headers.get('X-Api-Key');
-  if (!publishableKey) {
-    return NextResponse.json(
-      { success: false, error: { message: 'Publishable API Key es requerida (X-Publishable-API-Key).' } },
-      { status: 401 }
-    );
-  }
+  const auth = requirePublishableKey(
+    request,
+    'Publishable API Key es requerida (X-Publishable-API-Key).',
+    'X-Api-Key'
+  );
+  if (auth.error) return auth.error;
 
   const { searchParams } = new URL(request.url);
   const provider = searchParams.get('provider');
@@ -25,23 +24,21 @@ export async function GET(request: Request) {
   }
 
   try {
-    const url = new URL(`${INTERNAL_API_URL}/api/v1/oauths/link`);
+    const url = new URL('/api/v1/oauths/link', 'http://internal');
     url.searchParams.set('provider', provider);
     url.searchParams.set('platform', platform);
     if (role) url.searchParams.set('role', role);
     if (redirectUrl) url.searchParams.set('redirect_url', redirectUrl);
     if (rt) url.searchParams.set('rt', rt);
 
-    const res = await fetch(url.toString(), {
+    return await proxyToAccounts(`${url.pathname}${url.search}`, {
       method: 'GET',
       headers: {
-        'X-API-KEY': publishableKey,
+        'X-API-KEY': auth.key,
         Accept: 'application/json',
       },
       cache: 'no-store',
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json(
       { success: false, error: { message: 'Error al conectar con el servidor.' } },

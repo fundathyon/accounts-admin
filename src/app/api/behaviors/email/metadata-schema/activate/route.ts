@@ -1,34 +1,22 @@
-import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { errorResponse, proxyToAccounts, requireSecretKey } from '@/lib/accounts-api';
 
 export async function POST(request: Request) {
-  const secretKey = request.headers.get('X-Secret-API-Key');
-
-  if (!secretKey) {
-    return NextResponse.json(
-      { success: false, error: { message: 'Secret API Key es requerida.' } },
-      { status: 401 }
-    );
-  }
+  const auth = requireSecretKey(request);
+  if (auth.error) return auth.error;
 
   try {
     const body = await request.json();
-    const res = await fetch(`${INTERNAL_API_URL}/api/v1/app-behaviors/email/metadata-schema/activate`, {
+    return proxyToAccounts('/api/v1/app-behaviors/email/metadata-schema/activate', {
       method: 'POST',
       headers: {
-        'X-API-KEY': secretKey,
+        'X-API-KEY': auth.key,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
       body: JSON.stringify(body),
       cache: 'no-store',
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
   } catch {
-    return NextResponse.json(
-      { success: false, error: { message: 'Error al conectar con el servidor.' } },
-      { status: 500 }
-    );
+    return errorResponse('Error al conectar con el servidor.', 500);
   }
 }

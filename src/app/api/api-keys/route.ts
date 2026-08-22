@@ -1,31 +1,14 @@
-import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { proxyToAccounts, requireSecretKey } from '@/lib/accounts-api';
 
 export async function GET(request: Request) {
-  const secretKey = request.headers.get('X-Secret-API-Key');
+  const auth = requireSecretKey(request, 'Secret API Key es requerida (X-Secret-API-Key).');
+  if (auth.error) return auth.error;
 
-  if (!secretKey) {
-    return NextResponse.json(
-      { success: false, error: { message: 'Secret API Key es requerida (X-Secret-API-Key).' } },
-      { status: 401 }
-    );
-  }
-
-  try {
-    const res = await fetch(`${INTERNAL_API_URL}/api/v1/api-keys`, {
-      method: 'GET',
-      headers: {
-        'X-API-KEY': secretKey,
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch {
-    return NextResponse.json(
-      { success: false, error: { message: 'Error al conectar con el servidor.' } },
-      { status: 500 }
-    );
-  }
+  return proxyToAccounts('/api/v1/api-keys', {
+    headers: {
+      'X-API-KEY': auth.key,
+      Accept: 'application/json',
+    },
+    cache: 'no-store',
+  });
 }

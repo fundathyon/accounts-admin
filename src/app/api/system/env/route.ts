@@ -1,34 +1,21 @@
-import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL, ADMIN_API_KEY } from '@/lib/utils';
+import { INTERNAL_API_URL } from '@/lib/utils';
+import { proxyToAccounts, requireAdminKey } from '@/lib/accounts-api';
 
 export async function GET(request: Request) {
+    const auth = requireAdminKey('ADMIN_API_KEY no está configurada en el servidor.');
+    if (auth.error) return auth.error;
+
     const { searchParams } = new URL(request.url);
     const revealSensitive = searchParams.get('reveal_sensitive') === '1' || searchParams.get('reveal_sensitive') === 'true';
-
-    if (!ADMIN_API_KEY) {
-        return NextResponse.json(
-            { success: false, error: { message: 'ADMIN_API_KEY no está configurada en el servidor.' } },
-            { status: 500 }
-        );
-    }
 
     const url = new URL(`${INTERNAL_API_URL}/api/v1/system/env`);
     if (revealSensitive) url.searchParams.set('reveal_sensitive', '1');
 
-    try {
-        const res = await fetch(url.toString(), {
-            headers: {
-                'X-Admin-API-Key': ADMIN_API_KEY,
-                'Accept': 'application/json',
-            },
-            cache: 'no-store',
-        });
-        const data = await res.json();
-        return NextResponse.json(data, { status: res.status });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: { message: 'Error al conectar con el servidor.' } },
-            { status: 500 }
-        );
-    }
+    return proxyToAccounts(url.toString().replace(INTERNAL_API_URL, ''), {
+        headers: {
+            'X-Admin-API-Key': auth.key,
+            'Accept': 'application/json',
+        },
+        cache: 'no-store',
+    });
 }

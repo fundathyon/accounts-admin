@@ -1,38 +1,32 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { errorResponse, fetchAccountsJson, requireSecretKey } from '@/lib/accounts-api';
 
 const UPSTREAM_PAGE_SIZE = 100;
 const MAX_PAGES = 100;
 
 export async function GET(request: Request) {
-    const secretApiKey = request.headers.get('X-Secret-API-Key');
-
-    if (!secretApiKey) {
-        return NextResponse.json(
-            { success: false, error: { message: 'Secret API Key es requerida. Configúrala en Ajustes.' } },
-            { status: 401 }
-        );
-    }
+    const auth = requireSecretKey(request, 'Secret API Key es requerida. Configúrala en Ajustes.');
+    if (auth.error) return auth.error;
 
     try {
         const aggregated: unknown[] = [];
         let lastTotal: number | null = null;
 
         for (let page = 0; page < MAX_PAGES; page++) {
-            const res = await fetch(
-                `${INTERNAL_API_URL}/api/v1/users?page=${page}&size=${UPSTREAM_PAGE_SIZE}`,
+            const { status, ok, data } = await fetchAccountsJson(
+                `/api/v1/users?page=${page}&size=${UPSTREAM_PAGE_SIZE}`,
                 {
                     headers: {
-                        'X-API-KEY': secretApiKey,
+                        'X-API-KEY': auth.key,
                         Accept: 'application/json',
                     },
                     cache: 'no-store',
                 }
             );
 
-            const json = await res.json();
-            if (!res.ok || json?.success === false) {
-                return NextResponse.json(json, { status: res.status });
+            const json = data as any;
+            if (!ok || json?.success === false) {
+                return NextResponse.json(json, { status });
             }
 
             const pageData: unknown[] = Array.isArray(json?.data) ? json.data : [];
@@ -60,9 +54,6 @@ export async function GET(request: Request) {
             },
         });
     } catch {
-        return NextResponse.json(
-            { success: false, error: { message: 'Failed to fetch users' } },
-            { status: 500 }
-        );
+        return errorResponse('Failed to fetch users', 500);
     }
 }

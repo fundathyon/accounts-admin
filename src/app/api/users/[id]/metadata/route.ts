@@ -1,34 +1,26 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { proxyToAccounts, requireSecretKey } from '@/lib/accounts-api';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const secretKey = request.headers.get('X-Secret-API-Key');
-
-  if (!secretKey) {
-    return NextResponse.json(
-      { success: false, error: { message: 'Secret API Key es requerida.' } },
-      { status: 401 }
-    );
-  }
+  const auth = requireSecretKey(request);
+  if (auth.error) return auth.error;
 
   try {
     const body = await request.json();
-    const res = await fetch(`${INTERNAL_API_URL}/api/v1/users/${id}/metadata`, {
+    return await proxyToAccounts(`/api/v1/users/${id}/metadata`, {
       method: 'PATCH',
       headers: {
-        'X-API-KEY': secretKey,
+        'X-API-KEY': auth.key,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
       body: JSON.stringify(body),
       cache: 'no-store',
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json(
       { success: false, error: { message: 'Error al conectar con el servidor.' } },
