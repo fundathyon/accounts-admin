@@ -182,7 +182,7 @@ export default function BehaviorDetailPage() {
           <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
         </Link>
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">{t('behaviors.behaviorNotFound')}</p>
+          <p className="text-muted">{t('behaviors.behaviorNotFound')}</p>
         </Card>
       </div>
     );
@@ -214,7 +214,7 @@ export default function BehaviorDetailPage() {
                 >
                   {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
                 </Badge>
-                <span className="text-xs text-muted-foreground font-mono">{behavior.id}</span>
+                <span className="text-xs text-muted font-mono">{behavior.id}</span>
               </div>
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function BehaviorDetailPage() {
         </div>
 
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-muted mb-4 flex items-center gap-2">
             <Settings className="w-4 h-4" />
             {behavior.behavior_code === 'email_auth' ? t('behaviors.config') : t('behaviors.configJson')}
           </h3>
@@ -240,7 +240,7 @@ export default function BehaviorDetailPage() {
               togglingMagicLink={togglingMagicLink}
             />
           ) : (
-            <div className="bg-muted/50 rounded-2xl p-4 border font-mono text-sm overflow-x-auto">
+            <div className="bg-subtle/50 rounded-2xl p-4 border font-mono text-sm overflow-x-auto">
               <pre className="text-sky-300">{JSON.stringify(behavior.config, null, 2)}</pre>
             </div>
           )}
@@ -248,19 +248,19 @@ export default function BehaviorDetailPage() {
 
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">{t('behaviors.createdBy')}</div>
+            <div className="text-xs text-muted font-medium uppercase">{t('behaviors.createdBy')}</div>
             <div className="text-sm font-mono">{behavior.created_by}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">{t('oauth.appId')}</div>
+            <div className="text-xs text-muted font-medium uppercase">{t('oauth.appId')}</div>
             <div className="text-sm font-mono">{behavior.app_id}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">{t('behaviors.dateCreated')}</div>
+            <div className="text-xs text-muted font-medium uppercase">{t('behaviors.dateCreated')}</div>
             <div className="text-sm">{new Date(behavior.created_at).toLocaleString()}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase">{t('behaviors.lastUpdate')}</div>
+            <div className="text-xs text-muted font-medium uppercase">{t('behaviors.lastUpdate')}</div>
             <div className="text-sm">{new Date(behavior.updated_at).toLocaleString()}</div>
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function BehaviorDetailPage() {
               />
             ) : (
               <div className="space-y-4 h-full flex flex-col">
-                <div className="flex-1 bg-muted/50 rounded-xl border p-4 font-mono text-sm overflow-auto">
+                <div className="flex-1 bg-subtle/50 rounded-xl border p-4 font-mono text-sm overflow-auto">
                   <pre className="text-sky-300">
                     {JSON.stringify(behavior.config, null, 2)}
                   </pre>

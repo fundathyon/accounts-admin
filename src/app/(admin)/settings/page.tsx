@@ -272,7 +272,7 @@ export default function SettingsPage() {
             <Alert tone="danger" title={t('common.error')} className="mx-6 mt-4">
               {envError}
               {envError.includes('disabled') && (
-                <span className="block mt-1 text-text-muted">
+                <span className="block mt-1 text-muted">
                   {t('settings.exposeEnvHint')}
                 </span>
               )}
@@ -290,13 +290,13 @@ export default function SettingsPage() {
             <div className="divide-y divide-border">
               {Array.from(new Set(envVars.map((e) => e.category))).map((category) => (
                 <div key={category}>
-                  <div className="px-6 py-2 bg-muted/30">
+                  <div className="px-6 py-2 bg-subtle/30">
                     <Text variant="overline" tone="muted" className="font-bold tracking-widest">{category}</Text>
                   </div>
                   {envVars
                     .filter((e) => e.category === category)
                     .map((envVar) => (
-                      <div key={envVar.key} className="px-6 py-3 hover:bg-muted/50 transition-colors flex items-center gap-4">
+                      <div key={envVar.key} className="px-6 py-3 hover:bg-subtle/50 transition-colors flex items-center gap-4">
                         <div className="w-64 shrink-0">
                           <Text
                             variant="code"
@@ -336,11 +336,11 @@ export default function SettingsPage() {
                               className={cn(
                                 'truncate block',
                                 envVar.value === 'false'
-                                  ? 'text-text-muted'
+                                  ? 'text-muted'
                                   : envVar.value === 'true'
                                     ? 'text-emerald-400'
                                     : envVar.value === ''
-                                      ? 'text-text-muted italic'
+                                      ? 'text-muted italic'
                                       : 'text-text'
                               )}
                             >
@@ -358,7 +358,7 @@ export default function SettingsPage() {
 
         <Card className="p-6">
           <Heading level={2} visual="h4" className="mb-3">{t('settings.securityNotes')}</Heading>
-          <ul className="space-y-1.5 text-sm text-text-muted list-disc list-inside">
+          <ul className="space-y-1.5 text-sm text-muted list-disc list-inside">
             <li>{t('settings.securityNote1')}</li>
             <li>{t('settings.securityNote2')}</li>
             <li>{t('settings.securityNote3')}</li>

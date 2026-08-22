@@ -39,7 +39,7 @@ const JSON_KEY_CLASS = 'text-blue-600 dark:text-blue-400';
 const JSON_STRING_CLASS = 'text-amber-700 dark:text-amber-300';
 const JSON_NUMBER_CLASS = 'text-emerald-600 dark:text-emerald-400';
 const JSON_BOOLEAN_CLASS = 'text-purple-600 dark:text-purple-400';
-const JSON_NULL_CLASS = 'text-muted-foreground';
+const JSON_NULL_CLASS = 'text-muted';
 
 function JsonSyntaxHighlight({
   data,
@@ -66,30 +66,30 @@ function JsonSyntaxHighlight({
     return <span className={JSON_STRING_CLASS}>{JSON.stringify(data)}</span>;
   }
   if (Array.isArray(data)) {
-    if (data.length === 0) return <span className="text-foreground">[]</span>;
+    if (data.length === 0) return <span className="text-text">[]</span>;
     return (
       <>
-        <span className="text-foreground">[</span>
-        <span className="text-foreground">{'\n'}</span>
+        <span className="text-text">[</span>
+        <span className="text-text">{'\n'}</span>
         {data.map((item, i) => (
           <span key={i}>
-            <span className="text-foreground">{padInner}</span>
+            <span className="text-text">{padInner}</span>
             {JsonSyntaxHighlight({ data: item, indent: indent + 1, renderCustomValue })}
-            {i < data.length - 1 ? <span className="text-foreground">,</span> : null}
-            <span className="text-foreground">{'\n'}</span>
+            {i < data.length - 1 ? <span className="text-text">,</span> : null}
+            <span className="text-text">{'\n'}</span>
           </span>
         ))}
-        <span className="text-foreground">{pad}</span>
-        <span className="text-foreground">]</span>
+        <span className="text-text">{pad}</span>
+        <span className="text-text">]</span>
       </>
     );
   }
   if (typeof data === 'object' && data !== null) {
     const entries = Object.entries(data);
-    if (entries.length === 0) return <span className="text-foreground">{'{}'}</span>;
+    if (entries.length === 0) return <span className="text-text">{'{}'}</span>;
     return (
       <>
-        <span className="text-foreground">{'{\n'}</span>
+        <span className="text-text">{'{\n'}</span>
         {entries.map(([key, value], i) => {
           const custom = renderCustomValue?.(key, value);
           const valueNode =
@@ -100,17 +100,17 @@ function JsonSyntaxHighlight({
             );
           return (
             <span key={key}>
-              <span className="text-foreground">{padInner}</span>
+              <span className="text-text">{padInner}</span>
               <span className={JSON_KEY_CLASS}>{JSON.stringify(key)}</span>
-              <span className="text-foreground">{': '}</span>
+              <span className="text-text">{': '}</span>
               {valueNode}
-              {i < entries.length - 1 ? <span className="text-foreground">,</span> : null}
-              <span className="text-foreground">{'\n'}</span>
+              {i < entries.length - 1 ? <span className="text-text">,</span> : null}
+              <span className="text-text">{'\n'}</span>
             </span>
           );
         })}
-        <span className="text-foreground">{pad}</span>
-        <span className="text-foreground">{'}'}</span>
+        <span className="text-text">{pad}</span>
+        <span className="text-text">{'}'}</span>
       </>
     );
   }
@@ -186,9 +186,9 @@ function JwtColoredView({
       )}
     >
       <span className="text-emerald-600 dark:text-emerald-400">{header}</span>
-      <span className="text-foreground">.</span>
+      <span className="text-text">.</span>
       <span className="text-amber-600 dark:text-amber-400">{payload}</span>
-      <span className="text-foreground">.</span>
+      <span className="text-text">.</span>
       <span className="text-blue-600 dark:text-blue-400">{signature}</span>
     </span>
   );
@@ -217,7 +217,7 @@ const JwtTextarea = forwardRef<
     <div className={cn('relative flex-1 min-h-[200px] flex flex-col', wrapperClassName)}>
       <div
         ref={overlayRef}
-        className="absolute inset-0 overflow-auto rounded-md border border-input bg-background px-3 py-2 text-xs font-mono leading-normal"
+        className="absolute inset-0 overflow-auto rounded-md border border-border bg-bg px-3 py-2 text-xs font-mono leading-normal"
         aria-hidden
       >
         <JwtColoredView value={value} asOverlay />
@@ -229,7 +229,7 @@ const JwtTextarea = forwardRef<
         onChange={(e) => onChange(e.target.value)}
         onScroll={syncScroll}
         className={cn(
-          'relative z-10 w-full flex-1 min-h-[200px] rounded-md border border-transparent bg-transparent px-3 py-2 text-xs font-mono resize-none caret-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[var(--fdn-focus)]',
+          'relative z-10 w-full flex-1 min-h-[200px] rounded-md border border-transparent bg-transparent px-3 py-2 text-xs font-mono resize-none caret-foreground placeholder:text-muted focus-visible:ring-2 focus-visible:ring-[var(--fdn-focus)]',
           className
         )}
         spellCheck={false}
@@ -295,9 +295,9 @@ function TokenSection({
     const entries = Object.entries(data);
     return (
       <>
-        <div className={cn('overflow-x-auto overflow-y-auto rounded-lg border bg-muted/50', contentMinHeight || 'min-h-[120px] max-h-[200px]')}>
+        <div className={cn('overflow-x-auto overflow-y-auto rounded-lg border bg-subtle/50', contentMinHeight || 'min-h-[120px] max-h-[200px]')}>
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-muted border-b">
+            <thead className="sticky top-0 bg-subtle border-b">
               <tr>
                 <th className="text-left font-medium px-3 py-2">{t('tokens.claimKey')}</th>
                 <th className="text-left font-medium px-3 py-2">{t('tokens.claimValue')}</th>
@@ -309,7 +309,7 @@ function TokenSection({
                 const expTooltip = key === 'exp' ? formatExpirationTooltip(value) : null;
                 return (
                   <tr key={key} className="border-b border-border/50">
-                    <td className="px-3 py-2 font-mono text-muted-foreground">{key}</td>
+                    <td className="px-3 py-2 font-mono text-muted">{key}</td>
                     <td className="px-3 py-2 font-mono break-all">
                       {expTooltip ? (
                         <Tooltip
@@ -320,11 +320,11 @@ function TokenSection({
                             <span className="flex flex-col gap-0.5">
                               <span>{expTooltip.dateStr}</span>
                               <span>{expTooltip.timeStr}</span>
-                              {expTooltip.tzName && <span className="text-text-muted">{expTooltip.tzName}</span>}
+                              {expTooltip.tzName && <span className="text-muted">{expTooltip.tzName}</span>}
                             </span>
                           }
                         >
-                          <span className="cursor-help underline decoration-dotted decoration-muted-foreground underline-offset-2">
+                          <span className="cursor-help underline decoration-dotted decoration-bg-subtle underline-offset-2">
                             {displayValue}
                           </span>
                         </Tooltip>
@@ -365,7 +365,7 @@ function TokenSection({
                   </span>
                 }
               >
-                <span className={cn(JSON_NUMBER_CLASS, 'cursor-help underline decoration-dotted decoration-muted-foreground underline-offset-2')}>
+                <span className={cn(JSON_NUMBER_CLASS, 'cursor-help underline decoration-dotted decoration-bg-subtle underline-offset-2')}>
                   {value}
                 </span>
               </Tooltip>
@@ -385,8 +385,8 @@ function TokenSection({
           className={cn(
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             active === 'json'
-              ? 'text-foreground border-accent-border'
-              : 'text-muted-foreground border-transparent hover:text-foreground'
+              ? 'text-text border-accent-border'
+              : 'text-muted border-transparent hover:text-text'
           )}
         >
           JSON
@@ -397,8 +397,8 @@ function TokenSection({
           className={cn(
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             active === 'table'
-              ? 'text-foreground border-accent-border'
-              : 'text-muted-foreground border-transparent hover:text-foreground'
+              ? 'text-text border-accent-border'
+              : 'text-muted border-transparent hover:text-text'
           )}
         >
           {t('tokens.claimsTable')}
@@ -475,7 +475,7 @@ function TokenSection({
                 {tokenValue.trim() && (
                   <p className={cn(
                     'text-xs',
-                    isValidStructure ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+                    isValidStructure ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted'
                   )}>
                     {isValidStructure ? t('tokens.validJwtStructure') : t('tokens.invalidJwtStructure')}
                   </p>
@@ -483,14 +483,14 @@ function TokenSection({
                 {validateState && (
                   <p className={cn(
                     'text-xs font-medium',
-                    validateState.result.is_valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'
+                    validateState.result.is_valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-danger'
                   )}>
                     {validateState.result.is_valid
                       ? t('tokens.validResult', { type: validateState.result.entity_type || '—' })
                       : t('tokens.invalidResult')}
                   </p>
                 )}
-                {error && <p className="text-xs text-destructive">{error}</p>}
+                {error && <p className="text-xs text-danger">{error}</p>}
               </div>
             </CardBody>
           </Card>
@@ -520,7 +520,7 @@ function TokenSection({
             </CardHeader>
             <CardBody>
               <TabBar active={headerTab} onSelect={setHeaderTab} />
-              <div className="min-h-[120px] rounded-lg border bg-muted/50 overflow-hidden">
+              <div className="min-h-[120px] rounded-lg border bg-subtle/50 overflow-hidden">
                 {decoded ? (
                   headerTab === 'json' ? (
                     <pre className="p-3 h-full min-h-[120px] text-xs font-mono overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all">
@@ -530,7 +530,7 @@ function TokenSection({
                     <ClaimsTable data={decoded.header} contentMinHeight="min-h-[120px] max-h-[200px]" />
                   )
                 ) : (
-                  <p className="text-xs text-muted-foreground p-6 text-center min-h-[120px] flex items-center justify-center">
+                  <p className="text-xs text-muted p-6 text-center min-h-[120px] flex items-center justify-center">
                     {t('tokens.pasteTokenToDecode')}
                   </p>
                 )}
@@ -560,7 +560,7 @@ function TokenSection({
             </CardHeader>
             <CardBody>
               <TabBar active={payloadTab} onSelect={setPayloadTab} />
-              <div className="min-h-[220px] rounded-lg border bg-muted/50 overflow-hidden">
+              <div className="min-h-[220px] rounded-lg border bg-subtle/50 overflow-hidden">
                 {decoded ? (
                   payloadTab === 'json' ? (
                     <PayloadJsonWithExpTooltip data={decoded.payload} />
@@ -568,7 +568,7 @@ function TokenSection({
                     <ClaimsTable data={decoded.payload} contentMinHeight="min-h-[220px] max-h-[280px]" />
                   )
                 ) : (
-                  <p className="text-xs text-muted-foreground p-6 text-center min-h-[220px] flex items-center justify-center">
+                  <p className="text-xs text-muted p-6 text-center min-h-[220px] flex items-center justify-center">
                     {t('tokens.pasteTokenToDecode')}
                   </p>
                 )}
@@ -752,7 +752,7 @@ export default function TokensPage() {
       </div>
 
       <div className="space-y-4">
-        <Inline gap={1} className="p-1 rounded-lg bg-muted/50 w-fit">
+        <Inline gap={1} className="p-1 rounded-lg bg-subtle/50 w-fit">
           <Button
             type="button"
             variant={activeTab === 'access' ? 'secondary' : 'ghost'}
@@ -843,7 +843,7 @@ export default function TokensPage() {
               </div>
             </FormField>
             {dialogError && (
-              <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{dialogError}</p>
+              <p className="text-sm text-danger rounded-md bg-danger-bg/10 px-3 py-2">{dialogError}</p>
             )}
             {dialogResult && (
               <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
@@ -852,7 +852,7 @@ export default function TokensPage() {
                   {t('tokens.newAccessToken')}
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 min-h-[140px] max-h-[220px] overflow-auto rounded-md border bg-muted/30 px-3 py-2">
+                  <div className="flex-1 min-w-0 min-h-[140px] max-h-[220px] overflow-auto rounded-md border bg-subtle/30 px-3 py-2">
                     <JwtColoredView value={dialogResult.jwt} className="block" />
                   </div>
                   <IconButton

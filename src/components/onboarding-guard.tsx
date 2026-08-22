@@ -34,8 +34,8 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
   if (hasApps === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <Loader2 className="w-8 h-8 animate-spin text-muted" />
       </div>
     );
   }

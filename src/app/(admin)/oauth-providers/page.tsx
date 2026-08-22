@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
+import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, SearchX, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   Badge,
@@ -26,15 +26,12 @@ import {
   Input,
   Select,
   Spinner,
+  StatusBadge,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Text,
   Tooltip,
+  DataTable,
+  type DataTableColumn,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -170,6 +167,7 @@ export default function OAuthProvidersPage() {
   const { t } = useI18n();
   const [providers, setProviders] = useState<OAuthConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<OAuthConfig | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<OAuthConfig | null>(null);
@@ -202,14 +200,21 @@ export default function OAuthProvidersPage() {
       return;
     }
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch(apiUrl('/api/oauth-configs'), {
         headers: { 'X-Secret-API-Key': savedSecretKey },
       });
       const data = await res.json();
-      if (data.success) setProviders(data.data || []);
-      else showNotification(data.error?.message || t('oauth.errorLoad'), 'error');
+      if (data.success) {
+        setProviders(data.data || []);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
+        showNotification(data.error?.message || t('oauth.errorLoad'), 'error');
+      }
     } catch {
+      setLoadError(true);
       showNotification(t('oauth.errorConnection'), 'error');
     } finally {
       setLoading(false);
@@ -312,22 +317,95 @@ export default function OAuthProvidersPage() {
     }
   };
 
-  const filteredProviders = providers.filter(p => {
-    const query = searchQuery.toLowerCase();
-    const searchMatch = (p.name || '').toLowerCase().includes(query) ||
-      p.provider.toLowerCase().includes(query) ||
-      p.client_id.toLowerCase().includes(query) ||
-      p.id.toLowerCase().includes(query);
-
-    if (!searchMatch) return false;
-
+  // The two selects stay in the page: DataTable exposes a single global text
+  // filter, no per-column facets. The free-text search IS handed over to it.
+  const visibleProviders = providers.filter((p) => {
     if (statusFilter === 'enabled' && !p.enabled) return false;
     if (statusFilter === 'disabled' && p.enabled) return false;
-
     if (providerFilter !== 'all' && p.provider !== providerFilter) return false;
-
     return true;
   });
+
+  const filtersActive =
+    searchQuery.trim() !== '' || statusFilter !== 'all' || providerFilter !== 'all';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setProviderFilter('all');
+  };
+
+  const providerColumns = useMemo<DataTableColumn<OAuthConfig>[]>(
+    () => [
+      {
+        id: 'provider',
+        header: t('oauth.tableProvider'),
+        accessor: (p) => p.provider,
+        primary: true,
+        cell: (p) => (
+          <div className="flex items-center gap-2 min-w-0">
+            <OAuthProviderLogo provider={p.provider} size={28} className="rounded shrink-0" />
+            {migrationPendingIds.has(p.id) ? (
+              <Tooltip content={t('oauth.migrationRowTooltip')} side="top" className="max-w-xs whitespace-normal">
+                <span
+                  className="inline-flex size-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-[var(--fdn-bg)]"
+                  aria-label={t('oauth.migrationRowTooltip')}
+                />
+              </Tooltip>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        id: 'name',
+        header: t('oauth.tableName'),
+        accessor: (p) => p.name,
+        type: 'text',
+      },
+      {
+        // Accessor feeds the global filter; the cell keeps the mono treatment
+        // that `type: 'text'` would drop.
+        id: 'clientId',
+        header: t('oauth.tableClientId'),
+        accessor: (p) => p.client_id,
+        cell: (p) => (
+          <span className="block max-w-[200px] truncate font-mono text-xs text-muted" title={p.client_id}>
+            {p.client_id}
+          </span>
+        ),
+      },
+      {
+        // `type: 'status'` places it in the mobile card header and keeps the
+        // §19 taxonomy; the custom cell only swaps in the page's own copy,
+        // because the catalog renderer would print the English label.
+        id: 'state',
+        header: t('oauth.tableState'),
+        type: 'status',
+        cell: (p) => (
+          <StatusBadge status={p.enabled ? 'active' : 'disabled'}>
+            {p.enabled ? t('oauth.enabled') : t('oauth.disabled')}
+          </StatusBadge>
+        ),
+      },
+      {
+        id: 'callbackUri',
+        header: t('oauth.tableCallbackUri'),
+        cell: (p) => (
+          <span className="block max-w-[220px] truncate font-mono text-xs text-muted" title={p.callback_uri}>
+            {p.callback_uri}
+          </span>
+        ),
+      },
+      {
+        // Never rendered — it only keeps "search by ID" working, exactly as the
+        // hand-rolled filter did.
+        id: 'id',
+        header: 'ID',
+        accessor: (p) => p.id,
+      },
+    ],
+    [t, migrationPendingIds]
+  );
 
   const fetchRoles = async () => {
     if (!savedSecretKey) return;
@@ -764,7 +842,7 @@ export default function OAuthProvidersPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">{t('oauth.title')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="text-muted text-sm mt-1">
               {t('oauth.subtitle')}
             </p>
           </div>
@@ -802,10 +880,6 @@ export default function OAuthProvidersPage() {
               {t('oauth.goToSettings')}
             </Link>
           </Card>
-        ) : loading ? (
-          <div className="py-20 flex justify-center">
-            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
-          </div>
         ) : (
           <div className="space-y-4">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
@@ -838,26 +912,26 @@ export default function OAuthProvidersPage() {
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
               <div className="relative flex-1 min-w-[300px]">
                 <Input
-                  leading={<Search className="w-4 h-4 text-muted-foreground" />}
+                  leading={<Search className="w-4 h-4 text-muted" />}
                   placeholder={t('oauth.searchPlaceholder') || "Search by name, provider or ID..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  wrapperClassName="h-10 border-none bg-background shadow-none"
+                  wrapperClassName="h-10 border-none bg-bg shadow-none"
                 />
               </div>
 
               <div className="flex items-center gap-3">
                 <Tooltip content={t('tooltips.oauth')}>
                   <span className="relative inline-flex items-center">
-                    <Filter className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                    <Filter className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted" />
                     <Select
                       value={providerFilter}
                       onValueChange={(v) => setProviderFilter(v ?? 'all')}
                       placeholder={t('oauth.provider') || "Provider"}
-                      className="w-[140px] h-10 pl-8 border-none bg-background shadow-none"
+                      className="w-[140px] h-10 pl-8 border-none bg-bg shadow-none"
                       items={[
                         { value: 'all', label: t('common.all') || "All" },
                         ...ALLOWED_PROVIDERS.map((p) => ({ value: p.value, label: p.label })),
@@ -868,12 +942,12 @@ export default function OAuthProvidersPage() {
 
                 <Tooltip content={t('tooltips.state')}>
                   <span className="relative inline-flex items-center">
-                    <ShieldCheck className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                    <ShieldCheck className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted" />
                     <Select
                       value={statusFilter}
                       onValueChange={(v) => setStatusFilter((v ?? 'all') as 'all' | 'enabled' | 'disabled')}
                       placeholder={t('users.state') || "State"}
-                      className="w-[140px] h-10 pl-8 border-none bg-background shadow-none"
+                      className="w-[140px] h-10 pl-8 border-none bg-bg shadow-none"
                       items={[
                         { value: 'all', label: t('common.all') || "Both" },
                         { value: 'enabled', label: t('oauth.enabled') || "Enabled" },
@@ -885,70 +959,53 @@ export default function OAuthProvidersPage() {
               </div>
             </div>
 
-            {providers.length === 0 ? (
-              <Card className="border-dashed gap-6 p-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
-                  <LogIn className="w-8 h-8 text-rose-400" />
-                </div>
-                <Heading level={2} visual="h3" className="mb-2">
-                  {t('oauth.noProviders')}
-                </Heading>
-                <Text tone="secondary" className="mb-6">
-                  {t('oauth.noProvidersDesc')}
-                </Text>
-                <Button variant="primary" onClick={openCreateModal} className="gap-2">
-                  <Plus className="w-4 h-4" /> {t('oauth.addProvider')}
-                </Button>
-              </Card>
-            ) : (
-              <Table className="overflow-hidden">
-                <TableHeader>
-                  <TableRow className="border-b">
-                    <TableHead className="px-8 py-4">{t('oauth.tableProvider')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('oauth.tableName')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('oauth.tableClientId')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('oauth.tableState')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('oauth.tableCallbackUri')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProviders.map((p) => (
-                    <TableRow
-                      key={p.id}
-                      interactive
-                      className="group transition-colors"
-                      onClick={() => setSelectedProvider(p)}
-                    >
-                      <TableCell className="px-8 py-4">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <OAuthProviderLogo provider={p.provider} size={28} className="rounded shrink-0" />
-                          {migrationPendingIds.has(p.id) ? (
-                            <Tooltip content={t('oauth.migrationRowTooltip')} side="top" className="max-w-xs whitespace-normal">
-                              <span
-                                className="inline-flex size-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-background"
-                                aria-label={t('oauth.migrationRowTooltip')}
-                              />
-                            </Tooltip>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-4 text-muted-foreground">{p.name || '—'}</TableCell>
-                      <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={p.client_id}>
-                        {p.client_id}
-                      </TableCell>
-                      <TableCell className="px-8 py-4">
-                        <Badge variant={p.enabled ? 'tonal' : 'outline'} tone={p.enabled ? 'success' : 'neutral'}>
-                          {p.enabled ? t('oauth.enabled') : t('oauth.disabled')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[220px] truncate" title={p.callback_uri}>
-                        {p.callback_uri}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <DataTable<OAuthConfig>
+              columns={providerColumns}
+              data={visibleProviders}
+              rowId={(p) => p.id}
+              columnVisibility={{ defaultState: { id: false } }}
+              globalFilter={searchQuery}
+              onRowClick={(p) => setSelectedProvider(p)}
+              getRowProps={(p) => (p.enabled ? undefined : { terminal: true })}
+              loading={loading}
+              loadingRowCount={5}
+              error={loadError ? { title: t('oauth.errorLoad'), retry: { label: t('common.retry'), onClick: () => { void fetchProviders(); } } } : undefined}
+              emptyState={
+                filtersActive
+                  ? {
+                    icon: SearchX,
+                    title: t('oauth.noProviders'),
+                    action: (
+                      <Button variant="secondary" onClick={clearFilters}>
+                        {t('common.clearFilters')}
+                      </Button>
+                    ),
+                  }
+                  : {
+                    icon: LogIn,
+                    title: t('oauth.noProviders'),
+                    description: t('oauth.noProvidersDesc'),
+                    action: (
+                      <Button variant="primary" onClick={openCreateModal} className="gap-2">
+                        <Plus className="w-4 h-4" /> {t('oauth.addProvider')}
+                      </Button>
+                    ),
+                  }
+              }
+              noResultsState={{
+                icon: SearchX,
+                title: t('oauth.noProviders'),
+                action: (
+                  <Button variant="secondary" onClick={clearFilters}>
+                    {t('common.clearFilters')}
+                  </Button>
+                ),
+              }}
+              labels={{
+                loading: t('common.loading'),
+                of: (shown, total) => `${shown} / ${total}`,
+              }}
+            />
           </div>
         )}
       </motion.div>
@@ -984,7 +1041,7 @@ export default function OAuthProvidersPage() {
                     onClick={() => !editingProvider && setFormData((p) => ({ ...p, provider: prov.value }))}
                     className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-accent-border disabled:opacity-70 disabled:cursor-not-allowed ${formData.provider === prov.value
                       ? 'border-accent-border bg-accent-bg'
-                      : 'border-input bg-muted/30'
+                      : 'border-border bg-subtle/30'
                       }`}
                   >
                     <OAuthProviderLogo provider={prov.value} size={28} className="rounded" />
@@ -1058,7 +1115,7 @@ export default function OAuthProvidersPage() {
                 readOnly
                 placeholder={t('oauth.callbackKeyPlaceholder')}
                 value={formData.callback_key}
-                className="font-mono text-sm text-muted-foreground cursor-not-allowed"
+                className="font-mono text-sm text-muted cursor-not-allowed"
               />
             </div>
 
@@ -1070,7 +1127,7 @@ export default function OAuthProvidersPage() {
                   placeholder={t('oauth.callbackUriPlaceholder')}
                   value={formData.callback_uri}
                   wrapperClassName="flex-1 min-w-0"
-                  className="font-mono text-sm text-muted-foreground cursor-not-allowed"
+                  className="font-mono text-sm text-muted cursor-not-allowed"
                 />
                 <IconButton
                   type="button"
@@ -1112,7 +1169,7 @@ export default function OAuthProvidersPage() {
                   {t('oauth.redirectWhitelist')}
                   <FieldHint text={t('oauth.hints.redirectWhitelist')} />
                 </Text>
-                <p className="text-xs text-muted-foreground mt-1">{t('oauth.redirectWhitelistHint')}</p>
+                <p className="text-xs text-muted mt-1">{t('oauth.redirectWhitelistHint')}</p>
               </div>
               <div className="space-y-3">
                 {formData.redirects.map((row, idx) => (
@@ -1120,9 +1177,9 @@ export default function OAuthProvidersPage() {
                     <FormField
                       className="sm:w-[130px]"
                       label={
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="text-xs text-muted flex items-center gap-1">
                           {t('oauth.platformLabel')}
-                          {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted-foreground/60" />}
+                          {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted/60" />}
                         </span>
                       }
                     >
@@ -1141,7 +1198,7 @@ export default function OAuthProvidersPage() {
                     </FormField>
                     <FormField
                       className="flex-1 min-w-0"
-                      label={<span className="text-xs text-muted-foreground">{t('oauth.redirectUrlRow')}</span>}
+                      label={<span className="text-xs text-muted">{t('oauth.redirectUrlRow')}</span>}
                     >
                       <Input
                         placeholder={t('oauth.redirectWebPlaceholder')}
@@ -1159,9 +1216,9 @@ export default function OAuthProvidersPage() {
                     <FormField
                       className="flex-1 min-w-0 sm:max-w-[200px]"
                       label={
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="text-xs text-muted flex items-center gap-1">
                           {t('oauth.rowNameOptional')}
-                          {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted-foreground/60" />}
+                          {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted/60" />}
                         </span>
                       }
                     >
@@ -1182,7 +1239,7 @@ export default function OAuthProvidersPage() {
                       icon={MinusCircle}
                       label={t('common.delete')}
                       variant="ghost"
-                      className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive"
+                      className="shrink-0 h-9 w-9 text-muted hover:text-danger"
                       onClick={() => {
                         setFormData((p) => ({
                           ...p,
@@ -1241,7 +1298,7 @@ export default function OAuthProvidersPage() {
               <LogIn className="w-5 h-5 text-accent" />
               {t('oauth.providerDetails')}
               {selectedProvider && (
-                <span className="capitalize text-muted-foreground font-normal">
+                <span className="capitalize text-muted font-normal">
                   ({selectedProvider.provider}{selectedProvider.name ? ` · ${selectedProvider.name}` : ''})
                 </span>
               )}
@@ -1284,13 +1341,13 @@ export default function OAuthProvidersPage() {
 
               <div className="space-y-2">
                 <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.tableClientId')}</Text>
-                <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.client_id}</p>
+                <p className="text-sm font-mono break-all bg-subtle/50 rounded-lg p-3">{selectedProvider.client_id}</p>
               </div>
 
               <div className="space-y-2">
                 <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.callbackKey')}</Text>
                 <div className="flex gap-2 items-start">
-                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_key}</p>
+                  <p className="text-sm font-mono break-all bg-subtle/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_key}</p>
                   <IconButton
                     icon={Copy}
                     label={t('common.copy')}
@@ -1307,7 +1364,7 @@ export default function OAuthProvidersPage() {
               <div className="space-y-2">
                 <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.callbackUri')}</Text>
                 <div className="flex gap-2 items-start">
-                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_uri}</p>
+                  <p className="text-sm font-mono break-all bg-subtle/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_uri}</p>
                   <IconButton
                     icon={Copy}
                     label={t('common.copy')}
@@ -1347,7 +1404,7 @@ export default function OAuthProvidersPage() {
                       return (
                         <div
                           key={`${rowKey}-${idx}`}
-                          className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2"
+                          className="rounded-lg border border-border/60 bg-subtle/30 p-3 space-y-2"
                         >
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2 min-w-0">
@@ -1355,7 +1412,7 @@ export default function OAuthProvidersPage() {
                                 {row.platform}
                               </Badge>
                               {row.name?.trim() && (
-                                <span className="text-xs text-muted-foreground truncate">{row.name}</span>
+                                <span className="text-xs text-muted truncate">{row.name}</span>
                               )}
                               {row.legacy && (
                                 <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300">
@@ -1364,13 +1421,13 @@ export default function OAuthProvidersPage() {
                               )}
                             </div>
                             {row.rt && (
-                              <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                              <span className="text-[10px] font-mono text-muted/70 shrink-0">
                                 rt: {row.rt.slice(0, 6)}…
                               </span>
                             )}
                           </div>
                           <div className="flex gap-2 items-start">
-                            <p className="text-xs font-mono break-all bg-background rounded-md p-2 flex-1 min-w-0">
+                            <p className="text-xs font-mono break-all bg-bg rounded-md p-2 flex-1 min-w-0">
                               {row.url}
                             </p>
                             <IconButton
@@ -1402,7 +1459,7 @@ export default function OAuthProvidersPage() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">
+                  <p className="text-xs text-muted italic">
                     {t('oauth.detailsRedirectsEmpty')}
                   </p>
                 )}
@@ -1432,7 +1489,7 @@ export default function OAuthProvidersPage() {
                               <span className="text-[10px] uppercase tracking-wide text-amber-200/60 w-16 shrink-0">
                                 {r.label}
                               </span>
-                              <p className="text-xs font-mono break-all bg-background/60 rounded p-1.5 flex-1 min-w-0">
+                              <p className="text-xs font-mono break-all bg-bg/60 rounded p-1.5 flex-1 min-w-0">
                                 {r.value}
                               </p>
                               <IconButton
@@ -1549,7 +1606,7 @@ export default function OAuthProvidersPage() {
               <Link2 className="w-5 h-5 text-accent" />
               {t('oauth.getLink')}
               {linkDialogProvider && (
-                <span className="capitalize text-muted-foreground font-normal">
+                <span className="capitalize text-muted font-normal">
                   ({linkDialogProvider.provider})
                 </span>
               )}
@@ -1608,9 +1665,9 @@ export default function OAuthProvidersPage() {
                 {!savedSecretKey ? (
                   <p className="text-sm text-amber-400">{t('oauth.secretKeyRequiredForRedirects')}</p>
                 ) : linkRedirectsLoading ? (
-                  <p className="text-sm text-muted-foreground">{t('oauth.linkRedirectsLoading')}</p>
+                  <p className="text-sm text-muted">{t('oauth.linkRedirectsLoading')}</p>
                 ) : linkRedirectsForPlatform.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t('oauth.noRedirectsForPlatform')}</p>
+                  <p className="text-sm text-muted">{t('oauth.noRedirectsForPlatform')}</p>
                 ) : (
                   <Select
                     value={linkRedirectUrl || linkRedirectsForPlatform[0]?.url || ''}

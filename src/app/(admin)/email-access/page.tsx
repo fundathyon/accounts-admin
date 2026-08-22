@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Key,
@@ -9,8 +9,6 @@ import {
   ListFilter,
   Plus,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   PlayCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -31,19 +29,14 @@ import {
   FormField,
   Heading,
   Icon,
-  IconButton,
   Input,
   Select,
   Spinner,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Text,
   Textarea,
+  DataTable,
+  type DataTableColumn,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -84,6 +77,8 @@ export default function EmailAccessPage() {
   const [blockMeta, setBlockMeta] = useState<{ totalPages: number; total: number } | null>(null);
   const [allowLoading, setAllowLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [allowError, setAllowError] = useState(false);
+  const [blockError, setBlockError] = useState(false);
 
   const [addOpen, setAddOpen] = useState(false);
   const [addListKind, setAddListKind] = useState<'allow' | 'block'>('allow');
@@ -184,8 +179,10 @@ export default function EmailAccessPage() {
       const setRows = kind === 'allow' ? setAllowRows : setBlockRows;
       const setMeta = kind === 'allow' ? setAllowMeta : setBlockMeta;
       const setLoading = kind === 'allow' ? setAllowLoading : setBlockLoading;
+      const setError = kind === 'allow' ? setAllowError : setBlockError;
 
       setLoading(true);
+      setError(false);
       try {
         const res = await fetch(apiUrl(path), {
           headers: { 'X-Secret-API-Key': savedSecretKey },
@@ -205,9 +202,11 @@ export default function EmailAccessPage() {
             setMeta(null);
           }
         } else {
+          setError(true);
           showNotification(data.error?.message || t('emailAccess.listLoadError'), 'error');
         }
       } catch {
+        setError(true);
         showNotification(t('emailAccess.listLoadError'), 'error');
       } finally {
         setLoading(false);
@@ -362,30 +361,83 @@ export default function EmailAccessPage() {
     </Button>
   );
 
+  const entryColumns = useMemo<DataTableColumn<EmailAccessEntryView>[]>(
+    () => [
+      {
+        id: 'type',
+        header: t('emailAccess.colType'),
+        accessor: (row) => row.entry_type,
+        cell: (row) => <Badge className="font-mono">{row.entry_type}</Badge>,
+      },
+      {
+        id: 'segment',
+        header: t('emailAccess.colSegment'),
+        hideBelow: 'lg',
+        accessor: (row) => row.access_segment || 'all',
+        cell: (row) => (
+          <Badge variant="outline" className="font-mono">
+            {row.access_segment || 'all'}
+          </Badge>
+        ),
+      },
+      {
+        id: 'value',
+        header: t('emailAccess.colValue'),
+        primary: true,
+        accessor: (row) => row.value_normalized,
+        cell: (row) => <span className="font-mono">{row.value_normalized}</span>,
+      },
+      {
+        id: 'note',
+        header: t('emailAccess.colNote'),
+        hideBelow: 'md',
+        accessor: (row) => row.note,
+        type: 'text',
+      },
+      {
+        // `type: 'date'` is avoided on purpose: it hard-codes the `es` date-fns
+        // locale and drops the time, which this list shows. Tabular figures are
+        // kept by hand (§14).
+        id: 'created',
+        header: t('emailAccess.colCreated'),
+        hideBelow: 'sm',
+        align: 'right',
+        cell: (row) => (
+          <span className="tabular-nums text-caption text-muted">
+            {new Date(row.created_at).toLocaleString()}
+          </span>
+        ),
+      },
+    ],
+    [t]
+  );
+
   const renderList = (
     kind: 'allow' | 'block',
     rows: EmailAccessEntryView[],
     loading: boolean,
+    listError: boolean,
     page: number,
     meta: { totalPages: number; total: number } | null,
     setPage: (n: number) => void
   ) => {
     const totalPages = meta?.totalPages ?? 1;
+    const addButton = (
+      <Button
+        variant="primary"
+        size="md"
+        onClick={() => openAdd(kind)}
+        leading={<Icon icon={Plus} size={14} />}
+      >
+        {t('emailAccess.addEntry')}
+      </Button>
+    );
     return (
-      <Card className="border-border/60">
-        <CardHeader
-          className="items-center p-6 pb-4"
-          actions={
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => openAdd(kind)}
-              leading={<Icon icon={Plus} size={14} />}
-            >
-              {t('emailAccess.addEntry')}
-            </Button>
-          }
-        >
+      // No Card wrapper here any more: DataTable already paints the bordered
+      // surface (and so do its empty / error states), so keeping the Card
+      // produced a double frame.
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <Heading level={2} visual="h3">
               {kind === 'allow' ? t('emailAccess.tabAllow') : t('emailAccess.tabBlock')}
@@ -396,93 +448,46 @@ export default function EmailAccessPage() {
               </Text>
             )}
           </div>
-        </CardHeader>
-        <CardBody className="p-6 pt-0">
-          {loading ? (
-            <div className="py-16 flex justify-center">
-              <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
-            </div>
-          ) : rows.length === 0 ? (
-            <Text tone="muted" className="py-8 text-center">{t('emailAccess.emptyList')}</Text>
-          ) : (
-            <>
-              <Table className="rounded-none border-0 bg-transparent">
-                <TableHeader className="bg-transparent">
-                  <TableRow>
-                    <TableHead>{t('emailAccess.colType')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('emailAccess.colSegment')}</TableHead>
-                    <TableHead>{t('emailAccess.colValue')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('emailAccess.colNote')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('emailAccess.colCreated')}</TableHead>
-                    <TableHead className="w-[100px]" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>
-                        <Badge className="font-mono">
-                          {row.entry_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <Badge variant="outline" className="font-mono">
-                          {row.access_segment || 'all'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono">{row.value_normalized}</TableCell>
-                      <TableCell className="hidden md:table-cell max-w-[200px] truncate text-text-secondary">
-                        {row.note || '—'}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-caption text-text-muted">
-                        {new Date(row.created_at).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <IconButton
-                          icon={Trash2}
-                          label={t('emailAccess.deleteEntry')}
-                          variant="destructive-subtle"
-                          onClick={() => {
-                            setDeleteTarget({ kind, id: row.id });
-                            setDeleteOpen(true);
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-                <Text variant="caption" tone="muted">
-                  {t('emailAccess.page')} {page + 1} {t('emailAccess.of')} {totalPages}
-                </Text>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    disabled={page <= 0}
-                    onClick={() => setPage(page - 1)}
-                    leading={<Icon icon={ChevronLeft} size={14} />}
-                  >
-                    {t('emailAccess.prev')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage(page + 1)}
-                    trailing={<Icon icon={ChevronRight} size={14} />}
-                  >
-                    {t('emailAccess.next')}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardBody>
-      </Card>
+          {addButton}
+        </div>
+
+        <DataTable<EmailAccessEntryView>
+          columns={entryColumns}
+          data={rows}
+          rowId={(row) => row.id}
+          loading={loading}
+          loadingRowCount={5}
+          error={listError ? { title: t('emailAccess.listLoadError') } : undefined}
+          emptyState={{
+            icon: ListFilter,
+            title: t('emailAccess.emptyList'),
+            action: addButton,
+          }}
+          rowActions={(row) => [
+            {
+              label: t('emailAccess.deleteEntry'),
+              icon: Trash2,
+              destructive: true,
+              onSelect: () => {
+                setDeleteTarget({ kind, id: row.id });
+                setDeleteOpen(true);
+              },
+            },
+          ]}
+          pagination={{
+            pageSize: PAGE_SIZE,
+            page: page + 1,
+            onPageChange: (next) => setPage(next - 1),
+            total: meta?.total ?? rows.length,
+            manual: true,
+          }}
+          labels={{
+            loading: t('common.loading'),
+            actions: t('oauth.actions'),
+            of: () => `${t('emailAccess.page')} ${page + 1} ${t('emailAccess.of')} ${totalPages}`,
+          }}
+        />
+      </div>
     );
   };
 
@@ -559,7 +564,7 @@ export default function EmailAccessPage() {
                   <Text tone="secondary">
                     {t('emailAccess.desc')}
                     {settings?.app_id ? (
-                      <span className="mt-2 block font-mono text-code text-text-muted">
+                      <span className="mt-2 block font-mono text-code text-muted">
                         app_id: {settings.app_id}
                       </span>
                     ) : null}
@@ -568,7 +573,7 @@ export default function EmailAccessPage() {
                 <CardBody className="p-6 pt-0">
                   {settingsLoading && !settings ? (
                     <div className="py-12 flex justify-center">
-                      <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
+                      <Spinner size={20} label={t('common.loading')} className="text-muted" />
                     </div>
                   ) : (
                     <form onSubmit={handleSaveSettings} className="space-y-8 max-w-lg">
@@ -609,9 +614,9 @@ export default function EmailAccessPage() {
             )}
 
             {tab === 'allow' &&
-              renderList('allow', allowRows, allowLoading, allowPage, allowMeta, setAllowPage)}
+              renderList('allow', allowRows, allowLoading, allowError, allowPage, allowMeta, setAllowPage)}
             {tab === 'block' &&
-              renderList('block', blockRows, blockLoading, blockPage, blockMeta, setBlockPage)}
+              renderList('block', blockRows, blockLoading, blockError, blockPage, blockMeta, setBlockPage)}
           </div>
         )}
       </motion.div>
@@ -789,12 +794,12 @@ export default function EmailAccessPage() {
                   )}
                 </div>
                 {testResult.scope && (
-                  <div className="mt-1 text-xs text-text-muted">
+                  <div className="mt-1 text-xs text-muted">
                     scope: <code className="font-mono">{testResult.scope}</code>
                   </div>
                 )}
                 {testResult.reason && (
-                  <div className="mt-1 text-xs text-text-muted">{testResult.reason}</div>
+                  <div className="mt-1 text-xs text-muted">{testResult.reason}</div>
                 )}
               </div>
             )}

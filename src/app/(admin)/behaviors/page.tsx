@@ -60,7 +60,7 @@ export default function BehaviorsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">{t('sidebar.behaviors')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{t('behaviors.desc')}</p>
+            <p className="text-muted text-sm mt-1">{t('behaviors.desc')}</p>
           </div>
           {!savedSecretKey && (
             <Link
@@ -92,7 +92,7 @@ export default function BehaviorsPage() {
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-muted" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -130,16 +130,16 @@ export default function BehaviorsPage() {
                       <Heading level={3} visual="h3" className="mb-1">
                         {behavior.behavior_code}
                       </Heading>
-                      <p className="text-xs text-muted-foreground font-mono mb-4">{behavior.id}</p>
+                      <p className="text-xs text-muted font-mono mb-4">{behavior.id}</p>
 
-                      <div className="text-xs text-muted-foreground mt-auto pt-4 border-t border-border flex flex-col gap-1">
+                      <div className="text-xs text-muted mt-auto pt-4 border-t border-border flex flex-col gap-1">
                         <div className="flex justify-between">
                           <span>{t('behaviors.updated')}:</span>
-                          <span className="text-foreground">{new Date(behavior.updated_at).toLocaleDateString()}</span>
+                          <span className="text-text">{new Date(behavior.updated_at).toLocaleDateString()}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>{t('behaviors.created')}:</span>
-                          <span className="text-foreground">{new Date(behavior.created_at).toLocaleDateString()}</span>
+                          <span className="text-text">{new Date(behavior.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </Card>

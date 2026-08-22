@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Users, Webhook, Puzzle, Key, Shield, LogIn } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { motion } from 'framer-motion';
-import { Badge, Card, Heading, Inline, Text } from '@foundathyon/community-ui';
+import { Badge, Heading, Icon, Inline, StatCard } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { BASE_PATH } from '@/lib/utils';
 
@@ -67,10 +67,11 @@ export default function DashboardPage() {
         <Heading level={1}>{t('dashboard.title')}</Heading>
         <Badge variant="outline">{t('dashboard.badge')}</Badge>
       </Inline>
-      {/* Explicit 1/2/3-column breakpoints kept on purpose: community-ui's `Grid`
-          is `auto-fit`/`minmax`, which would grow past three columns on wide
-          viewports and change this layout. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      {/* The column count comes from a CSS var rather than `sm:grid-cols-2
+          md:grid-cols-3`: community-ui's stylesheet loads last and also emits
+          `sm:grid-cols-2`, which at equal specificity beat `md:grid-cols-3` and
+          pinned this grid to two columns on desktop. See src/app/globals.css. */}
+      <div className="dashboard-stat-grid">
         {[
           { icon: Users, labelKey: 'sidebar.users', value: stats.users, href: '/users' },
           { icon: Webhook, labelKey: 'sidebar.webhooks', value: stats.webhooks, href: '/webhooks' },
@@ -79,21 +80,21 @@ export default function DashboardPage() {
           { icon: Shield, labelKey: 'sidebar.roles', value: stats.roles, href: '/roles-policies' },
           { icon: LogIn, labelKey: 'sidebar.oauthProviders', value: stats.oauth_configs, href: '/oauth-providers' },
         ].map((card) => (
-          <Link key={card.labelKey} href={buildHref(card.href)}>
-            <Card interactive className="p-6 cursor-pointer h-full">
-              {/* `primary` (the app's cyan) is kept deliberately: community-ui's
-                  `.text-accent` is shadowed by the app's shadcn `--accent`
-                  (a neutral grey) because globals.css loads last. */}
-              <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center text-accent mb-4">
-                <card.icon className="w-6 h-6" />
-              </div>
-              <Text as="div" variant="label" tone="muted">
-                {t(card.labelKey)}
-              </Text>
-              <Text as="div" tabular className="text-h1 mt-1">
-                {loading ? '…' : card.value}
-              </Text>
-            </Card>
+          <Link key={card.labelKey} href={buildHref(card.href)} className="group">
+            {/* §14 Stat/Metric: overline label on top, big figure below. No
+                delta is passed because dashboard-stats returns bare counts —
+                the API has no previous-period figure to compare against, and
+                §14 requires a delta to carry its own period to mean anything. */}
+            <StatCard
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon icon={card.icon} size={14} />
+                  {t(card.labelKey)}
+                </span>
+              }
+              value={loading ? '—' : card.value}
+              className="h-full transition-colors duration-150 group-hover:bg-surface-hover"
+            />
           </Link>
         ))}
       </div>

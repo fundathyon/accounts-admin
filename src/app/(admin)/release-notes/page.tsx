@@ -29,7 +29,7 @@ function Subsection({
 function BulletList({ keys, prefix }: { keys: readonly string[]; prefix: string }) {
   const { t } = useI18n();
   return (
-    <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground/90">
+    <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-text/90">
       {keys.map((key) => (
         <li key={key}>{t(`${prefix}.${key}`)}</li>
       ))}
@@ -79,7 +79,7 @@ export default function ReleaseNotesPage() {
           </CardHeader>
           <CardBody>
             <Stack gap={8}>
-              <Text className="leading-relaxed text-foreground/90">{t('releaseNotes.v020.intro')}</Text>
+              <Text className="leading-relaxed text-text/90">{t('releaseNotes.v020.intro')}</Text>
 
               <Subsection title={t('releaseNotes.v020.sections.oauthApi.title')}>
                 <Text tone="secondary" className="leading-relaxed">
@@ -120,7 +120,7 @@ export default function ReleaseNotesPage() {
           </CardHeader>
           <CardBody>
             <Stack gap={8}>
-              <Text className="leading-relaxed text-foreground/90">{t('releaseNotes.v010.intro')}</Text>
+              <Text className="leading-relaxed text-text/90">{t('releaseNotes.v010.intro')}</Text>
 
               <Subsection title={t('releaseNotes.v010.sections.foundation.title')}>
                 <BulletList keys={v010FoundationKeys} prefix="releaseNotes.v010.sections.foundation" />

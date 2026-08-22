@@ -132,7 +132,11 @@
     "error": "Error",
     "errorConnection": "Connection error",
     "edit": "Edit",
-    "all": "All"
+    "all": "All",
+    "retry": "Retry",
+    "noResults": "No results",
+    "noResultsDesc": "No items match the filters you applied.",
+    "clearFilters": "Clear filters"
   },
   "commandPalette": {
     "placeholder": "Search or jump to…",

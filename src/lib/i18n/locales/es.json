@@ -132,7 +132,11 @@
     "error": "Error",
     "errorConnection": "Error de conexión",
     "edit": "Editar",
-    "all": "Todo"
+    "all": "Todo",
+    "retry": "Reintentar",
+    "noResults": "Sin resultados",
+    "noResultsDesc": "Ningún elemento coincide con los filtros aplicados.",
+    "clearFilters": "Limpiar filtros"
   },
   "commandPalette": {
     "placeholder": "Buscar o ir a…",

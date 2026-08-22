@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -31,14 +31,10 @@ import {
   Input,
   KeyValue,
   Spinner,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Text,
   Tooltip,
+  DataTable,
+  type DataTableColumn,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -55,6 +51,7 @@ export default function RolesPage() {
   const { t } = useI18n();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   // Deep link from the command palette's "Acciones" group.
@@ -76,9 +73,15 @@ export default function RolesPage() {
     try {
       const res = await fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
-      if (data.data && (data.status === 200 || data.success)) setRoles(data.data || []);
-      else showNotification(data.error?.message || t('roles.errorLoadRoles'), 'error');
+      if (data.data && (data.status === 200 || data.success)) {
+        setRoles(data.data || []);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
+        showNotification(data.error?.message || t('roles.errorLoadRoles'), 'error');
+      }
     } catch {
+      setLoadError(true);
       showNotification(t('common.errorConnection'), 'error');
     }
   };
@@ -116,27 +119,83 @@ export default function RolesPage() {
       return;
     }
     setLoading(true);
+    setLoadError(false);
     fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } })
       .then((r) => r.json())
       .then((rData) => {
         if (rData.data && (rData.status === 200 || rData.success)) setRoles(rData.data || []);
+        else setLoadError(true);
       })
-      .catch(() => { })
+      .catch(() => { setLoadError(true); })
       .finally(() => setLoading(false));
   }, [savedSecretKey]);
 
-  const filteredRoles = roles.filter(role => {
-    const query = searchQuery.toLowerCase();
-    return (
-      role.name.toLowerCase().includes(query) ||
-      (role.description && role.description.toLowerCase().includes(query)) ||
-      role.id.toLowerCase().includes(query)
-    );
-  }).sort((a, b) => {
+  // Search is delegated to the DataTable global filter; only the toolbar
+  // "newest / oldest" toggle stays here — it is not a column-header sort.
+  const sortedRoles = [...roles].sort((a, b) => {
     const dateA = new Date(a.created_at || 0).getTime();
     const dateB = new Date(b.created_at || 0).getTime();
     return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
   });
+
+  const roleColumns = useMemo<DataTableColumn<Role>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('roles.name'),
+        accessor: (role) => role.name,
+        type: 'text',
+        primary: true,
+      },
+      {
+        id: 'description',
+        header: t('roles.description'),
+        accessor: (role) => role.description,
+        type: 'text',
+      },
+      {
+        // Comparable figure -> `number` cell, which brings `tabular-nums` (§14).
+        id: 'users',
+        header: t('roles.usersCount'),
+        accessor: (role) => role.users_count ?? 0,
+        type: 'number',
+      },
+      {
+        // Custom cell: the `text` type would drop the mono treatment.
+        id: 'appId',
+        header: t('roles.appId'),
+        cell: (role) => (
+          <span
+            className="block max-w-[200px] truncate font-mono text-code text-muted"
+            title={role.app_id}
+          >
+            {role.app_id}
+          </span>
+        ),
+      },
+      {
+        // No accessor on purpose: it keeps the raw ISO date out of the global
+        // filter. `type: 'date'` is not used because it hard-codes the `es`
+        // date-fns locale and this admin is bilingual.
+        id: 'created',
+        header: t('roles.created'),
+        align: 'right',
+        cell: (role) => (
+          <span className="tabular-nums text-caption text-muted">
+            {role.created_at ? new Date(role.created_at).toLocaleDateString() : '\u2014'}
+          </span>
+        ),
+      },
+      {
+        // Never rendered (hidden by default) but still fed to the global
+        // filter, so "search by ID" keeps working as the placeholder promises.
+        id: 'id',
+        header: 'ID',
+        accessor: (role) => role.id,
+      },
+    ],
+    [t]
+  );
 
   return (
     <>
@@ -171,7 +230,7 @@ export default function RolesPage() {
         </div>
 
         {savedSecretKey && (
-          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
+          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-subtle/30 rounded-2xl border border-border/50">
             <div className="flex-1 min-w-[300px]">
               <Input
                 size="lg"
@@ -179,7 +238,7 @@ export default function RolesPage() {
                 placeholder={t('roles.searchPlaceholder') || "Search by name, description or ID..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                wrapperClassName="border-none bg-background shadow-none"
+                wrapperClassName="border-none bg-bg shadow-none"
               />
             </div>
 
@@ -189,7 +248,7 @@ export default function RolesPage() {
                   variant="ghost"
                   size="lg"
                   onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                  className="bg-background hover:bg-background/80"
+                  className="bg-bg hover:bg-bg/80"
                   leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={16} />}
                 >
                   {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
@@ -218,47 +277,44 @@ export default function RolesPage() {
               <Icon icon={ShieldCheck} size={16} /> {t('roles.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
 
-            {loading ? (
-              <div className="py-12 flex justify-center">
-                <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
-              </div>
-            ) : roles.length === 0 ? (
-              <Card className="p-12 text-center">
-                <Text tone="muted" className="py-12">{t('roles.noRolesHint')}</Text>
-              </Card>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="px-8 py-4">{t('roles.name')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('roles.description')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('roles.usersCount')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('roles.appId')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('roles.created')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRoles.map((role) => (
-                    <TableRow
-                      key={role.id}
-                      interactive
-                      className="group"
-                      onClick={() => setSelectedRole(role)}
-                    >
-                      <TableCell className="px-8 py-4 font-medium">{role.name}</TableCell>
-                      <TableCell className="px-8 py-4 text-text-secondary">{role.description || '—'}</TableCell>
-                      <TableCell className="px-8 py-4">{role.users_count ?? 0}</TableCell>
-                      <TableCell className="px-8 py-4 font-mono text-code text-text-muted max-w-[200px] truncate" title={role.app_id}>
-                        {role.app_id}
-                      </TableCell>
-                      <TableCell className="px-8 py-4 text-caption text-text-muted">
-                        {role.created_at ? new Date(role.created_at).toLocaleDateString() : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <DataTable<Role>
+              columns={roleColumns}
+              data={sortedRoles}
+              rowId={(role) => role.id}
+              columnVisibility={{ defaultState: { id: false } }}
+              globalFilter={searchQuery}
+              onRowClick={(role) => setSelectedRole(role)}
+              loading={loading}
+              loadingRowCount={5}
+              error={loadError ? { title: t('roles.errorLoadRoles'), retry: { label: t('common.retry'), onClick: () => { void fetchRoles(); } } } : undefined}
+              emptyState={{
+                icon: Shield,
+                title: t('roles.noRoles'),
+                description: t('roles.noRolesHint'),
+                action: (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => setIsRoleModalOpen(true)}
+                    leading={<Icon icon={Shield} size={16} />}
+                  >
+                    {t('roles.newRole')}
+                  </Button>
+                ),
+              }}
+              noResultsState={{
+                title: t('roles.noRoles'),
+                action: (
+                  <Button variant="secondary" size="lg" onClick={() => setSearchQuery('')}>
+                    {t('common.clearFilters')}
+                  </Button>
+                ),
+              }}
+              labels={{
+                loading: t('common.loading'),
+                of: (shown, total) => `${shown} / ${total}`,
+              }}
+            />
           </div>
         )}
       </motion.div>
@@ -309,7 +365,7 @@ export default function RolesPage() {
               <Icon icon={Shield} size={20} className="text-accent" />
               {t('roles.roleDetails')}
               {selectedRole && (
-                <span className="text-text-secondary font-normal">({selectedRole.name})</span>
+                <span className="text-secondary font-normal">({selectedRole.name})</span>
               )}
             </DialogTitle>
             <DialogDescription>

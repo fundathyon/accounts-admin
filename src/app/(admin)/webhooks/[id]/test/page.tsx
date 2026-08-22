@@ -182,7 +182,7 @@ export default function WebhookTestPage() {
   if (loading) {
     return (
       <Stack gap={4} align="center" className="justify-center min-h-[50vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+        <Loader2 className="w-10 h-10 animate-spin text-muted" />
         <Text tone="secondary">{t('webhooks.testPage.loadingWebhook')}</Text>
       </Stack>
     );
@@ -220,20 +220,20 @@ export default function WebhookTestPage() {
       </Inline>
 
       <div className="space-y-6">
-        <Collapsible defaultOpen className="rounded-xl border border-input bg-muted/30 group/collapse">
+        <Collapsible defaultOpen className="rounded-xl border border-border bg-subtle/30 group/collapse">
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-muted/50 transition-colors rounded-xl"
+              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-subtle/50 transition-colors rounded-xl"
             >
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-cyan-400" />
                 <span className="font-medium">{t('webhooks.testPage.testEvent')}</span>
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-xs text-muted font-mono">
                   {testEventSelectedEvent || t('webhooks.testPage.select')}
                 </span>
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]/collapse:rotate-90" />
+              <ChevronRight className="w-4 h-4 text-muted transition-transform group-data-[state=open]/collapse:rotate-90" />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -247,11 +247,11 @@ export default function WebhookTestPage() {
                     'text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors',
                     testEventSelectedEvent === ev.code
                       ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                      : 'bg-background/50 text-muted-foreground hover:bg-muted border border-transparent'
+                      : 'bg-bg/50 text-muted hover:bg-subtle border border-transparent'
                   )}
                 >
                   <div className="font-medium">{ev.code}</div>
-                  <div className="text-muted-foreground mt-0.5">{ev.description}</div>
+                  <div className="text-muted mt-0.5">{ev.description}</div>
                 </button>
               ))}
             </div>

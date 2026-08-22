@@ -239,7 +239,14 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               {audiences.length}
             </Badge>
           )}
-          <div className="hidden sm:flex items-center gap-1.5">
+          {/* `hidden sm:flex` cannot be used here: community-ui's stylesheet loads
+              last and its unconditional `.hidden` would beat this media query at
+              equal specificity. A CSS-var media query keeps the behaviour without
+              entering that shared namespace. */}
+          <div
+            className="items-center gap-1.5"
+            style={{ display: 'var(--audience-chips-display, none)' }}
+          >
             {PLATFORMS.map((pl) => {
               const count = groupedCounts[pl.value];
               const active = count > 0;
@@ -256,7 +263,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                     className={`text-[10px] px-2 py-0.5 rounded-full border ${
                       active
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                        : 'border-border/60 bg-muted/30 text-muted-foreground'
+                        : 'border-border/60 bg-subtle/30 text-muted'
                     }`}
                   >
                     {pl.label} · {count}
@@ -286,7 +293,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
 
       {loading ? (
         <div className="py-6 flex justify-center">
-          <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+          <Spinner size={20} label={t('common.loading')} className="text-muted" />
         </div>
       ) : sortedAudiences.length > 0 ? (
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -299,7 +306,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
-                className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2"
+                className="rounded-lg border border-border/60 bg-subtle/30 p-3 space-y-2"
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
@@ -307,19 +314,19 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                       {a.platform}
                     </Badge>
                     {a.label?.trim() && (
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="text-xs text-muted truncate">
                         {a.label}
                       </span>
                     )}
                   </div>
                   {a.created_at && (
-                    <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                    <span className="text-[10px] font-mono text-muted/70 shrink-0">
                       {new Date(a.created_at).toLocaleDateString()}
                     </span>
                   )}
                 </div>
                 <div className="flex gap-2 items-start">
-                  <p className="text-xs font-mono break-all bg-background rounded-md p-2 flex-1 min-w-0">
+                  <p className="text-xs font-mono break-all bg-bg rounded-md p-2 flex-1 min-w-0">
                     {a.audience}
                   </p>
                   <IconButton
@@ -333,7 +340,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                     icon={Trash2}
                     label={t('oauth.audiences.delete')}
                     variant="secondary"
-                    className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                    className="shrink-0 h-8 w-8 text-muted hover:text-danger hover:border-danger-border/40"
                     loading={deletingId === a.id}
                     disabled={deletingId === a.id}
                     onClick={() => handleDelete(a)}
@@ -344,8 +351,8 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
           </AnimatePresence>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-center">
-          <p className="text-xs text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border/60 bg-subtle/20 p-4 text-center">
+          <p className="text-xs text-muted">
             {t('oauth.audiences.empty')}
           </p>
         </div>
@@ -384,7 +391,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
               <FormField
                 label={
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="text-[10px] uppercase tracking-wide text-muted">
                     {t('oauth.audiences.platform')}
                   </span>
                 }
@@ -399,7 +406,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               <FormField
                 className="min-w-0"
                 label={
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <span className="text-[10px] uppercase tracking-wide text-muted flex items-center gap-1">
                     {t('oauth.audiences.audience')}
                     <FieldHint text={t('oauth.audiences.audienceHint')} />
                   </span>
@@ -418,7 +425,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             </div>
             <FormField
               label={
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                <span className="text-[10px] uppercase tracking-wide text-muted">
                   {t('oauth.audiences.label')}
                 </span>
               }

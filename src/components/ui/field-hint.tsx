@@ -20,7 +20,7 @@ export function FieldHint({ text, href, linkLabel, className, side = 'top' }: Fi
           type="button"
           aria-label="More info"
           className={cn(
-            'inline-flex items-center justify-center text-muted-foreground/70 hover:text-foreground transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded',
+            'inline-flex items-center justify-center text-muted/70 hover:text-text transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--fdn-focus)] rounded',
             className
           )}
         >

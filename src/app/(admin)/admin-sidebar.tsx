@@ -177,7 +177,7 @@ export function AdminSidebar() {
                 <span className="truncate font-semibold text-accent">
                   {app?.name ?? 'Accounts Admin'}
                 </span>
-                <span className="truncate text-[10px] text-text-muted uppercase tracking-wider font-bold">
+                <span className="truncate text-[10px] text-muted uppercase tracking-wider font-bold">
                   {app ? t('sidebar.app') : t('sidebar.apiAccounts')}
                 </span>
               </div>
@@ -208,7 +208,7 @@ export function AdminSidebar() {
                 <DropdownMenuSeparator />
               </>
             )}
-            <DropdownMenuItem disabled className="px-3 text-caption text-text-muted">
+            <DropdownMenuItem disabled className="px-3 text-caption text-muted">
               API Accounts · Community
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -243,12 +243,12 @@ export function AdminSidebar() {
                 <div className="flex gap-3 items-start">
                   <div className={cn(
                     "size-10 shrink-0 rounded-lg flex items-center justify-center overflow-hidden border border-border",
-                    !updateForm.image && "bg-bg-subtle"
+                    !updateForm.image && "bg-subtle"
                   )}>
                     {updateForm.image ? (
                       <img src={updateForm.image} alt="Preview" className="size-full object-cover" />
                     ) : (
-                      <ImageIcon className="w-5 h-5 text-text-muted" />
+                      <ImageIcon className="w-5 h-5 text-muted" />
                     )}
                   </div>
                   <Input
@@ -339,7 +339,7 @@ export function AdminSidebar() {
         </SidebarSection>
 
         <div className={cn('px-2 py-3 border-t border-border', collapsed && 'hidden')}>
-          <p className="text-[10px] text-text-muted truncate" title={`v${ADMIN_VERSION} · ${t('sidebar.poweredBy')}`}>
+          <p className="text-[10px] text-muted truncate" title={`v${ADMIN_VERSION} · ${t('sidebar.poweredBy')}`}>
             v{ADMIN_VERSION} · {t('sidebar.poweredBy')}
           </p>
         </div>

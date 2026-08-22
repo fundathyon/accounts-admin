@@ -137,3 +137,28 @@ body {
     @apply bg-background text-foreground;
   }
 }
+/* Platform chips in oauth-native-audiences: shown from `sm` up. Declared here
+   rather than with `hidden sm:flex` because community-ui's stylesheet loads
+   last and its unconditional `.hidden` outranks a media query at equal
+   specificity — see the import order note in src/app/layout.tsx. */
+@media (min-width: 40rem) {
+  :root {
+    --audience-chips-display: flex;
+  }
+}
+
+/* Dashboard stat grid: 1 / 2 / 3 columns. Declared here instead of
+   `sm:grid-cols-2 md:grid-cols-3` because community-ui's stylesheet loads last
+   and emits `sm:grid-cols-2` too — at equal specificity the later rule wins
+   regardless of breakpoint, which pinned the grid to two columns on desktop. */
+.dashboard-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+@media (min-width: 40rem) {
+  .dashboard-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 48rem) {
+  .dashboard-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

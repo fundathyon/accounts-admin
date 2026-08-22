@@ -90,7 +90,7 @@ export function AdminUserMenu() {
       <DropdownMenuContent className="min-w-56" align="end" side="bottom" sideOffset={6}>
         <div className="flex flex-col gap-1 px-2 py-1.5">
           <p className="text-sm font-medium text-text">{adminUser ?? t('sidebar.adminUser')}</p>
-          <p className="text-xs text-text-muted">{adminUser ? `${adminUser}@admin` : ''}</p>
+          <p className="text-xs text-muted">{adminUser ? `${adminUser}@admin` : ''}</p>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem icon={Settings} render={<Link href={buildHref('/settings')} />}>
@@ -153,7 +153,7 @@ export function AdminUserMenu() {
           onClick={handleLogout}
           disabled={logoutLoading}
           className={cn(
-            'text-text-muted data-[highlighted]:bg-danger-bg data-[highlighted]:text-danger',
+            'text-muted data-[highlighted]:bg-danger-bg data-[highlighted]:text-danger',
             logoutLoading && '[&_svg]:animate-spin'
           )}
         >

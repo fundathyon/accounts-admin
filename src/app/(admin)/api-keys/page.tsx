@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -13,8 +13,6 @@ import {
   PowerOff,
   Search,
   Filter,
-  ArrowDownAZ,
-  ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -23,6 +21,7 @@ import {
   Button,
   buttonVariants,
   Card,
+  DataTable,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -39,15 +38,11 @@ import {
   KeyValue,
   Select,
   Spinner,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  StatusBadge,
   Text,
   Tooltip,
 } from '@foundathyon/community-ui';
+import type { DataTableColumn, DataTableSort, StatusKey } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
@@ -56,6 +51,23 @@ import type { App, APIKeyListItem } from '@/lib/admin-types';
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
+}
+
+/**
+ * Epoch value for the `date` cell. A number rather than the raw ISO string
+ * keeps human-readable dates out of the global filter, and an unparseable or
+ * missing date renders `—` instead of throwing inside `formatDate`.
+ */
+function timestampOf(value?: string | null) {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** §19 state for a key: revoked and disabled are both terminal (0.6 opacity). */
+function apiKeyStatus(key: APIKeyListItem): StatusKey {
+  if (key.is_active) return 'active';
+  return key.revoked_at ? 'revoked' : 'disabled';
 }
 
 export default function ApiKeysPage() {
@@ -84,7 +96,8 @@ export default function ApiKeysPage() {
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [envFilter, setEnvFilter] = useState<'all' | 'production' | 'staging' | 'development'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
+  const [keysError, setKeysError] = useState<string | null>(null);
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -108,14 +121,20 @@ export default function ApiKeysPage() {
       return;
     }
     setKeysLoading(true);
+    setKeysError(null);
     try {
       const res = await fetch(apiUrl('/api/api-keys'), {
         headers: { 'X-Secret-API-Key': savedSecretKey },
       });
       const data = await res.json();
       if (data.success) setApiKeys(data.data || []);
-      else showNotification(data.error?.message || t('apiKeys.errorLoadKeys'), 'error');
+      else {
+        const message = data.error?.message || t('apiKeys.errorLoadKeys');
+        setKeysError(message);
+        showNotification(message, 'error');
+      }
     } catch {
+      setKeysError(t('apiKeys.errorConnectionApi'));
       showNotification(t('apiKeys.errorConnectionApi'), 'error');
     } finally {
       setKeysLoading(false);
@@ -130,23 +149,86 @@ export default function ApiKeysPage() {
     fetchAPIKeys();
   }, [savedSecretKey]);
 
-  const filteredApiKeys = apiKeys.filter(key => {
-    const query = searchQuery.toLowerCase();
-    const searchMatch = key.name.toLowerCase().includes(query) ||
-      (key.description && key.description.toLowerCase().includes(query)) ||
-      key.publishable_key.toLowerCase().includes(query) ||
-      key.id.toLowerCase().includes(query);
+  // The environment picker is a faceted filter and `DataTable` only exposes a
+  // single `globalFilter`, so it stays here and pre-filters the rows the table
+  // receives. Search became `globalFilter`; the date order became the sortable
+  // "Creado" column header.
+  const envFilteredKeys = envFilter === 'all'
+    ? apiKeys
+    : apiKeys.filter((key) => key.environment === envFilter);
 
-    if (!searchMatch) return false;
+  // The DataTable's own copy defaults to English. The dictionary has no key for
+  // the footer summary ("3 of 128"), so it renders as a language-neutral ratio.
+  const keysTableLabels = {
+    loading: t('common.loading'),
+    of: (shown: number, total: number) => `${shown}/${total}`,
+  };
 
-    if (envFilter !== 'all' && key.environment !== envFilter) return false;
+  // Shared copy for the two "no rows" states — the only existing page copy that
+  // states there is nothing to show and offers the §11 exit.
+  const noKeysStateCopy = {
+    title: t('apiKeys.generateNew'),
+    description: t('apiKeys.generateNewDesc'),
+    action: (
+      <Button
+        variant="primary"
+        size="lg"
+        onClick={() => setIsGenerateModalOpen(true)}
+        leading={<Icon icon={Plus} size={16} />}
+      >
+        {t('apiKeys.generateKeys')}
+      </Button>
+    ),
+  };
 
-    return true;
-  }).sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
-    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
-  });
+  const keyColumns = useMemo<DataTableColumn<APIKeyListItem>[]>(() => [
+    {
+      id: 'name',
+      header: t('apiKeys.tableName'),
+      primary: true,
+      // Doubles as the search corpus: the page's search also matched the id.
+      accessor: (key) => `${key.name} ${key.id}`,
+      cell: (key) => (
+        <span className="block truncate font-medium" title={key.name}>{key.name}</span>
+      ),
+      sortable: true,
+    },
+    {
+      id: 'description',
+      header: t('apiKeys.tableDescription'),
+      type: 'text',
+      accessor: (key) => key.description,
+    },
+    {
+      id: 'publishableKey',
+      header: t('apiKeys.publishableKey'),
+      type: 'digest',
+      accessor: (key) => key.publishable_key,
+    },
+    {
+      id: 'state',
+      header: t('apiKeys.tableState'),
+      // The `status` cell type renders the canonical English label and takes no
+      // product copy, so the §19 badge is rendered here with the page's keys.
+      cell: (key) => (
+        <StatusBadge status={apiKeyStatus(key)}>
+          {key.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: 'environment',
+      header: t('apiKeys.tableEnv'),
+      cell: (key) => <span className="capitalize">{key.environment}</span>,
+    },
+    {
+      id: 'created',
+      header: t('apiKeys.tableCreated'),
+      type: 'date',
+      accessor: (key) => timestampOf(key.created_at),
+      sortable: true,
+    },
+  ], [t]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,7 +379,7 @@ export default function ApiKeysPage() {
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
+            <Spinner size={20} label={t('common.loading')} className="text-muted" />
           </div>
         ) : apps.length === 0 && apiKeys.length === 0 ? (
           <Card className="border-dashed">
@@ -323,7 +405,7 @@ export default function ApiKeysPage() {
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
               <div className="flex-1 min-w-[300px]">
                 <Input
                   size="lg"
@@ -331,20 +413,20 @@ export default function ApiKeysPage() {
                   placeholder={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  wrapperClassName="border-none bg-background shadow-none"
+                  wrapperClassName="border-none bg-bg shadow-none"
                 />
               </div>
 
               <Inline gap={3}>
                 <Tooltip content={t('tooltips.state')}>
                   <div className="flex items-center gap-2">
-                    <Icon icon={Filter} size={14} className="text-text-muted" />
+                    <Icon icon={Filter} size={14} className="text-muted" />
                     <Select
                       size="lg"
                       value={envFilter}
                       onValueChange={(v) => setEnvFilter((v ?? 'all') as typeof envFilter)}
                       placeholder={t('apiKeys.environment') || "Env"}
-                      className="w-[140px] border-none bg-background shadow-none"
+                      className="w-[140px] border-none bg-bg shadow-none"
                       items={[
                         { value: 'all', label: t('common.all') || "All Envs" },
                         { value: 'production', label: 'Production' },
@@ -354,69 +436,35 @@ export default function ApiKeysPage() {
                     />
                   </div>
                 </Tooltip>
-
-                <Tooltip content={t('tooltips.sortBy')}>
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                    className="bg-background hover:bg-background/80"
-                    leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={16} />}
-                  >
-                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
-                  </Button>
-                </Tooltip>
               </Inline>
             </div>
 
-            {keysLoading ? (
-              <div className="py-12 flex justify-center">
-                <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
-              </div>
-            ) : apiKeys.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="px-8 py-4">{t('apiKeys.tableName')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('apiKeys.tableDescription')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('apiKeys.publishableKey')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('apiKeys.tableState')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('apiKeys.tableEnv')}</TableHead>
-                    <TableHead className="px-8 py-4">{t('apiKeys.tableCreated')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredApiKeys.map((k) => (
-                    <TableRow
-                      key={k.id}
-                      interactive
-                      className="group"
-                      onClick={() => setSelectedApiKey(k)}
-                    >
-                      <TableCell className="px-8 py-4 font-medium">{k.name}</TableCell>
-                      <TableCell className="px-8 py-4 text-text-secondary">{k.description || '—'}</TableCell>
-                      <TableCell className="px-8 py-4 font-mono text-code text-text-muted max-w-[200px] truncate" title={k.publishable_key}>
-                        {k.publishable_key}
-                      </TableCell>
-                      <TableCell className="px-8 py-4">
-                        <Badge
-                          variant={k.is_active ? 'tonal' : 'outline'}
-                          tone={k.is_active ? 'success' : 'neutral'}
-                        >
-                          {k.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-8 py-4 text-text-secondary capitalize">{k.environment}</TableCell>
-                      <TableCell className="px-8 py-4 text-caption text-text-muted">
-                        {k.created_at ? new Date(k.created_at).toLocaleDateString() : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : null}
+            <DataTable<APIKeyListItem>
+              columns={keyColumns}
+              data={envFilteredKeys}
+              rowId={(key) => key.id}
+              density="comfortable"
+              loading={keysLoading}
+              loadingRowCount={5}
+              error={keysError ? { title: t('apiKeys.errorLoadKeys'), description: keysError, retry: { label: t('common.retry'), onClick: () => { void fetchAPIKeys(); } } } : undefined}
+              // Both no-row states share the page's "generate keys" copy: the
+              // dictionary has no "filtered to nothing" string for API keys and
+              // the DataTable's own fallback headline is English. They still
+              // differ in kind (`data-kind`) and icon.
+              emptyState={{ ...noKeysStateCopy, icon: Key }}
+              noResultsState={{ ...noKeysStateCopy, icon: Search }}
+              globalFilter={searchQuery}
+              sorting={{ state: sort, onChange: setSort }}
+              onRowClick={(key) => setSelectedApiKey(key)}
+              // Revoked / deactivated keys are terminal rows (§14, §19).
+              getRowProps={(key) => (key.is_active && !key.revoked_at ? undefined : { terminal: true })}
+              labels={keysTableLabels}
+            />
 
-            {apps.length > 0 && (
+            {/* The table's empty / no-results state carries this exact headline
+                and CTA, so the persistent card steps aside while the list is
+                filtered — otherwise both render at once. */}
+            {apps.length > 0 && envFilteredKeys.length > 0 && !searchQuery.trim() && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center shrink-0">
@@ -510,7 +558,7 @@ export default function ApiKeysPage() {
             </div>
           ) : (
             <form onSubmit={handleGenerate} className="space-y-4">
-              <Text variant="body-sm" tone="secondary" className="block rounded-lg border border-border bg-muted/20 px-3 py-2">
+              <Text variant="body-sm" tone="secondary" className="block rounded-lg border border-border bg-subtle/20 px-3 py-2">
                 {t('apiKeys.generateUsesSecretApp') ||
                   'Las claves se crearán para la aplicación asociada a tu Secret Key guardada en ajustes.'}
               </Text>
@@ -555,7 +603,7 @@ export default function ApiKeysPage() {
               <Icon icon={Key} size={20} className="text-accent" />
               {t('apiKeys.detailsTitle')}
               {selectedApiKey && (
-                <span className="text-text-secondary font-normal">({selectedApiKey.name})</span>
+                <span className="text-secondary font-normal">({selectedApiKey.name})</span>
               )}
             </DialogTitle>
             <DialogDescription>
@@ -598,7 +646,7 @@ export default function ApiKeysPage() {
               <div className="space-y-2">
                 <Text variant="caption" tone="muted" className="block">{t('apiKeys.publishableKey')}</Text>
                 <Inline gap={2} align="start">
-                  <Text variant="code" as="p" className="break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">
+                  <Text variant="code" as="p" className="break-all bg-subtle/50 rounded-lg p-3 flex-1 min-w-0">
                     {selectedApiKey.publishable_key}
                   </Text>
                   <IconButton

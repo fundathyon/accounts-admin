@@ -153,7 +153,7 @@ export function OnboardingScreen() {
                   </div>
 
                   {data?.created_role && (
-                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-bg-subtle p-4">
+                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-subtle p-4">
                       <Text variant="label" tone="muted" className="flex items-center gap-1.5">
                         <Icon icon={Shield} size={14} /> {t('onboarding.roleCreated')}
                       </Text>

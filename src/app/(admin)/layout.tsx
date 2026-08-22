@@ -26,7 +26,7 @@ export default function AdminLayout({
                   content column owns the scroll. */}
               <div className="flex h-svh w-full">
                 <AdminSidebar />
-                <main className="relative flex w-full min-w-0 flex-1 flex-col bg-background">
+                <main className="relative flex w-full min-w-0 flex-1 flex-col bg-bg">
                   <AdminTopbar />
                   {/* The Topbar owns the sidebar trigger now, so the content no
                       longer needs extra top padding to clear a floating button. */}

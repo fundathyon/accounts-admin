@@ -5,14 +5,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/context/i18n-context";
 import { BRAND_ACCENT } from "@/lib/brand";
-// Order matters while shadcn and community-ui coexist. Both ship a Tailwind
-// build declaring the same utility class names, and at equal specificity the
-// stylesheet loaded LAST wins — media queries add no specificity. With
-// styles.css last, its unconditional `.hidden` beat globals.css's `md:flex`
-// and collapsed the sidebar. Keeping the app's own sheet last lets its
-// responsive utilities win; this constraint disappears once shadcn is gone.
-import "@foundathyon/community-ui/styles.css";
+// Order matters: both sheets are independent Tailwind builds declaring the same
+// utility class names, and at equal specificity the LAST one wins (media queries
+// add no specificity). styles.css goes last so the library's own responsive
+// utilities survive — DataTable switches to a card layout via `md:hidden` /
+// `md:block`, which the app build's unconditional `.hidden` was overriding,
+// rendering every table as mobile cards on desktop. The app has only one
+// conditional-display utility of its own, and it uses an inline style instead.
 import "./globals.css";
+import "@foundathyon/community-ui/styles.css";
 
 const inter = Inter({ subsets: ["latin"] });
 

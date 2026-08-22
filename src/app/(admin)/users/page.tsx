@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -12,7 +12,6 @@ import {
   XCircle,
   Loader2,
   Copy,
-  MoreVertical,
   Users,
   AlertCircle,
   Eye,
@@ -25,8 +24,6 @@ import {
   Download,
   FileCode,
   Search,
-  ArrowDownAZ,
-  ArrowUpAZ,
   ShieldOff,
   Database,
 } from 'lucide-react';
@@ -37,6 +34,7 @@ import {
   buttonVariants,
   Card,
   CardBody,
+  DataTable,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -56,16 +54,15 @@ import {
   RoleBadge,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Text,
   Textarea,
   Tooltip,
   Spinner,
+} from '@foundathyon/community-ui';
+import type {
+  DataTableColumn,
+  DataTableRowAction,
+  DataTableSort,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -79,12 +76,37 @@ function truncateKey(key: string) {
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
 
+function primaryEmailOf(user: User) {
+  return user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
+}
+
+/**
+ * Searchable text of a row. This is the `user` column's `accessor`, so it is
+ * what `DataTable`'s `globalFilter` matches on — and the group-by-role view
+ * (which the DataTable API cannot express) reuses it to build its sections.
+ */
+function userSearchText(user: User) {
+  return `${user.id} ${user.user_name || ''} ${primaryEmailOf(user) || ''} ${user.name || ''}`;
+}
+
+/**
+ * Epoch value for the `date` / `relative-date` cells. Returning a number rather
+ * than the raw ISO string keeps human-readable dates out of the global filter,
+ * and an unparseable date renders `—` instead of throwing inside `formatDate`.
+ */
+function timestampOf(value?: string | null) {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
 export default function UsersPage() {
   const router = useRouter();
   const { apiUrl, showNotification, savedSecretKey, savedPublishableKey } = useAdmin();
   const { t } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [signupForm, setSignupForm] = useState({ email: '', password: '', user_name: '' });
   const [isSignupSubmitting, setIsSignupSubmitting] = useState(false);
@@ -111,7 +133,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [loginFilter, setLoginFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
   const [isGroupedByRole, setIsGroupedByRole] = useState(false);
   const [isRevokeRefreshOpen, setIsRevokeRefreshOpen] = useState(false);
   const [revokeByTokenValue, setRevokeByTokenValue] = useState('');
@@ -222,12 +244,18 @@ export default function UsersPage() {
       return;
     }
     setLoading(true);
+    setUsersError(null);
     try {
       const res = await fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
       if (data.data && (data.status === 200 || data.success)) setUsers(data.data || []);
-      else showNotification(data.error?.message || data.errors?.[0] || t('users.errorLoadUsers'), 'error');
+      else {
+        const message = data.error?.message || data.errors?.[0] || t('users.errorLoadUsers');
+        setUsersError(message);
+        showNotification(message, 'error');
+      }
     } catch {
+      setUsersError(t('users.errorConnectionUsers'));
       showNotification(t('users.errorConnectionUsers'), 'error');
     } finally {
       setLoading(false);
@@ -570,13 +598,11 @@ export default function UsersPage() {
     }
   };
 
+  // Role and login-method are faceted filters. `DataTable` exposes a single
+  // `globalFilter` and no per-column filtering, so these two stay on the page
+  // and pre-filter the rows the table receives. Search and sort moved into the
+  // table (`globalFilter` + the sortable "Creado" / "Última actividad" heads).
   const filteredUsers = users.filter((user) => {
-    const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || '';
-    const searchableText = `${user.id} ${user.user_name || ''} ${primaryEmail} ${user.name || ''}`.toLowerCase();
-    const query = searchQuery.toLowerCase();
-
-    if (query && !searchableText.includes(query)) return false;
-
     if (roleFilter !== 'all' && user.role_id !== roleFilter && user.role_details?.name !== roleFilter) return false;
 
     if (loginFilter !== 'all') {
@@ -590,20 +616,24 @@ export default function UsersPage() {
     }
 
     return true;
-  }).sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
-    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
   });
 
+  // Row grouping has no DataTable equivalent, so the grouped view renders one
+  // table per role and applies the search itself — through `userSearchText`,
+  // the very accessor the table's own `globalFilter` matches on.
+  const searchLower = searchQuery.trim().toLowerCase();
   const groupedUsers = isGroupedByRole
-    ? filteredUsers.reduce((acc, user) => {
-      const roleName = user.role_details?.name || 'default';
-      if (!acc[roleName]) acc[roleName] = [];
-      acc[roleName].push(user);
-      return acc;
-    }, {} as Record<string, User[]>)
-    : { "All Users": filteredUsers };
+    ? Object.entries(
+      filteredUsers
+        .filter((user) => !searchLower || userSearchText(user).toLowerCase().includes(searchLower))
+        .reduce((acc, user) => {
+          const roleName = user.role_details?.name || 'default';
+          if (!acc[roleName]) acc[roleName] = [];
+          acc[roleName].push(user);
+          return acc;
+        }, {} as Record<string, User[]>)
+    )
+    : [];
 
   const handleExportCSV = () => {
     if (users.length === 0) {
@@ -658,6 +688,150 @@ export default function UsersPage() {
   };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
+  const userHref = (user: User) => `${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/');
+
+  // The DataTable's own copy defaults to English. The dictionary has no key for
+  // the footer summary ("3 of 128"), so it renders as a language-neutral ratio.
+  const usersTableLabels = {
+    loading: t('common.loading'),
+    actions: t('commandPalette.actions'),
+    of: (shown: number, total: number) => `${shown}/${total}`,
+  };
+
+  const userColumns = useMemo<DataTableColumn<User>[]>(() => [
+    {
+      id: 'user',
+      header: t('users.user'),
+      primary: true,
+      accessor: userSearchText,
+      cell: (user) => {
+        const primaryEmail = primaryEmailOf(user);
+        const displayName = user.name || user.user_name || primaryEmail || 'Sin nombre';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-accent-bg flex items-center justify-center text-accent font-semibold text-xs shrink-0">
+              {(displayName || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="font-mono text-xs text-muted truncate max-w-[140px]" title={user.id}>
+                {user.id}
+              </div>
+              <div className="font-medium text-sm truncate">{primaryEmail || user.user_name || '—'}</div>
+              {displayName !== primaryEmail && displayName !== user.user_name && (
+                <div className="text-xs text-muted truncate">{displayName}</div>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'provider',
+      header: t('users.provider'),
+      cell: (user) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {user.login_methods?.map((lm) =>
+            lm.entity_type === 'oauth' && lm.details?.platform ? (
+              <OAuthProviderLogo
+                key={lm.id}
+                provider={lm.details.platform}
+                size={22}
+                className="rounded"
+              />
+            ) : lm.entity_type === 'email' ? (
+              <span
+                key={lm.id}
+                className="inline-flex items-center justify-center gap-0.5 shrink-0"
+                title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
+              >
+                <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
+                  <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                </span>
+                {lm.is_verify ? (
+                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                )}
+              </span>
+            ) : (
+              <Badge key={lm.id} variant="outline" tone="warning" className="px-1.5">
+                {lm.entity_type}
+                {lm.is_verify ? (
+                  <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
+                ) : (
+                  <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
+                )}
+              </Badge>
+            )
+          ) || <span className="text-muted text-xs">—</span>}
+        </div>
+      ),
+    },
+    {
+      id: 'role',
+      header: t('users.role'),
+      cell: (user) =>
+        user.role_details ? (
+          <RoleBadge role={user.role_details.name} />
+        ) : (
+          <span className="text-muted text-xs">—</span>
+        ),
+    },
+    {
+      id: 'created',
+      header: t('users.created'),
+      type: 'date',
+      accessor: (user) => timestampOf(user.created_at),
+      sortable: true,
+    },
+    {
+      id: 'lastActivity',
+      header: t('users.lastActivity'),
+      type: 'relative-date',
+      accessor: (user) => timestampOf(user.updated_at),
+      sortable: true,
+    },
+  ], [t]);
+
+  const userRowActions = (user: User): DataTableRowAction[] => [
+    {
+      label: t('users.viewDetail'),
+      icon: ChevronRight,
+      onSelect: () => router.push(userHref(user)),
+    },
+    {
+      label: t('users.deleteAccount'),
+      icon: Trash2,
+      destructive: true,
+      onSelect: () => setUserToDelete(user),
+    },
+  ];
+
+  const renderUsersTable = (rows: User[], globalFilter?: string) => (
+    <DataTable<User>
+      columns={userColumns}
+      data={rows}
+      rowId={(user) => user.id}
+      density="comfortable"
+      loading={loading}
+      loadingRowCount={6}
+      error={usersError ? { title: t('users.errorLoadUsers'), description: usersError, retry: { label: t('common.retry'), onClick: () => { void fetchUsers(); } } } : undefined}
+      // The DataTable derives "no results" from `globalFilter` alone, so the
+      // page-level role/login filters decide the copy here: rows exist, they
+      // just did not survive a filter.
+      emptyState={
+        users.length === 0
+          ? { icon: Users, title: t('users.noUsers') }
+          : { title: t('users.noUsers') }
+      }
+      noResultsState={{ title: t('users.noUsers') }}
+      globalFilter={globalFilter}
+      sorting={{ state: sort, onChange: setSort }}
+      rowActions={userRowActions}
+      onRowClick={(user) => router.push(userHref(user))}
+      labels={usersTableLabels}
+    />
+  );
 
   return (
     <>
@@ -709,7 +883,7 @@ export default function UsersPage() {
                         setIsBulkDeleteOpen(true);
                       }}
                       leading={<Icon icon={Trash2} size={14} />}
-                      className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      className="border-danger-border/30 text-danger hover:bg-danger-bg/10 hover:text-danger"
                     >
                       {t('users.deleteAll')}
                     </Button>
@@ -750,7 +924,7 @@ export default function UsersPage() {
         </Inline>
 
         {savedSecretKey && (
-          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
+          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-subtle/30 rounded-2xl border border-border/50">
             <div className="flex-1 min-w-[300px]">
               <Input
                 leading={<Icon icon={Search} size={14} />}
@@ -758,7 +932,7 @@ export default function UsersPage() {
                 placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                wrapperClassName="h-10 border-none bg-background shadow-none"
+                wrapperClassName="h-10 border-none bg-bg shadow-none"
               />
             </div>
 
@@ -773,7 +947,7 @@ export default function UsersPage() {
                   { value: 'all', label: t('users.allRoles') || "All Roles" },
                   ...roles.map((role) => ({ value: role.id, label: role.name })),
                 ]}
-                className="w-[160px] h-9 bg-background border-none shadow-none"
+                className="w-[160px] h-9 bg-bg border-none shadow-none"
               />
             </Inline>
 
@@ -792,22 +966,11 @@ export default function UsersPage() {
                   { value: 'apple', label: 'Apple' },
                   { value: 'microsoft', label: 'Microsoft' },
                 ]}
-                className="w-[160px] h-9 bg-background border-none shadow-none"
+                className="w-[160px] h-9 bg-bg border-none shadow-none"
               />
             </Inline>
 
             <Inline gap={2} className="ml-auto">
-              <Tooltip content={t('tooltips.sortBy')}>
-                <Button
-                  variant="ghost"
-                  onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                  leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={14} />}
-                  className="h-9 text-muted-foreground hover:text-foreground"
-                >
-                  {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-                </Button>
-              </Tooltip>
-              <div className="w-px h-4 bg-border" />
               <Tooltip content={t('tooltips.groupByRole')}>
                 <Button
                   variant="ghost"
@@ -815,7 +978,7 @@ export default function UsersPage() {
                   leading={<Icon icon={Users} size={14} />}
                   className={cn(
                     "h-9",
-                    isGroupedByRole ? "text-accent bg-accent-bg" : "text-muted-foreground"
+                    isGroupedByRole ? "text-accent bg-accent-bg" : "text-muted"
                   )}
                 >
                   {t('users.groupByRole') || "Group by Role"}
@@ -843,168 +1006,20 @@ export default function UsersPage() {
             <div className="px-6 py-3 bg-emerald-500/5 border-b border-emerald-500/10 flex items-center gap-2 text-xs text-emerald-400">
               <ShieldCheck className="w-4 h-4 shrink-0" /> {t('users.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
-            <CardBody className="p-0">
-              {loading ? (
-                <div className="py-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="py-16 text-center text-muted-foreground text-sm">
-                  {t('users.noUsers')}
-                </div>
-              ) : (
-                Object.entries(groupedUsers).map(([groupName, groupUsers]) => (
-                  <div key={groupName} className="border-b last:border-none">
-                    {isGroupedByRole && (
-                      <div className="px-6 py-3 bg-muted/20 flex items-center justify-between border-b border-border/50">
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          {groupName} <span className="ml-2 font-normal opacity-50">({groupUsers.length})</span>
-                        </span>
-                      </div>
-                    )}
-                    <Table className="rounded-none border-0 bg-transparent">
-                      <TableHeader className={cn('bg-transparent', isGroupedByRole ? "hidden" : "")}>
-                        <TableRow className="border-b hover:bg-transparent">
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.user')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.provider')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.created')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.lastActivity')}</TableHead>
-                          <TableHead className="px-6 py-3 w-12" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupUsers.map((user) => {
-                          const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
-                          const displayName = user.name || user.user_name || primaryEmail || 'Sin nombre';
-                          return (
-                            <TableRow
-                              key={user.id}
-                              interactive
-                              className="group hover:bg-muted/50 transition-colors"
-                              onClick={() => router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'))}
-                            >
-                              <TableCell className="px-6 py-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-accent-bg flex items-center justify-center text-accent font-semibold text-xs shrink-0">
-                                    {(displayName || 'U').charAt(0).toUpperCase()}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="font-mono text-xs text-muted-foreground truncate max-w-[140px]" title={user.id}>
-                                      {user.id}
-                                    </div>
-                                    <div className="font-medium text-sm truncate">{primaryEmail || user.user_name || '—'}</div>
-                                    {displayName !== primaryEmail && displayName !== user.user_name && (
-                                      <div className="text-xs text-muted-foreground truncate">{displayName}</div>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-center">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {user.login_methods?.map((lm) =>
-                                    lm.entity_type === 'oauth' && lm.details?.platform ? (
-                                      <OAuthProviderLogo
-                                        key={lm.id}
-                                        provider={lm.details.platform}
-                                        size={22}
-                                        className="rounded"
-                                      />
-                                    ) : lm.entity_type === 'email' ? (
-                                      <span
-                                        key={lm.id}
-                                        className="inline-flex items-center justify-center gap-0.5 shrink-0"
-                                        title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
-                                      >
-                                        <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
-                                          <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
-                                        </span>
-                                        {lm.is_verify ? (
-                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                                        ) : (
-                                          <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
-                                        )}
-                                      </span>
-                                    ) : (
-                                      <Badge
-                                        key={lm.id}
-                                        variant="outline"
-                                        tone="warning"
-                                        className="px-1.5"
-                                      >
-                                        {lm.entity_type}
-                                        {lm.is_verify ? (
-                                          <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
-                                        ) : (
-                                          <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
-                                        )}
-                                      </Badge>
-                                    )
-                                  ) || <span className="text-muted-foreground text-xs">—</span>}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                {user.role_details ? (
-                                  <RoleBadge role={user.role_details.name} />
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">—</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-xs text-muted-foreground">
-                                {new Date(user.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-xs text-muted-foreground">
-                                {new Date(user.updated_at).toLocaleDateString('es', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </TableCell>
-                              <TableCell className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger
-                                    render={
-                                      <Button
-                                        variant="ghost"
-                                        className="h-8 w-8 px-0 text-muted-foreground hover:text-foreground"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <Icon icon={MoreVertical} size={14} />
-                                      </Button>
-                                    }
-                                  />
-                                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                    <DropdownMenuItem
-                                      icon={ChevronRight}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
-                                      }}
-                                    >
-                                      {t('users.viewDetail')}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      icon={Trash2}
-                                      destructive
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setUserToDelete(user);
-                                      }}
-                                    >
-                                      Eliminar cuenta
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+            <CardBody className="p-4">
+              {isGroupedByRole && groupedUsers.length > 0 ? (
+                groupedUsers.map(([groupName, groupUsers]) => (
+                  <div key={groupName} className="mb-6 last:mb-0">
+                    <div className="px-2 pb-2 flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-widest text-muted">
+                        {groupName} <span className="ml-2 font-normal opacity-50">({groupUsers.length})</span>
+                      </span>
+                    </div>
+                    {renderUsersTable(groupUsers)}
                   </div>
                 ))
+              ) : (
+                renderUsersTable(isGroupedByRole ? [] : filteredUsers, searchQuery)
               )}
             </CardBody>
           </Card>
@@ -1101,7 +1116,7 @@ export default function UsersPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-muted-foreground"
+                  className="text-muted"
                   leading={<Icon icon={RefreshCw} size={14} />}
                   onClick={() => {
                     setResendEmail(signupForm.email);
@@ -1247,7 +1262,7 @@ export default function UsersPage() {
                         label={
                           <>
                             {field.name}
-                            <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
+                            <span className="ml-2 text-[10px] text-muted font-mono">{field.type}</span>
                           </>
                         }
                       >
@@ -1285,7 +1300,7 @@ export default function UsersPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="text-muted-foreground"
+                    className="text-muted"
                     leading={<Icon icon={RefreshCw} size={14} />}
                     onClick={() => {
                       setResendEmail(signupForm.email || '');
@@ -1469,7 +1484,7 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           {publicKeyLoading ? (
-            <div className="py-8 flex items-center justify-center gap-2 text-muted-foreground">
+            <div className="py-8 flex items-center justify-center gap-2 text-muted">
               <Loader2 className="w-5 h-5 animate-spin" />
               {t('common.loading')}
             </div>
@@ -1590,7 +1605,7 @@ export default function UsersPage() {
             <DialogDescription>
               {t('users.deleteConfirm')}
               {userToDelete && (
-                <span className="mt-2 block text-foreground font-medium">
+                <span className="mt-2 block text-text font-medium">
                   {userToDelete.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || userToDelete.user_name || userToDelete.id}
                 </span>
               )}
@@ -1620,7 +1635,7 @@ export default function UsersPage() {
       >
         <DialogContent size="md" className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="flex items-center gap-2 text-danger">
               <AlertCircle className="w-5 h-5" />
               {t('users.deleteAllTitle')}
             </DialogTitle>
@@ -1631,9 +1646,9 @@ export default function UsersPage() {
 
           {!bulkProgress ? (
             <div className="space-y-4">
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-                <p className="text-muted-foreground">{t('users.deleteAllConfirmHint')}</p>
-                <p className="mt-1 font-mono font-semibold text-destructive">
+              <div className="rounded-lg border border-danger-border/30 bg-danger-bg/5 p-3 text-sm">
+                <p className="text-muted">{t('users.deleteAllConfirmHint')}</p>
+                <p className="mt-1 font-mono font-semibold text-danger">
                   {t('users.deleteAllConfirmPhrase')}
                 </p>
               </div>
@@ -1682,26 +1697,26 @@ export default function UsersPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className="flex items-center gap-2 text-muted">
                     {bulkProgress.running && <Loader2 className="w-4 h-4 animate-spin" />}
                     {bulkProgress.finished
                       ? t('users.deleteAllDone')
                       : t('users.deleteAllInProgress')}
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="font-mono text-xs text-muted">
                     {t('users.deleteAllProgress', {
                       done: bulkProgress.done,
                       total: bulkProgress.total,
                     })}
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-subtle">
                   <div
                     className={cn(
                       'h-full transition-all',
                       bulkProgress.errors.length > 0
                         ? 'bg-amber-500'
-                        : 'bg-destructive'
+                        : 'bg-danger-bg'
                     )}
                     style={{
                       width: `${bulkProgress.total === 0
@@ -1712,7 +1727,7 @@ export default function UsersPage() {
                   />
                 </div>
                 {bulkProgress.finished && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted">
                     {t('users.deleteAllDoneSummary', {
                       ok: bulkProgress.done - bulkProgress.errors.length,
                       failed: bulkProgress.errors.length,
@@ -1726,10 +1741,10 @@ export default function UsersPage() {
                   <p className="font-semibold text-amber-500">
                     {t('users.deleteAllErrors', { count: bulkProgress.errors.length })}
                   </p>
-                  <ul className="space-y-0.5 text-muted-foreground">
+                  <ul className="space-y-0.5 text-muted">
                     {bulkProgress.errors.slice(0, 50).map((err) => (
                       <li key={err.id} className="font-mono">
-                        <span className="text-foreground">{err.email || err.id}</span>
+                        <span className="text-text">{err.email || err.id}</span>
                         {' — '}
                         <span className="text-amber-500">{err.message}</span>
                       </li>
