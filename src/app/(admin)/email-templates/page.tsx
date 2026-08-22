@@ -1,28 +1,32 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Mail, Loader2 } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { apiUrl } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import {
+  Button,
+  Card,
+  CardBody,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import {
+  EmptyState,
+  FormField,
+  Heading,
+  Icon,
+  Inline,
+  Input,
+  Select,
+  Spinner,
+  Text,
   Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { apiUrl } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 interface EmailTemplate {
@@ -165,89 +169,82 @@ export default function EmailTemplatesPage() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t('emailTemplates.title')}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t('emailTemplates.subtitle')}</p>
+          <Heading level={1}>{t('emailTemplates.title')}</Heading>
+          <Text tone="secondary" className="mt-1">
+            {t('emailTemplates.subtitle')}
+          </Text>
         </div>
         {templates.length > 0 && (
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedId ?? ''}
-              onChange={(e) => setSelectedId(e.target.value || null)}
-              className="px-4 py-2 rounded-lg border border-input bg-background text-sm font-medium min-w-[200px]"
-            >
-              {templates.map((tpl) => (
-                <option key={tpl.id} value={tpl.id}>
-                  {tpl.name}
-                </option>
-              ))}
-            </select>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    setSendTestEmail('');
-                    setSendTestDialogOpen(true);
-                  }}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  {t('emailTemplates.sendEmail')}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('tooltips.sendTestEmail')}
-              </TooltipContent>
+          <Inline gap={2}>
+            <Select
+              items={templates.map((tpl) => ({ value: tpl.id, label: tpl.name }))}
+              value={selectedId}
+              onValueChange={(value) => setSelectedId(value || null)}
+              aria-label={t('emailTemplates.title')}
+              className="min-w-[200px]"
+            />
+            <Tooltip content={t('tooltips.sendTestEmail')}>
+              <Button
+                variant="primary"
+                size="sm"
+                leading={<Icon icon={Mail} size={14} />}
+                onClick={() => {
+                  setSendTestEmail('');
+                  setSendTestDialogOpen(true);
+                }}
+              >
+                {t('emailTemplates.sendEmail')}
+              </Button>
             </Tooltip>
-          </div>
+          </Inline>
         )}
       </div>
 
       {loading ? (
         <div className="py-20 flex justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+          <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
         </div>
       ) : error ? (
         <Card className="border-destructive/30">
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">{error}</p>
-          </CardContent>
+          <CardBody className="py-12 text-center">
+            <Text tone="secondary">{error}</Text>
+          </CardBody>
         </Card>
       ) : templates.length === 0 ? (
-        <Card className="border-dashed p-16 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-8 h-8 text-amber-400" />
-          </div>
-          <CardTitle className="mb-2">{t('emailTemplates.noTemplates')}</CardTitle>
-          <CardDescription>{t('emailTemplates.noTemplatesDesc')}</CardDescription>
+        <Card className="border-dashed">
+          <EmptyState
+            icon={Mail}
+            title={t('emailTemplates.noTemplates')}
+            description={t('emailTemplates.noTemplatesDesc')}
+          />
         </Card>
       ) : (
         <div className="space-y-6">
           {/* Formulario */}
           {selectedTemplate && (
             <Card>
-              <CardContent className="pt-6">
+              <CardBody>
                 <div className="flex flex-wrap items-center gap-3">
                   {selectedTemplate.variables.map((v) => (
-                    <div key={v} className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-mono text-muted-foreground">{v}:</span>
+                    <FormField key={v} label={<span className="font-mono">{v}</span>} className="shrink-0">
                       <Input
                         placeholder={`{${v}}`}
                         value={(formValues[selectedTemplate.id] || {})[v] ?? ''}
                         onChange={(e) => updateFormValue(selectedTemplate.id, v, e.target.value)}
-                        className="font-mono text-sm w-40"
+                        className="font-mono"
+                        wrapperClassName="w-40"
                       />
-                    </div>
+                    </FormField>
                   ))}
                 </div>
-              </CardContent>
+              </CardBody>
             </Card>
           )}
 
           {/* Previsualización automática */}
           {selectedTemplate && (
-            <Card className="flex min-h-[70vh] flex-col">
-              <CardContent className="flex flex-1 flex-col min-h-0 p-6">
+            <Card className="min-h-[70vh]">
+              <CardBody className="flex flex-1 flex-col min-h-0 p-6">
                 <div
                   className={cn(
                     'flex flex-1 min-h-0 flex-col rounded-lg border border-border bg-white overflow-x-auto',
@@ -272,12 +269,12 @@ export default function EmailTemplatesPage() {
                       sandbox="allow-same-origin"
                     />
                   ) : !previewLoading ? (
-                    <p className="text-sm text-muted-foreground p-6">
+                    <Text tone="muted" className="p-6">
                       {t('emailTemplates.previewHint')}
-                    </p>
+                    </Text>
                   ) : null}
                 </div>
-              </CardContent>
+              </CardBody>
             </Card>
           )}
 
@@ -288,23 +285,23 @@ export default function EmailTemplatesPage() {
                 <DialogTitle>{t('emailTemplates.sendTestDialogTitle')}</DialogTitle>
                 <DialogDescription>{t('emailTemplates.sendTestDialogDescription')}</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-2 py-2">
-                <label htmlFor="send-test-email" className="text-sm font-medium">
-                  {t('emailTemplates.sendTestDialogEmailLabel')}
-                </label>
-                <Input
-                  id="send-test-email"
-                  type="email"
-                  placeholder="email@ejemplo.com"
-                  value={sendTestEmail}
-                  onChange={(e) => setSendTestEmail(e.target.value)}
-                />
+              <div className="py-2">
+                <FormField label={t('emailTemplates.sendTestDialogEmailLabel')}>
+                  <Input
+                    id="send-test-email"
+                    type="email"
+                    placeholder="email@ejemplo.com"
+                    value={sendTestEmail}
+                    onChange={(e) => setSendTestEmail(e.target.value)}
+                  />
+                </FormField>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setSendTestDialogOpen(false)}>
+                <Button variant="secondary" onClick={() => setSendTestDialogOpen(false)}>
                   {t('emailTemplates.sendTestDialogCancel')}
                 </Button>
                 <Button
+                  variant="primary"
                   onClick={() => {
                     /* TODO: enviar email al destinatario */
                     showNotification(t('emailTemplates.sendEmailComingSoon'), 'success');

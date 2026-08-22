@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { Users, Webhook, Puzzle, Key, Shield, LogIn } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 import { motion } from 'framer-motion';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge, Card, Heading, Inline, Text } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { BASE_PATH } from '@/lib/utils';
 
@@ -64,12 +63,13 @@ export default function DashboardPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="flex items-center gap-3 mb-8">
-        <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
-        <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
-          {t('dashboard.badge')}
-        </Badge>
-      </div>
+      <Inline gap={3} className="mb-8">
+        <Heading level={1}>{t('dashboard.title')}</Heading>
+        <Badge variant="outline">{t('dashboard.badge')}</Badge>
+      </Inline>
+      {/* Explicit 1/2/3-column breakpoints kept on purpose: community-ui's `Grid`
+          is `auto-fit`/`minmax`, which would grow past three columns on wide
+          viewports and change this layout. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {[
           { icon: Users, labelKey: 'sidebar.users', value: stats.users, href: '/users' },
@@ -80,12 +80,19 @@ export default function DashboardPage() {
           { icon: LogIn, labelKey: 'sidebar.oauthProviders', value: stats.oauth_configs, href: '/oauth-providers' },
         ].map((card) => (
           <Link key={card.labelKey} href={buildHref(card.href)}>
-            <Card className="p-6 hover:border-primary/30 transition-colors cursor-pointer h-full">
+            <Card interactive className="p-6 cursor-pointer h-full">
+              {/* `primary` (the app's cyan) is kept deliberately: community-ui's
+                  `.text-accent` is shadowed by the app's shadcn `--accent`
+                  (a neutral grey) because globals.css loads last. */}
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4">
                 <card.icon className="w-6 h-6" />
               </div>
-              <div className="text-muted-foreground text-sm font-medium">{t(card.labelKey)}</div>
-              <div className="text-3xl font-bold mt-1">{loading ? '…' : card.value}</div>
+              <Text as="div" variant="label" tone="muted">
+                {t(card.labelKey)}
+              </Text>
+              <Text as="div" tabular className="text-h1 mt-1">
+                {loading ? '…' : card.value}
+              </Text>
             </Card>
           </Link>
         ))}
