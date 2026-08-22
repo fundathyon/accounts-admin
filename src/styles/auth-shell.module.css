@@ -1,0 +1,222 @@
+/*
+ * Split-pane shell for the login/onboarding first-run screens — ported from
+ * Dokgistry's own onboarding/login shell (apps/web/app/globals.css,
+ * .onboarding / .onboardingBranding / BrandPanel), which itself was ported
+ * verbatim from vault, so every product's first-run screens read as the same
+ * family. CSS Modules (not global classes like the Dokgistry/vault source)
+ * so this never has to reconcile with either the app's own shadcn utilities
+ * or @foundathyon/community-ui's prebuilt stylesheet — scoping is guaranteed
+ * by the build, not by hand-picked class-name prefixes.
+ *
+ * Only the outer chrome lives here (branding pane, glow, brand mark, feature
+ * list). The actual form card content uses real @foundathyon/community-ui
+ * components (Card, FormField, Input, Button, …).
+ */
+
+.shell {
+  display: flex;
+  min-height: 100dvh;
+  background: #0f0f12;
+  color: #ffffff;
+}
+
+.branding {
+  position: relative;
+  display: none;
+  overflow: hidden;
+  width: 50%;
+  padding: 3rem;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.22), #0f0f12 55%, #0f0f12);
+}
+
+.orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(64px);
+  background: rgba(249, 115, 22, 0.1);
+  pointer-events: none;
+}
+
+.orbTopRight {
+  top: -6rem;
+  right: -6rem;
+  width: 18rem;
+  height: 18rem;
+}
+
+.orbBottomLeft {
+  bottom: -8rem;
+  left: -5rem;
+  width: 20rem;
+  height: 20rem;
+}
+
+.orbRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30rem;
+  height: 30rem;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 1px solid rgba(249, 115, 22, 0.1);
+  pointer-events: none;
+}
+
+.orbitGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 999px;
+  filter: blur(40px);
+  background: conic-gradient(from 0deg, transparent 0%, rgba(249, 115, 22, 0.45) 10%, transparent 30%, transparent 100%);
+  animation: authOrbitSpin 14s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes authOrbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbitGlow {
+    animation: none;
+  }
+}
+
+.brandingContent {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.brandLogo {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f97316;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.brandName {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.headline {
+  max-width: 26rem;
+}
+
+.headline h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  margin: 0.75rem 0 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  max-width: 20rem;
+}
+
+.featureList {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.featureList li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.featureCheck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  flex-shrink: 0;
+}
+
+.featureCheck svg {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: #6b7280;
+}
+
+.formPane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.formCard {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.brandMarkMobile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .branding {
+    display: flex;
+  }
+
+  .brandMarkMobile {
+    display: none;
+  }
+}
