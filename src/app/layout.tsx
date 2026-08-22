@@ -9,7 +9,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Foundathyon Admin",
+  title: "Accounts Admin",
   description: "Next-gen authentication admin panel",
   icons: {
     icon: "/accounts-small.svg",

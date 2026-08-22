@@ -28,7 +28,7 @@ export function BrandPanel({ headline, tagline }: BrandPanelProps) {
       <div className={styles.brandingContent}>
         <div className={styles.brandRow}>
           <span className={styles.brandLogo}>A</span>
-          <span className={styles.brandName}>Foundathyon</span>
+          <span className={styles.brandName}>Accounts</span>
         </div>
 
         <div className={styles.headline}>
@@ -59,7 +59,7 @@ export function BrandMark() {
   return (
     <div className={styles.brandMarkMobile}>
       <span className={styles.brandLogo}>A</span>
-      <span className={styles.brandName}>Foundathyon</span>
+      <span className={styles.brandName}>Accounts</span>
     </div>
   );
 }

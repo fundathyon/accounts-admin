@@ -282,7 +282,7 @@
     "feature3": "Audit active sessions and access"
   },
   "login": {
-    "title": "Foundathyon Admin",
+    "title": "Accounts Admin",
     "subtitle": "Sign in to continue",
     "brandHeadline": "Welcome back",
     "brandTagline": "Sign in to manage your organization.",

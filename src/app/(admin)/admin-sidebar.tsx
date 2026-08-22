@@ -222,7 +222,7 @@ export function AdminSidebar() {
                       </div>
                       <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[state=collapsed]/sidebar-wrapper:hidden">
                         <span className="truncate font-semibold text-sidebar-primary">
-                          {app?.name ?? 'Foundathyon Admin'}
+                          {app?.name ?? 'Accounts Admin'}
                         </span>
                         <span className="truncate text-[10px] text-muted-foreground/80 uppercase tracking-wider font-bold">
                           {app ? t('sidebar.app') : t('sidebar.apiAccounts')}
