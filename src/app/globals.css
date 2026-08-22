@@ -1,4 +1,20 @@
 @import "tailwindcss";
+
+/* Single Tailwind build. The library ships a PREBUILT stylesheet too, but
+   loading it alongside this one put two independent builds on the page emitting
+   the same utility class names — at equal specificity the later sheet wins
+   regardless of breakpoint, so `grid-cols-1` beat `lg:grid-cols-12` and
+   `sm:grid-cols-2` beat `md:grid-cols-3`. Importing only the tokens and letting
+   `@source` scan the package makes this build generate the library's classes
+   too, so there is exactly one sheet and nothing can collide.
+
+   NOTE: the package's own theme.css is deliberately NOT used — it does
+   `--color-*: initial`, which would also wipe Tailwind's default palette that
+   this app still uses in ~240 places. The colour mappings it provides are
+   copied into the @theme block at the bottom of this file instead. */
+@import "@foundathyon/community-ui/tokens.css";
+@import "../../node_modules/@foundathyon/community-ui/dist/styles/base.css";
+@source "../../node_modules/@foundathyon/community-ui/dist";
 @import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "shadcn/tailwind.css";
 
@@ -137,28 +153,48 @@ body {
     @apply bg-background text-foreground;
   }
 }
-/* Platform chips in oauth-native-audiences: shown from `sm` up. Declared here
-   rather than with `hidden sm:flex` because community-ui's stylesheet loads
-   last and its unconditional `.hidden` outranks a media query at equal
-   specificity — see the import order note in src/app/layout.tsx. */
-@media (min-width: 40rem) {
-  :root {
-    --audience-chips-display: flex;
-  }
-}
-
-/* Dashboard stat grid: 1 / 2 / 3 columns. Declared here instead of
-   `sm:grid-cols-2 md:grid-cols-3` because community-ui's stylesheet loads last
-   and emits `sm:grid-cols-2` too — at equal specificity the later rule wins
-   regardless of breakpoint, which pinned the grid to two columns on desktop. */
-.dashboard-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 1.5rem;
-}
-@media (min-width: 40rem) {
-  .dashboard-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 48rem) {
-  .dashboard-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Design-system colours registered in the APP's Tailwind theme.
+   The library ships a PREBUILT stylesheet, so it only contains the classes the
+   library itself uses — an app-side `border-border/50` or `text-text-muted`
+   exists in neither sheet unless this build knows the token. Copied from the
+   package's theme.css WITHOUT its `--color-*: initial`, which would also wipe
+   Tailwind's default palette (still used in ~240 places). The `--fdn-*` values
+   themselves come from the library stylesheet at runtime. */
+@theme inline {
+  --color-bg: var(--fdn-bg);
+  --color-bg-subtle: var(--fdn-bg-subtle);
+  --color-surface: var(--fdn-surface);
+  --color-surface-raised: var(--fdn-surface-raised);
+  --color-surface-hover: var(--fdn-surface-hover);
+  --color-border: var(--fdn-border);
+  --color-border-strong: var(--fdn-border-strong);
+  --color-text: var(--fdn-text);
+  --color-text-secondary: var(--fdn-text-secondary);
+  --color-text-muted: var(--fdn-text-muted);
+  --color-text-disabled: var(--fdn-text-disabled);
+  --color-accent: var(--fdn-accent-text);
+  --color-accent-solid: var(--fdn-accent-solid);
+  --color-accent-solid-hover: var(--fdn-accent-solid-hover);
+  --color-accent-solid-active: var(--fdn-accent-solid-active);
+  --color-accent-bg: var(--fdn-accent-bg);
+  --color-accent-border: var(--fdn-accent-border);
+  --color-accent-on-solid: var(--fdn-accent-on-solid);
+  --color-focus: var(--fdn-focus);
+  --color-success: var(--fdn-success-text);
+  --color-success-bg: var(--fdn-success-bg);
+  --color-success-border: var(--fdn-success-border);
+  --color-success-solid: var(--fdn-success-solid);
+  --color-warning: var(--fdn-warning-text);
+  --color-warning-bg: var(--fdn-warning-bg);
+  --color-warning-border: var(--fdn-warning-border);
+  --color-warning-solid: var(--fdn-warning-solid);
+  --color-danger: var(--fdn-danger-text);
+  --color-danger-bg: var(--fdn-danger-bg);
+  --color-danger-border: var(--fdn-danger-border);
+  --color-danger-solid: var(--fdn-danger-solid);
+  --color-info: var(--fdn-info-text);
+  --color-info-bg: var(--fdn-info-bg);
+  --color-info-border: var(--fdn-info-border);
+  --color-info-solid: var(--fdn-info-solid);
+  --color-on-solid: var(--fdn-on-solid);
 }

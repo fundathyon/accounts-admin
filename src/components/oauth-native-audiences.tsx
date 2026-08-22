@@ -239,14 +239,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               {audiences.length}
             </Badge>
           )}
-          {/* `hidden sm:flex` cannot be used here: community-ui's stylesheet loads
-              last and its unconditional `.hidden` would beat this media query at
-              equal specificity. A CSS-var media query keeps the behaviour without
-              entering that shared namespace. */}
-          <div
-            className="items-center gap-1.5"
-            style={{ display: 'var(--audience-chips-display, none)' }}
-          >
+          <div className="hidden sm:flex items-center gap-1.5">
             {PLATFORMS.map((pl) => {
               const count = groupedCounts[pl.value];
               const active = count > 0;

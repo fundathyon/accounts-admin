@@ -67,11 +67,7 @@ export default function DashboardPage() {
         <Heading level={1}>{t('dashboard.title')}</Heading>
         <Badge variant="outline">{t('dashboard.badge')}</Badge>
       </Inline>
-      {/* The column count comes from a CSS var rather than `sm:grid-cols-2
-          md:grid-cols-3`: community-ui's stylesheet loads last and also emits
-          `sm:grid-cols-2`, which at equal specificity beat `md:grid-cols-3` and
-          pinned this grid to two columns on desktop. See src/app/globals.css. */}
-      <div className="dashboard-stat-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {[
           { icon: Users, labelKey: 'sidebar.users', value: stats.users, href: '/users' },
           { icon: Webhook, labelKey: 'sidebar.webhooks', value: stats.webhooks, href: '/webhooks' },
