@@ -8,13 +8,11 @@ import {
   Card,
   CardBody,
   FormField,
-  FoundathyonProvider,
   Heading,
   Input,
   PasswordInput,
   Text,
 } from '@foundathyon/community-ui';
-import '@foundathyon/community-ui/styles.css';
 import { BrandMark, BrandPanel } from '@/components/auth-brand-panel';
 import { useI18n } from '@/context/i18n-context';
 import { apiUrl, BASE_PATH } from '@/lib/utils';
@@ -23,7 +21,6 @@ import styles from '@/styles/auth-shell.module.css';
 // Same orange as Dokgistry's --vault-accent (#f97316), expressed as the
 // oklch triple @foundathyon/community-ui's accent engine needs — see
 // accounts-admin-community-ui-migration memory for the exact conversion.
-const BRAND_ACCENT = { hue: 47.6, l: 0.7049, c: 0.1867 };
 
 function LoginForm() {
   const router = useRouter();
@@ -134,10 +131,8 @@ function LoginFallback() {
 
 export default function LoginPage() {
   return (
-    <FoundathyonProvider accent={BRAND_ACCENT}>
-      <Suspense fallback={<LoginFallback />}>
-        <LoginForm />
-      </Suspense>
-    </FoundathyonProvider>
+    <Suspense fallback={<LoginFallback />}>
+      <LoginForm />
+    </Suspense>
   );
 }

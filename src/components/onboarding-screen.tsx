@@ -8,14 +8,12 @@ import {
   Card,
   CardBody,
   FormField,
-  FoundathyonProvider,
   Heading,
   Icon,
   Input,
   Text,
   TokenDisplay,
 } from '@foundathyon/community-ui';
-import '@foundathyon/community-ui/styles.css';
 import { BrandMark, BrandPanel } from '@/components/auth-brand-panel';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -23,7 +21,6 @@ import { BASE_PATH } from '@/lib/utils';
 import styles from '@/styles/auth-shell.module.css';
 
 // Same orange as Dokgistry's --vault-accent (#f97316) — see login/page.tsx.
-const BRAND_ACCENT = { hue: 47.6, l: 0.7049, c: 0.1867 };
 
 interface CreateAppResponse {
   data?: {
@@ -93,96 +90,94 @@ export function OnboardingScreen() {
   const data = response?.data;
 
   return (
-    <FoundathyonProvider accent={BRAND_ACCENT}>
-      <div className={styles.shell}>
-        <BrandPanel headline={t('onboarding.brandHeadline')} tagline={t('onboarding.branding')} />
+    <div className={styles.shell}>
+      <BrandPanel headline={t('onboarding.brandHeadline')} tagline={t('onboarding.branding')} />
 
-        <section className={styles.formPane}>
-          <div className={styles.formCard}>
-            <BrandMark />
+      <section className={styles.formPane}>
+        <div className={styles.formCard}>
+          <BrandMark />
 
-            <Card>
-              <CardBody className="flex flex-col gap-5">
-                <div>
-                  <Heading level={1} visual="h2">
-                    {step === 'form' ? t('onboarding.setupTitle') : t('onboarding.successTitle')}
-                  </Heading>
-                  <Text tone="secondary">
-                    {step === 'form'
-                      ? t('onboarding.setupDesc')
-                      : t('onboarding.successDesc', { name: data?.name ?? '' })}
-                  </Text>
-                </div>
+          <Card>
+            <CardBody className="flex flex-col gap-5">
+              <div>
+                <Heading level={1} visual="h2">
+                  {step === 'form' ? t('onboarding.setupTitle') : t('onboarding.successTitle')}
+                </Heading>
+                <Text tone="secondary">
+                  {step === 'form'
+                    ? t('onboarding.setupDesc')
+                    : t('onboarding.successDesc', { name: data?.name ?? '' })}
+                </Text>
+              </div>
 
-                {step === 'form' ? (
-                  <form onSubmit={handleSubmit} aria-busy={isSubmitting} className="flex flex-col gap-5">
-                    <FormField label={t('onboarding.appName')}>
-                      <Input
-                        required
-                        placeholder={t('onboarding.appNamePlaceholder')}
-                        value={formData.name}
-                        onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                      />
-                    </FormField>
-                    <FormField label={t('onboarding.adminEmail')}>
-                      <Input
-                        required
-                        type="email"
-                        placeholder={t('onboarding.adminEmailPlaceholder')}
-                        value={formData.root_email}
-                        onChange={(e) => setFormData((p) => ({ ...p, root_email: e.target.value }))}
-                      />
-                    </FormField>
-                    <Button type="submit" variant="primary" size="lg" loading={isSubmitting} className="w-full">
-                      {isSubmitting ? t('onboarding.creating') : t('onboarding.createApp')}
-                    </Button>
-                  </form>
-                ) : (
-                  <div className="flex flex-col gap-5">
-                    <Alert tone="warning" title={t('onboarding.keysWarning')} />
+              {step === 'form' ? (
+                <form onSubmit={handleSubmit} aria-busy={isSubmitting} className="flex flex-col gap-5">
+                  <FormField label={t('onboarding.appName')}>
+                    <Input
+                      required
+                      placeholder={t('onboarding.appNamePlaceholder')}
+                      value={formData.name}
+                      onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                    />
+                  </FormField>
+                  <FormField label={t('onboarding.adminEmail')}>
+                    <Input
+                      required
+                      type="email"
+                      placeholder={t('onboarding.adminEmailPlaceholder')}
+                      value={formData.root_email}
+                      onChange={(e) => setFormData((p) => ({ ...p, root_email: e.target.value }))}
+                    />
+                  </FormField>
+                  <Button type="submit" variant="primary" size="lg" loading={isSubmitting} className="w-full">
+                    {isSubmitting ? t('onboarding.creating') : t('onboarding.createApp')}
+                  </Button>
+                </form>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  <Alert tone="warning" title={t('onboarding.keysWarning')} />
 
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-2">
-                        <Text variant="label" tone="muted" className="flex items-center gap-1.5">
-                          <Icon icon={Key} size={14} /> {t('onboarding.secretKey')}
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Text variant="label" tone="muted" className="flex items-center gap-1.5">
+                        <Icon icon={Key} size={14} /> {t('onboarding.secretKey')}
+                      </Text>
+                      <TokenDisplay value={data?.secret_key || ''} warning={null} />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Text variant="label" tone="muted" className="flex items-center gap-1.5">
+                        <Icon icon={Key} size={14} /> {t('onboarding.publishableKey')}
+                      </Text>
+                      <TokenDisplay value={data?.publishable_key || ''} warning={null} />
+                    </div>
+                  </div>
+
+                  {data?.created_role && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-bg-subtle p-4">
+                      <Text variant="label" tone="muted" className="flex items-center gap-1.5">
+                        <Icon icon={Shield} size={14} /> {t('onboarding.roleCreated')}
+                      </Text>
+                      <div>
+                        <Text className="font-medium">{data.created_role.name}</Text>
+                        <Text as="p" variant="caption" tone="muted">
+                          {data.created_role.description}
                         </Text>
-                        <TokenDisplay value={data?.secret_key || ''} warning={null} />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Text variant="label" tone="muted" className="flex items-center gap-1.5">
-                          <Icon icon={Key} size={14} /> {t('onboarding.publishableKey')}
+                        <Text as="p" variant="caption" tone="muted" className="font-mono mt-1">
+                          {data.created_role.id}
                         </Text>
-                        <TokenDisplay value={data?.publishable_key || ''} warning={null} />
                       </div>
                     </div>
+                  )}
 
-                    {data?.created_role && (
-                      <div className="flex flex-col gap-2 rounded-lg border border-border bg-bg-subtle p-4">
-                        <Text variant="label" tone="muted" className="flex items-center gap-1.5">
-                          <Icon icon={Shield} size={14} /> {t('onboarding.roleCreated')}
-                        </Text>
-                        <div>
-                          <Text className="font-medium">{data.created_role.name}</Text>
-                          <Text as="p" variant="caption" tone="muted">
-                            {data.created_role.description}
-                          </Text>
-                          <Text as="p" variant="caption" tone="muted" className="font-mono mt-1">
-                            {data.created_role.id}
-                          </Text>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button onClick={handleFinish} variant="primary" size="lg" className="w-full">
-                      {t('onboarding.goToDashboard')}
-                    </Button>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-          </div>
-        </section>
-      </div>
-    </FoundathyonProvider>
+                  <Button onClick={handleFinish} variant="primary" size="lg" className="w-full">
+                    {t('onboarding.goToDashboard')}
+                  </Button>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+      </section>
+    </div>
   );
 }
