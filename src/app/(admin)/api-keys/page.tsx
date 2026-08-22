@@ -12,7 +12,6 @@ import {
   Trash2,
   PowerOff,
   Search,
-  Filter,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -21,7 +20,6 @@ import {
   Button,
   buttonVariants,
   Card,
-  DataTable,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -36,18 +34,16 @@ import {
   Inline,
   Input,
   KeyValue,
-  Select,
   Spinner,
   StatusBadge,
-  Tag,
   Text,
-  Tooltip,
 } from '@foundathyon/community-ui';
 import type { DataTableColumn, DataTableSort, StatusKey } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
 import type { App, APIKeyListItem } from '@/lib/admin-types';
+import { AdminDataTable, DeleteSelectionButton, DeleteSelectionDialog } from '@/components/admin-data-table';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
@@ -131,6 +127,8 @@ export default function ApiKeysPage() {
   const [envFilter, setEnvFilter] = useState<EnvFilter>('all');
   const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
   const [keysError, setKeysError] = useState<string | null>(null);
+  // Rows behind «Eliminar selección»; `null` keeps the confirmation closed.
+  const [bulkTargets, setBulkTargets] = useState<APIKeyListItem[] | null>(null);
 
   // §16 — the URL IS the state: `?q=` + `?env=` make a filtered view shareable.
   // The query string seeds the filters once, and every change is written back
@@ -241,19 +239,6 @@ export default function ApiKeysPage() {
     ? apiKeys
     : apiKeys.filter((key) => key.environment === envFilter);
 
-  // The DataTable's own copy defaults to English. The dictionary has no key for
-  // the footer summary ("3 of 128"), so it renders as a language-neutral ratio.
-  const keysTableLabels = {
-    loading: t('common.loading'),
-    of: (shown: number, total: number) =>
-      t('common.countOf', { shown, total, entity: t('apiKeys.title') }),
-  };
-
-  const clearSearch = () => {
-    setSearchInput('');
-    setSearchQuery('');
-    writeUrl((params) => { params.delete('q'); });
-  };
 
   // §16 — the one exit out of «Sin resultados»: it drops every applied filter,
   // the search term included.
@@ -267,20 +252,10 @@ export default function ApiKeysPage() {
     });
   };
 
-  // §16 — every applied filter is visible as a removable chip, the search term
-  // included. §09: a filter is data the user set, so it is a Tag, never a Badge.
-  const activeFilters: { id: string; label: string; onRemove: () => void }[] = [
-    ...(searchQuery.trim()
-      ? [{ id: 'q', label: `“${searchQuery.trim()}”`, onRemove: clearSearch }]
-      : []),
-    ...(envFilter !== 'all'
-      ? [{
-        id: 'env',
-        label: `${t('apiKeys.environment')}: ${ENV_LABELS[envFilter]}`,
-        onRemove: () => applyEnvFilter('all'),
-      }]
-      : []),
-  ];
+  // §16 — an applied filter is never hidden: the search keeps its value and the
+  // facet button carries a counter. This only decides which empty copy the
+  // table shows when the page-level environment facet leaves nothing.
+  const filtersActive = searchQuery.trim() !== '' || envFilter !== 'all';
 
   // §16 — «Sin resultados» is not an empty state: it says nothing matched and
   // offers the way out, which clears every filter including the search term.
@@ -549,91 +524,63 @@ export default function ApiKeysPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {savedSecretKey && (
-              <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-                <Icon icon={ShieldCheck} size={16} /> {t('apiKeys.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
-              <div className="flex-1 min-w-[300px]">
-                <Input
-                  size="lg"
-                  leading={<Icon icon={Search} size={16} />}
-                  placeholder={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
-                  aria-label={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  wrapperClassName="border-none bg-bg shadow-none"
-                />
-              </div>
-
-              <Inline gap={3}>
-                <Tooltip content={t('tooltips.state')}>
-                  <div className="flex items-center gap-2">
-                    <Icon icon={Filter} size={14} className="text-muted" />
-                    <Select
-                      size="lg"
-                      value={envFilter}
-                      onValueChange={(v) => applyEnvFilter(parseEnvFilter(v))}
-                      placeholder={t('apiKeys.environment') || "Env"}
-                      className="w-[140px] border-none bg-bg shadow-none"
-                      items={[
-                        { value: 'all', label: t('common.all') || "All Envs" },
-                        { value: 'production', label: ENV_LABELS.production },
-                        { value: 'staging', label: ENV_LABELS.staging },
-                        { value: 'development', label: ENV_LABELS.development },
-                      ]}
-                    />
-                  </div>
-                </Tooltip>
-              </Inline>
-            </div>
-
-            {/* §16 — applied filters live in the open, right under the toolbar,
-                each one removable. "Limpiar filtros" appears once more than one
-                is applied. */}
-            {activeFilters.length > 0 && (
-              <Inline gap={2} wrap className="px-1">
-                {activeFilters.map((filter) => (
-                  <Tag key={filter.id} onRemove={filter.onRemove} removeLabel={t('common.removeFilter')}>
-                    {filter.label}
-                  </Tag>
-                ))}
-                {activeFilters.length > 1 && (
-                  <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                    {t('common.clearFilters')}
-                  </Button>
-                )}
-              </Inline>
-            )}
-
-            <DataTable<APIKeyListItem>
+            {/* §14 — one frame: toolbar (search · Entorno · Columnas, and the
+                selection summary with «Eliminar selección» on the right), the
+                table, and the footer with the count and the key in use. */}
+            <AdminDataTable<APIKeyListItem>
+              entity={t('apiKeys.title')}
               columns={keyColumns}
               data={envFilteredKeys}
               rowId={(key) => key.id}
-              density="comfortable"
               loading={keysLoading}
               loadingRowCount={5}
               error={keysError ? { title: t('apiKeys.errorLoadKeys'), description: keysError, retry: { label: t('common.retry'), onClick: () => { void fetchAPIKeys(); } } } : undefined}
               // The table derives "no results" from `globalFilter` alone, so the
-              // page-level environment filter decides the copy here: when a
-              // filter is applied and nothing survives it, the rows did not run
-              // out — they were filtered away, and the exit is clearing them.
-              emptyState={activeFilters.length > 0 ? noResultsStateCopy : { ...noKeysStateCopy, icon: Key }}
+              // page-level environment facet decides the copy here: when it is
+              // applied and nothing survives, the rows were filtered away — and
+              // the exit is clearing the filters.
+              emptyState={filtersActive ? noResultsStateCopy : { ...noKeysStateCopy, icon: Key }}
               noResultsState={noResultsStateCopy}
               globalFilter={searchQuery}
               sorting={{ state: sort, onChange: setSort }}
+              search={{
+                value: searchInput,
+                onChange: setSearchInput,
+                placeholder: t('apiKeys.searchPlaceholder') || 'Search by name, key or ID...',
+              }}
+              filters={[
+                {
+                  id: 'env',
+                  label: t('apiKeys.environment'),
+                  multiple: false,
+                  value: envFilter === 'all' ? [] : [envFilter],
+                  onChange: (next) => applyEnvFilter(parseEnvFilter(next[0] ?? null)),
+                  options: (Object.keys(ENV_LABELS) as Exclude<EnvFilter, 'all'>[]).map((env) => ({
+                    value: env,
+                    label: ENV_LABELS[env],
+                    count: apiKeys.filter((key) => key.environment === env).length,
+                  })),
+                },
+              ]}
+              columnsButton
+              selectable
+              bulkActions={(rows) => <DeleteSelectionButton onClick={() => setBulkTargets(rows)} />}
               onRowClick={(key) => setSelectedApiKey(key)}
               // Revoked / deactivated keys are terminal rows (§14, §19).
               getRowProps={(key) => (key.is_active && !key.revoked_at ? undefined : { terminal: true })}
-              labels={keysTableLabels}
+              footer={
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon icon={ShieldCheck} size={12} />
+                  {t('apiKeys.consultingWith')}
+                  <code className="font-mono">{truncateKey(savedSecretKey ?? '')}</code>
+                </span>
+              }
             />
 
             {/* The table's empty / no-results state carries this exact headline
                 and CTA, so the persistent card steps aside while the list is
                 filtered — otherwise both render at once. */}
-            {apps.length > 0 && envFilteredKeys.length > 0 && activeFilters.length === 0 && (
+            {apps.length > 0 && envFilteredKeys.length > 0 && !filtersActive && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center shrink-0">
@@ -659,6 +606,33 @@ export default function ApiKeysPage() {
           </div>
         )}
       </motion.div>
+
+      {/* §17 — the confirmation behind «Eliminar selección»: names the count,
+          the button says the verb, and every deletion resolves before it closes. */}
+      <DeleteSelectionDialog<APIKeyListItem>
+        targets={bulkTargets}
+        onClose={() => setBulkTargets(null)}
+        entity={t('apiKeys.title')}
+        deleteOne={async (key) => {
+          const res = await fetch(apiUrl(`/api/api-keys/${key.id}`), {
+            method: 'DELETE',
+            headers: { 'X-Secret-API-Key': savedSecretKey ?? '' },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!(data.success || res.ok)) throw new Error(data.error?.message || `HTTP ${res.status}`);
+        }}
+        onFinished={async ({ done, failed }) => {
+          if (failed.length === 0) {
+            showNotification(t('common.deleteSelectedDone', { count: done, entity: t('apiKeys.title') }), 'success');
+          } else {
+            showNotification(
+              t('common.deleteSelectedPartial', { done, total: done + failed.length, failed: failed.length }),
+              'error'
+            );
+          }
+          await fetchAPIKeys();
+        }}
+      />
 
       <Dialog open={isGenerateModalOpen} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent size="sm">

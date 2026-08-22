@@ -36,13 +36,13 @@ import {
   Switch,
   Text,
   Textarea,
-  DataTable,
   type DataTableColumn,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
 import type { EmailAccessEntryView, EmailAccessSettingsView } from '@/lib/admin-types';
+import { AdminDataTable, DeleteSelectionButton, DeleteSelectionDialog } from '@/components/admin-data-table';
 
 const PAGE_SIZE = 20;
 
@@ -116,6 +116,9 @@ function EmailAccessPageContent() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: 'allow' | 'block'; id: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // Rows behind «Eliminar selección» and the list they belong to; `null` keeps
+  // the confirmation closed.
+  const [bulkTargets, setBulkTargets] = useState<{ kind: 'allow' | 'block'; rows: EmailAccessEntryView[] } | null>(null);
 
   // Reads the live query string so unrelated params survive, and never depends
   // on the `searchParams` object — that would re-fire on every replace.
@@ -468,7 +471,7 @@ function EmailAccessPageContent() {
         hideBelow: 'sm',
         align: 'right',
         cell: (row) => (
-          <span className="tabular-nums text-caption text-muted">
+          <span className="tabular-nums text-caption text-text-muted">
             {new Date(row.created_at).toLocaleString()}
           </span>
         ),
@@ -510,7 +513,11 @@ function EmailAccessPageContent() {
           {addButton}
         </div>
 
-        <DataTable<EmailAccessEntryView>
+        {/* §14 — one frame: toolbar (Columnas, and the selection summary with
+            «Eliminar selección» on the right), the table, and the footer with
+            the page position. */}
+        <AdminDataTable<EmailAccessEntryView>
+          entity={t('emailAccess.entries')}
           columns={entryColumns}
           data={rows}
           rowId={(row) => row.id}
@@ -522,6 +529,11 @@ function EmailAccessPageContent() {
             title: t('emailAccess.emptyList'),
             action: addButton,
           }}
+          columnsButton
+          selectable
+          bulkActions={(selected) => (
+            <DeleteSelectionButton onClick={() => setBulkTargets({ kind, rows: selected })} />
+          )}
           rowActions={(row) => [
             {
               label: t('emailAccess.deleteEntry'),
@@ -542,7 +554,6 @@ function EmailAccessPageContent() {
             manual: true,
           }}
           labels={{
-            loading: t('common.loading'),
             actions: t('oauth.actions'),
             of: () => `${t('emailAccess.page')} ${page + 1} ${t('emailAccess.of')} ${totalPages}`,
           }}
@@ -633,7 +644,7 @@ function EmailAccessPageContent() {
                   <Text tone="secondary">
                     {t('emailAccess.desc')}
                     {settings?.app_id ? (
-                      <span className="mt-2 block font-mono text-code text-muted">
+                      <span className="mt-2 block font-mono text-code text-text-muted">
                         app_id: {settings.app_id}
                       </span>
                     ) : null}
@@ -689,6 +700,40 @@ function EmailAccessPageContent() {
           </div>
         )}
       </motion.div>
+
+      {/* §17 — the confirmation behind «Eliminar selección»: names the count,
+          the button says the verb, and every deletion resolves before it closes. */}
+      <DeleteSelectionDialog<EmailAccessEntryView>
+        targets={bulkTargets?.rows ?? null}
+        onClose={() => setBulkTargets(null)}
+        entity={t('emailAccess.entries')}
+        deleteOne={async (row) => {
+          const kind = bulkTargets?.kind ?? 'allow';
+          const path =
+            kind === 'allow'
+              ? `/api/email-access/allowlist/${encodeURIComponent(row.id)}`
+              : `/api/email-access/blocklist/${encodeURIComponent(row.id)}`;
+          const res = await fetch(apiUrl(path), {
+            method: 'DELETE',
+            headers: { 'X-Secret-API-Key': savedSecretKey ?? '' },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!data.success) throw new Error(data.error?.message || `HTTP ${res.status}`);
+        }}
+        onFinished={({ done, failed }) => {
+          const kind = bulkTargets?.kind ?? 'allow';
+          if (failed.length === 0) {
+            showNotification(t('common.deleteSelectedDone', { count: done, entity: t('emailAccess.entries') }), 'success');
+          } else {
+            showNotification(
+              t('common.deleteSelectedPartial', { done, total: done + failed.length, failed: failed.length }),
+              'error'
+            );
+          }
+          if (kind === 'allow') fetchList('allow', allowPage);
+          else fetchList('block', blockPage);
+        }}
+      />
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent size="md" className="sm:max-w-lg">

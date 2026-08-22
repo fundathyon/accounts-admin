@@ -30,6 +30,12 @@ import {
   Text,
   Tooltip,
   Spinner,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -295,22 +301,27 @@ function TokenSection({
     const entries = Object.entries(data);
     return (
       <>
-        <div className={cn('overflow-x-auto overflow-y-auto rounded-lg border bg-subtle/50', contentMinHeight || 'min-h-[120px] max-h-[200px]')}>
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-subtle border-b">
-              <tr>
-                <th className="text-left font-medium px-3 py-2">{t('tokens.claimKey')}</th>
-                <th className="text-left font-medium px-3 py-2">{t('tokens.claimValue')}</th>
-              </tr>
-            </thead>
-            <tbody>
+        {/* Presentation-only table (§14 Table, not DataTable): no selection, sort
+            or filters — just the claims, with the header pinned while scrolling. */}
+        <Table
+          stickyHeader
+          className={cn('overflow-y-auto rounded-lg', contentMinHeight || 'min-h-[120px] max-h-[200px]')}
+          tableProps={{ className: 'text-caption' }}
+        >
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('tokens.claimKey')}</TableHead>
+              <TableHead>{t('tokens.claimValue')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {entries.map(([key, value]) => {
                 const displayValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
                 const expTooltip = key === 'exp' ? formatExpirationTooltip(value) : null;
                 return (
-                  <tr key={key} className="border-b border-border/50">
-                    <td className="px-3 py-2 font-mono text-muted">{key}</td>
-                    <td className="px-3 py-2 font-mono break-all">
+                  <TableRow key={key}>
+                    <TableCell className="font-mono text-text-muted">{key}</TableCell>
+                    <TableCell className="font-mono break-all">
                       {expTooltip ? (
                         <Tooltip
                           side="top"
@@ -331,13 +342,12 @@ function TokenSection({
                       ) : (
                         displayValue
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+          </TableBody>
+        </Table>
       </>
     );
   }

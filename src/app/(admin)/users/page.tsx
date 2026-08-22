@@ -34,7 +34,6 @@ import {
   buttonVariants,
   Card,
   CardBody,
-  DataTable,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -57,7 +56,6 @@ import {
   RoleBadge,
   Select,
   Stack,
-  Tag,
   Text,
   Textarea,
   Tooltip,
@@ -73,6 +71,7 @@ import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, IS_PRODUCTION } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
+import { AdminDataTable, DeleteSelectionButton } from '@/components/admin-data-table';
 import type { User, Role, MetadataFieldSchema } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -175,6 +174,8 @@ export default function UsersPage() {
   const [revokeLoading, setRevokeLoading] = useState(false);
   const [revokeMode, setRevokeMode] = useState<'token' | 'id'>('token');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  // The rows behind «Eliminar selección»; `null` means the dialog deletes ALL users.
+  const [bulkTargets, setBulkTargets] = useState<User[] | null>(null);
   const [bulkConfirmPhrase, setBulkConfirmPhrase] = useState('');
   const [metadataSchema, setMetadataSchema] = useState<MetadataFieldSchema[] | null>(null);
   const [metadataValues, setMetadataValues] = useState<Record<string, string>>({});
@@ -594,9 +595,12 @@ export default function UsersPage() {
     }
   };
 
-  const handleBulkDeleteUsers = async () => {
-    if (IS_PRODUCTION || !savedSecretKey) return;
-    const targets = users.slice();
+  const handleBulkDeleteUsers = async (selection?: User[]) => {
+    if (!savedSecretKey) return;
+    // «Eliminar todos» stays out of production; deleting an explicit selection
+    // is the row action in bulk, so it is allowed wherever the row action is.
+    if (!selection && IS_PRODUCTION) return;
+    const targets = selection ? selection.slice() : users.slice();
     if (targets.length === 0) {
       showNotification(t('users.deleteAllNoUsers'), 'error');
       return;
@@ -722,9 +726,6 @@ export default function UsersPage() {
     return true;
   });
 
-  // Row grouping has no DataTable equivalent, so the grouped view renders one
-  // table per role and applies the search itself — through `userSearchText`,
-  // the very accessor the table's own `globalFilter` matches on.
   const searchLower = searchQuery.trim().toLowerCase();
   // The rows that survive every filter — the same set the table shows, since
   // `userSearchText` is the accessor its `globalFilter` matches on. Feeds the
@@ -732,17 +733,9 @@ export default function UsersPage() {
   const searchedUsers = filteredUsers.filter(
     (user) => !searchLower || userSearchText(user).toLowerCase().includes(searchLower)
   );
-  const groupedUsers = isGroupedByRole
-    ? Object.entries(
-      searchedUsers
-        .reduce((acc, user) => {
-          const roleName = user.role_details?.name || 'default';
-          if (!acc[roleName]) acc[roleName] = [];
-          acc[roleName].push(user);
-          return acc;
-        }, {} as Record<string, User[]>)
-    )
-    : [];
+  // Group key for the §14 grouped view — the table renders one group row per
+  // role and keeps the column sort inside each group.
+  const roleNameOf = (user: User) => user.role_details?.name || 'default';
 
   const handleExportCSV = () => {
     if (users.length === 0) {
@@ -797,22 +790,11 @@ export default function UsersPage() {
   };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
+  const bulkPhrase = bulkTargets
+    ? t('users.deleteSelectedConfirmPhrase', { count: bulkTargets.length })
+    : t('users.deleteAllConfirmPhrase');
   const userHref = (user: User) => `${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/');
 
-  // The DataTable's own copy defaults to English. The dictionary has no key for
-  // the footer summary ("3 of 128"), so it renders as a language-neutral ratio.
-  const usersTableLabels = {
-    loading: t('common.loading'),
-    actions: t('commandPalette.actions'),
-    of: (shown: number, total: number) =>
-      t('common.countOf', { shown, total, entity: t('users.title').toLowerCase() }),
-  };
-
-  const clearSearch = () => {
-    setSearchInput('');
-    setSearchQuery('');
-    writeUrl((params) => { params.delete('q'); });
-  };
 
   // §16 — the one exit out of «Sin resultados»: it drops every applied filter,
   // the search term included. Grouping is a view mode, so it survives.
@@ -828,28 +810,11 @@ export default function UsersPage() {
     });
   };
 
-  // §16 — every applied filter is visible as a removable chip, the search term
-  // included. §09: a filter is data the user set, so it is a Tag, never a Badge.
-  // Grouping is a view mode, not a filter, so it keeps its own pressed toggle.
-  const activeFilters: { id: string; label: string; onRemove: () => void }[] = [
-    ...(searchQuery.trim()
-      ? [{ id: 'q', label: `“${searchQuery.trim()}”`, onRemove: clearSearch }]
-      : []),
-    ...(roleFilter !== 'all'
-      ? [{
-        id: 'role',
-        label: `${t('users.role')}: ${roles.find((role) => role.id === roleFilter)?.name ?? roleFilter}`,
-        onRemove: () => applyRoleFilter('all'),
-      }]
-      : []),
-    ...(loginFilter !== 'all'
-      ? [{
-        id: 'type',
-        label: `${t('users.loginType')}: ${LOGIN_TYPE_LABELS[loginFilter]}`,
-        onRemove: () => applyLoginFilter('all'),
-      }]
-      : []),
-  ];
+  // §16 — an applied filter is never hidden: the search keeps its value and
+  // each facet button carries a counter. This only decides which empty copy
+  // the table shows when the page-level facets leave nothing to render.
+  const filtersActive =
+    searchQuery.trim() !== '' || roleFilter !== 'all' || loginFilter !== 'all';
 
   // §16 — «Sin resultados» is not an empty state: it says nothing matched and
   // offers the way out, which clears every filter including the search term.
@@ -866,30 +831,33 @@ export default function UsersPage() {
 
   const userColumns = useMemo<DataTableColumn<User>[]>(() => [
     {
+      // §21 Accounts spec — the `user` cell puts the technical id on top (support
+      // searches by id) and the human name below; the email is its own column.
+      // The global filter searches every part of the object.
       id: 'user',
       header: t('users.user'),
+      type: 'user',
       primary: true,
-      accessor: userSearchText,
-      cell: (user) => {
-        const primaryEmail = primaryEmailOf(user);
-        const displayName = user.name || user.user_name || primaryEmail || 'Sin nombre';
-        return (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent-bg flex items-center justify-center text-accent font-semibold text-xs shrink-0">
-              {(displayName || 'U').charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="font-mono text-xs text-muted truncate max-w-[140px]" title={user.id}>
-                {user.id}
-              </div>
-              <div className="font-medium text-sm truncate">{primaryEmail || user.user_name || '—'}</div>
-              {displayName !== primaryEmail && displayName !== user.user_name && (
-                <div className="text-xs text-muted truncate">{displayName}</div>
-              )}
-            </div>
-          </div>
-        );
-      },
+      accessor: (user) => ({
+        id: user.id,
+        name: user.name || user.user_name || undefined,
+        email: primaryEmailOf(user),
+      }),
+    },
+    {
+      id: 'email',
+      header: t('users.email'),
+      type: 'text',
+      accessor: (user) => primaryEmailOf(user),
+      sortable: true,
+    },
+    {
+      // Hidden by default (toggle it from «Columnas»), still fed to the global
+      // filter so "search by username" keeps working as the placeholder promises.
+      id: 'username',
+      header: 'Username',
+      type: 'text',
+      accessor: (user) => user.user_name,
     },
     {
       id: 'provider',
@@ -929,7 +897,7 @@ export default function UsersPage() {
                 )}
               </Badge>
             )
-          ) || <span className="text-muted text-xs">—</span>}
+          ) || <span className="text-text-muted text-xs">—</span>}
         </div>
       ),
     },
@@ -940,7 +908,7 @@ export default function UsersPage() {
         user.role_details ? (
           <RoleBadge role={user.role_details.name} />
         ) : (
-          <span className="text-muted text-xs">—</span>
+          <span className="text-text-muted text-xs">—</span>
         ),
     },
     {
@@ -972,32 +940,6 @@ export default function UsersPage() {
       onSelect: () => setUserToDelete(user),
     },
   ];
-
-  const renderUsersTable = (rows: User[], globalFilter?: string) => (
-    <DataTable<User>
-      columns={userColumns}
-      data={rows}
-      rowId={(user) => user.id}
-      density="comfortable"
-      loading={loading}
-      loadingRowCount={6}
-      error={usersError ? { title: t('users.errorLoadUsers'), description: usersError, retry: { label: t('common.retry'), onClick: () => { void fetchUsers(); } } } : undefined}
-      // The DataTable derives "no results" from `globalFilter` alone, so the
-      // page-level role/login filters decide the copy here: rows exist, they
-      // just did not survive a filter — and then the exit is clearing them.
-      emptyState={
-        activeFilters.length > 0
-          ? noResultsStateCopy
-          : { icon: Users, title: t('users.noUsers') }
-      }
-      noResultsState={noResultsStateCopy}
-      globalFilter={globalFilter}
-      sorting={{ state: sort, onChange: setSort }}
-      rowActions={userRowActions}
-      onRowClick={(user) => router.push(userHref(user))}
-      labels={usersTableLabels}
-    />
-  );
 
   return (
     <>
@@ -1078,6 +1020,7 @@ export default function UsersPage() {
                       destructive
                       icon={Trash2}
                       onClick={() => {
+                        setBulkTargets(null);
                         setBulkConfirmPhrase('');
                         setBulkProgress(null);
                         setIsBulkDeleteOpen(true);
@@ -1091,92 +1034,6 @@ export default function UsersPage() {
             </DropdownMenu>
           </Inline>
         </Inline>
-
-        {savedSecretKey && (
-          <div className="mb-6 space-y-3">
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
-              <div className="flex-1 min-w-[300px]">
-                <Input
-                  leading={<Icon icon={Search} size={14} />}
-                  aria-label={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
-                  placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  wrapperClassName="h-10 border-none bg-bg shadow-none"
-                />
-              </div>
-
-              <Inline gap={2}>
-                <Text variant="overline" tone="secondary">{t('users.role')}</Text>
-                <Select
-                  value={roleFilter}
-                  onValueChange={(v) => applyRoleFilter(v ?? 'all')}
-                  placeholder="All Roles"
-                  aria-label={t('users.role')}
-                  items={[
-                    { value: 'all', label: t('users.allRoles') || "All Roles" },
-                    ...roles.map((role) => ({ value: role.id, label: role.name })),
-                  ]}
-                  className="w-[160px] h-9 bg-bg border-none shadow-none"
-                />
-              </Inline>
-
-              <Inline gap={2}>
-                <Text variant="overline" tone="secondary">{t('users.loginType')}</Text>
-                <Select
-                  value={loginFilter}
-                  onValueChange={(v) => applyLoginFilter(parseLoginTypeFilter(v))}
-                  placeholder="Any Type"
-                  aria-label={t('users.loginType')}
-                  items={[
-                    { value: 'all', label: t('users.allTypes') || "Any Type" },
-                    { value: 'email', label: LOGIN_TYPE_LABELS.email },
-                    { value: 'oauth', label: LOGIN_TYPE_LABELS.oauth },
-                    { value: 'google', label: LOGIN_TYPE_LABELS.google },
-                    { value: 'apple', label: LOGIN_TYPE_LABELS.apple },
-                    { value: 'microsoft', label: LOGIN_TYPE_LABELS.microsoft },
-                  ]}
-                  className="w-[160px] h-9 bg-bg border-none shadow-none"
-                />
-              </Inline>
-
-              <Inline gap={2} className="ml-auto">
-                <Tooltip content={t('tooltips.groupByRole')}>
-                  <Button
-                    variant="ghost"
-                    aria-pressed={isGroupedByRole}
-                    onClick={toggleGroupByRole}
-                    leading={<Icon icon={Users} size={14} />}
-                    className={cn(
-                      "h-9",
-                      isGroupedByRole ? "text-accent bg-accent-bg" : "text-muted"
-                    )}
-                  >
-                    {t('users.groupByRole') || "Group by Role"}
-                  </Button>
-                </Tooltip>
-              </Inline>
-            </div>
-
-            {/* §16 — applied filters live in the open, right under the toolbar,
-                each one removable. "Limpiar filtros" appears once more than one
-                is applied. */}
-            {activeFilters.length > 0 && (
-              <Inline gap={2} wrap className="px-1">
-                {activeFilters.map((filter) => (
-                  <Tag key={filter.id} onRemove={filter.onRemove} removeLabel={t('common.removeFilter')}>
-                    {filter.label}
-                  </Tag>
-                ))}
-                {activeFilters.length > 1 && (
-                  <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                    {t('common.clearFilters')}
-                  </Button>
-                )}
-              </Inline>
-            )}
-          </div>
-        )}
 
         {!savedSecretKey ? (
           <Card className="border-amber-500/20">
@@ -1192,27 +1049,91 @@ export default function UsersPage() {
             </CardBody>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <div className="px-6 py-3 bg-emerald-500/5 border-b border-emerald-500/10 flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4 shrink-0" /> {t('users.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-            </div>
-            <CardBody className="p-4">
-              {isGroupedByRole && groupedUsers.length > 0 ? (
-                groupedUsers.map(([groupName, groupUsers]) => (
-                  <div key={groupName} className="mb-6 last:mb-0">
-                    <div className="px-2 pb-2 flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-widest text-muted">
-                        {groupName} <span className="ml-2 font-normal opacity-50">({groupUsers.length})</span>
-                      </span>
-                    </div>
-                    {renderUsersTable(groupUsers)}
-                  </div>
-                ))
-              ) : (
-                renderUsersTable(isGroupedByRole ? [] : filteredUsers, searchQuery)
-              )}
-            </CardBody>
-          </Card>
+          /* §14 — one frame: toolbar (search · Rol · Tipo de acceso · Columnas,
+             and the selection summary with «Eliminar selección» on the right),
+             the table, and the footer with the count and the key in use. */
+          <AdminDataTable<User>
+            entity={t('users.title').toLowerCase()}
+            columns={userColumns}
+            data={filteredUsers}
+            columnVisibility={{ defaultState: { username: false } }}
+            rowId={(user) => user.id}
+            loading={loading}
+            loadingRowCount={6}
+            error={usersError ? { title: t('users.errorLoadUsers'), description: usersError, retry: { label: t('common.retry'), onClick: () => { void fetchUsers(); } } } : undefined}
+            // The table derives "no results" from `globalFilter` alone, so the
+            // page-level role/login facets decide the copy here: rows exist,
+            // they just did not survive a filter — and the exit is clearing them.
+            emptyState={filtersActive ? noResultsStateCopy : { icon: Users, title: t('users.noUsers') }}
+            noResultsState={noResultsStateCopy}
+            globalFilter={searchQuery}
+            sorting={{ state: sort, onChange: setSort }}
+            search={{
+              value: searchInput,
+              onChange: setSearchInput,
+              placeholder: t('users.searchPlaceholder') || 'Search by email, username, name or ID...',
+            }}
+            filters={[
+              {
+                id: 'role',
+                label: t('users.role'),
+                multiple: false,
+                value: roleFilter === 'all' ? [] : [roleFilter],
+                onChange: (next) => applyRoleFilter(next[0] ?? 'all'),
+                options: roles.map((role) => ({
+                  value: role.id,
+                  label: role.name,
+                  count: users.filter((user) => user.role_id === role.id || user.role_details?.name === role.id).length,
+                })),
+              },
+              {
+                id: 'type',
+                label: t('users.loginType'),
+                multiple: false,
+                value: loginFilter === 'all' ? [] : [loginFilter],
+                onChange: (next) => applyLoginFilter(parseLoginTypeFilter(next[0] ?? null)),
+                options: (Object.keys(LOGIN_TYPE_LABELS) as Exclude<LoginTypeFilter, 'all'>[]).map((key) => ({
+                  value: key,
+                  label: LOGIN_TYPE_LABELS[key],
+                })),
+              },
+            ]}
+            columnsButton
+            toolbarEnd={
+              <Tooltip content={t('tooltips.groupByRole')}>
+                <Button
+                  variant="ghost"
+                  aria-pressed={isGroupedByRole}
+                  onClick={toggleGroupByRole}
+                  leading={<Icon icon={Users} size={14} />}
+                  className={cn(isGroupedByRole && 'bg-accent-bg text-accent')}
+                >
+                  {t('users.groupByRole') || 'Group by Role'}
+                </Button>
+              </Tooltip>
+            }
+            groupBy={isGroupedByRole ? { key: roleNameOf } : undefined}
+            selectable
+            bulkActions={(rows) => (
+              <DeleteSelectionButton
+                onClick={() => {
+                  setBulkTargets(rows);
+                  setBulkConfirmPhrase('');
+                  setBulkProgress(null);
+                  setIsBulkDeleteOpen(true);
+                }}
+              />
+            )}
+            rowActions={userRowActions}
+            onRowClick={(user) => router.push(userHref(user))}
+            footer={
+              <span className="inline-flex items-center gap-1.5">
+                <Icon icon={ShieldCheck} size={12} />
+                {t('users.consultingWith')}
+                <code className="font-mono">{truncateKey(savedSecretKey)}</code>
+              </span>
+            }
+          />
         )}
       </motion.div>
 
@@ -1818,6 +1739,7 @@ export default function UsersPage() {
           if (bulkProgress?.running) return;
           setIsBulkDeleteOpen(open);
           if (!open) {
+            setBulkTargets(null);
             setBulkConfirmPhrase('');
             setBulkProgress(null);
           }
@@ -1827,10 +1749,14 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-danger">
               <AlertCircle className="w-5 h-5" />
-              {t('users.deleteAllTitle')}
+              {bulkTargets
+                ? t('common.deleteSelectedTitle', { count: bulkTargets.length, entity: t('users.title').toLowerCase() })
+                : t('users.deleteAllTitle')}
             </DialogTitle>
             <DialogDescription>
-              {t('users.deleteAllDescription')}
+              {bulkTargets
+                ? t('common.deleteSelectedDesc', { count: bulkTargets.length, entity: t('users.title').toLowerCase() })
+                : t('users.deleteAllDescription')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1839,14 +1765,14 @@ export default function UsersPage() {
               <div className="rounded-lg border border-danger-border/30 bg-danger-bg/5 p-3 text-sm">
                 <p className="text-muted">{t('users.deleteAllConfirmHint')}</p>
                 <p className="mt-1 font-mono font-semibold text-danger">
-                  {t('users.deleteAllConfirmPhrase')}
+                  {bulkPhrase}
                 </p>
               </div>
               <FormField
                 label={t('users.deleteAllPhrasePlaceholder')}
                 error={
                   bulkConfirmPhrase.length > 0 &&
-                    bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase')
+                    bulkConfirmPhrase !== bulkPhrase
                     ? t('users.deleteAllPhraseMismatch')
                     : undefined
                 }
@@ -1855,7 +1781,7 @@ export default function UsersPage() {
                   id="bulk-delete-phrase"
                   value={bulkConfirmPhrase}
                   onChange={(e) => setBulkConfirmPhrase(e.target.value)}
-                  placeholder={t('users.deleteAllConfirmPhrase')}
+                  placeholder={bulkPhrase}
                   className="font-mono"
                   autoComplete="off"
                 />
@@ -1865,6 +1791,7 @@ export default function UsersPage() {
                   variant="secondary"
                   onClick={() => {
                     setIsBulkDeleteOpen(false);
+                    setBulkTargets(null);
                     setBulkConfirmPhrase('');
                   }}
                 >
@@ -1873,13 +1800,13 @@ export default function UsersPage() {
                 <Button
                   variant="destructive"
                   disabled={
-                    bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase') ||
-                    users.length === 0
+                    bulkConfirmPhrase !== bulkPhrase ||
+                    (bulkTargets ?? users).length === 0
                   }
-                  onClick={handleBulkDeleteUsers}
+                  onClick={() => handleBulkDeleteUsers(bulkTargets ?? undefined)}
                   leading={<Icon icon={Trash2} size={14} />}
                 >
-                  {t('users.deleteAllConfirmButton', { count: users.length })}
+                  {t('users.deleteAllConfirmButton', { count: (bulkTargets ?? users).length })}
                 </Button>
               </DialogFooter>
             </div>
@@ -1951,6 +1878,7 @@ export default function UsersPage() {
                   variant="secondary"
                   onClick={() => {
                     setIsBulkDeleteOpen(false);
+                    setBulkTargets(null);
                     setBulkConfirmPhrase('');
                     setBulkProgress(null);
                   }}

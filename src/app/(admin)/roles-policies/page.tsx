@@ -8,7 +8,6 @@ import {
   Shield,
   ShieldCheck,
   Pencil,
-  Search,
   SearchX,
   ArrowDownAZ,
   ArrowUpAZ,
@@ -28,20 +27,18 @@ import {
   FormField,
   Heading,
   Icon,
-  Inline,
   Input,
   KeyValue,
   Spinner,
-  Tag,
   Text,
   Tooltip,
-  DataTable,
   type DataTableColumn,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
 import type { Role } from '@/lib/admin-types';
+import { AdminDataTable } from '@/components/admin-data-table';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
@@ -229,7 +226,7 @@ function RolesPageContent() {
         header: t('roles.appId'),
         cell: (role) => (
           <span
-            className="block max-w-[200px] truncate font-mono text-code text-muted"
+            className="block max-w-[200px] truncate font-mono text-code text-text-muted"
             title={role.app_id}
           >
             {role.app_id}
@@ -244,7 +241,7 @@ function RolesPageContent() {
         header: t('roles.created'),
         align: 'right',
         cell: (role) => (
-          <span className="tabular-nums text-caption text-muted">
+          <span className="tabular-nums text-caption text-text-muted">
             {role.created_at ? new Date(role.created_at).toLocaleDateString() : '\u2014'}
           </span>
         ),
@@ -314,45 +311,6 @@ function RolesPageContent() {
           )}
         </div>
 
-        {savedSecretKey && (
-          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-subtle/30 rounded-2xl border border-border/50">
-            <div className="flex-1 min-w-[300px]">
-              <Input
-                size="lg"
-                leading={<Icon icon={Search} size={16} />}
-                placeholder={t('roles.searchPlaceholder') || "Search by name, description or ID..."}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                wrapperClassName="border-none bg-bg shadow-none"
-              />
-            </div>
-
-            <Inline gap={2} className="ml-auto">
-              <Tooltip content={t('tooltips.sortBy')}>
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={toggleSort}
-                  className="bg-bg hover:bg-bg/80"
-                  leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={16} />}
-                >
-                  {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-                </Button>
-              </Tooltip>
-            </Inline>
-          </div>
-        )}
-
-        {/* §16 — applied filters are always visible as removable chips, never
-            hidden behind a closed panel. §09: Tag (user data), never Badge. */}
-        {savedSecretKey && searchQuery.trim() !== '' && (
-          <Inline gap={2} wrap className="-mt-2 mb-6">
-            <Tag onRemove={clearFilters} removeLabel={t('common.removeFilter')}>
-              {searchQuery}
-            </Tag>
-          </Inline>
-        )}
-
         {!savedSecretKey ? (
           <Card className="border-amber-500/20">
             <EmptyState
@@ -368,16 +326,32 @@ function RolesPageContent() {
           </Card>
         ) : (
           <div className="space-y-4">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <Icon icon={ShieldCheck} size={16} /> {t('roles.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-            </div>
-
-            <DataTable<Role>
+            {/* §14 — one frame: toolbar (search · Columnas · order toggle), the
+                table, and the footer with the count and the key in use. */}
+            <AdminDataTable<Role>
+              entity={t('sidebar.roles')}
               columns={roleColumns}
               data={sortedRoles}
               rowId={(role) => role.id}
               columnVisibility={{ defaultState: { id: false } }}
               globalFilter={searchQuery}
+              search={{
+                value: searchInput,
+                onChange: setSearchInput,
+                placeholder: t('roles.searchPlaceholder') || 'Search by name, description or ID...',
+              }}
+              columnsButton
+              toolbarEnd={
+                <Tooltip content={t('tooltips.sortBy')}>
+                  <Button
+                    variant="ghost"
+                    onClick={toggleSort}
+                    leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={14} />}
+                  >
+                    {sortBy === 'newest' ? t('users.sortByNewest') || 'Newest first' : t('users.sortByOldest') || 'Oldest first'}
+                  </Button>
+                </Tooltip>
+              }
               onRowClick={(role) => setSelectedRole(role)}
               loading={loading}
               loadingRowCount={5}
@@ -409,11 +383,13 @@ function RolesPageContent() {
                   </Button>
                 ),
               }}
-              labels={{
-                loading: t('common.loading'),
-                of: (shown, total) =>
-                  t('common.countOf', { shown, total, entity: t('sidebar.roles') }),
-              }}
+              footer={
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon icon={ShieldCheck} size={12} />
+                  {t('roles.consultingWith')}
+                  <code className="font-mono">{truncateKey(savedSecretKey ?? '')}</code>
+                </span>
+              }
             />
           </div>
         )}

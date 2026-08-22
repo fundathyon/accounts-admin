@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, SearchX, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
+import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, SearchX, MinusCircle, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   Badge,
@@ -24,16 +24,13 @@ import {
   Heading,
   Icon,
   IconButton,
-  Inline,
   Input,
   Select,
   Spinner,
   StatusBadge,
   Switch,
-  Tag,
   Text,
   Tooltip,
-  DataTable,
   type DataTableColumn,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
@@ -41,6 +38,7 @@ import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import { OAuthNativeAudiences } from '@/components/oauth-native-audiences';
+import { AdminDataTable, DeleteSelectionButton, DeleteSelectionDialog } from '@/components/admin-data-table';
 import type { OAuthConfig, OAuthRedirectItem, Role } from '@/lib/admin-types';
 
 type OAuthPlatform = OAuthRedirectItem['platform'];
@@ -214,6 +212,8 @@ function OAuthProvidersPageContent() {
   const [migrationPendingIds, setMigrationPendingIds] = useState<Set<string>>(new Set());
   const [migrationPending, setMigrationPending] = useState(false);
   const [migrationApplyLoading, setMigrationApplyLoading] = useState(false);
+  // Rows behind «Eliminar selección»; `null` keeps the confirmation closed.
+  const [bulkTargets, setBulkTargets] = useState<OAuthConfig[] | null>(null);
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -412,12 +412,6 @@ function OAuthProvidersPageContent() {
     });
   };
 
-  const clearSearchFilter = () => {
-    setSearchInput('');
-    setSearchQuery('');
-    writeUrl((params) => params.delete('q'));
-  };
-
   const providerColumns = useMemo<DataTableColumn<OAuthConfig>[]>(
     () => [
       {
@@ -452,7 +446,7 @@ function OAuthProvidersPageContent() {
         header: t('oauth.tableClientId'),
         accessor: (p) => p.client_id,
         cell: (p) => (
-          <span className="block max-w-[200px] truncate font-mono text-xs text-muted" title={p.client_id}>
+          <span className="block max-w-[200px] truncate font-mono text-xs text-text-muted" title={p.client_id}>
             {p.client_id}
           </span>
         ),
@@ -474,7 +468,7 @@ function OAuthProvidersPageContent() {
         id: 'callbackUri',
         header: t('oauth.tableCallbackUri'),
         cell: (p) => (
-          <span className="block max-w-[220px] truncate font-mono text-xs text-muted" title={p.callback_uri}>
+          <span className="block max-w-[220px] truncate font-mono text-xs text-text-muted" title={p.callback_uri}>
             {p.callback_uri}
           </span>
         ),
@@ -987,10 +981,6 @@ function OAuthProvidersPageContent() {
           </Card>
         ) : (
           <div className="space-y-4">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> {t('oauth.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-            </div>
-
             {migrationPending && (
               <div
                 role="status"
@@ -1017,95 +1007,58 @@ function OAuthProvidersPageContent() {
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
-              <div className="relative flex-1 min-w-[300px]">
-                <Input
-                  leading={<Search className="w-4 h-4 text-muted" />}
-                  placeholder={t('oauth.searchPlaceholder') || "Search by name, provider or ID..."}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  wrapperClassName="h-10 border-none bg-bg shadow-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Tooltip content={t('tooltips.oauth')}>
-                  <span className="relative inline-flex items-center">
-                    <Filter className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted" />
-                    <Select
-                      value={providerFilter}
-                      onValueChange={(v) => applyProviderFilter(v ?? 'all')}
-                      placeholder={t('oauth.provider') || "Provider"}
-                      className="w-[140px] h-10 pl-8 border-none bg-bg shadow-none"
-                      items={[
-                        { value: 'all', label: t('common.all') || "All" },
-                        ...ALLOWED_PROVIDERS.map((p) => ({ value: p.value, label: p.label })),
-                      ]}
-                    />
-                  </span>
-                </Tooltip>
-
-                <Tooltip content={t('tooltips.state')}>
-                  <span className="relative inline-flex items-center">
-                    <ShieldCheck className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted" />
-                    <Select
-                      value={statusFilter}
-                      onValueChange={(v) => applyStatusFilter((v ?? 'all') as OAuthStatusFilter)}
-                      placeholder={t('users.state') || "State"}
-                      className="w-[140px] h-10 pl-8 border-none bg-bg shadow-none"
-                      items={[
-                        { value: 'all', label: t('common.all') || "Both" },
-                        { value: 'enabled', label: t('oauth.enabled') || "Enabled" },
-                        { value: 'disabled', label: t('oauth.disabled') || "Disabled" },
-                      ]}
-                    />
-                  </span>
-                </Tooltip>
-              </div>
-            </div>
-
-            {/* §16 — applied filters are always visible as removable chips,
-                never hidden behind a closed panel. §09: Tag (user data), never
-                Badge. "Clear all" appears once more than one filter is on. */}
-            {filtersActive && (
-              <Inline gap={2} wrap>
-                {searchQuery.trim() !== '' && (
-                  <Tag onRemove={clearSearchFilter} removeLabel={t('common.removeFilter')}>
-                    {searchQuery}
-                  </Tag>
-                )}
-                {providerFilter !== 'all' && (
-                  <Tag onRemove={() => applyProviderFilter('all')} removeLabel={t('common.removeFilter')}>
-                    {ALLOWED_PROVIDERS.find((p) => p.value === providerFilter)?.label ?? providerFilter}
-                  </Tag>
-                )}
-                {statusFilter !== 'all' && (
-                  <Tag onRemove={() => applyStatusFilter('all')} removeLabel={t('common.removeFilter')}>
-                    {statusFilter === 'enabled' ? t('oauth.enabled') : t('oauth.disabled')}
-                  </Tag>
-                )}
-                {activeFilterCount > 1 && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    {t('common.clearFilters')}
-                  </Button>
-                )}
-              </Inline>
-            )}
-
-            <DataTable<OAuthConfig>
+            {/* §14 — one frame: toolbar (search · Proveedor · Estado · Columnas,
+                and the selection summary with «Eliminar selección» on the
+                right), the table, and the footer with the count and the key. */}
+            <AdminDataTable<OAuthConfig>
+              entity={t('sidebar.oauthProviders')}
               columns={providerColumns}
               data={visibleProviders}
               rowId={(p) => p.id}
               columnVisibility={{ defaultState: { id: false } }}
               globalFilter={searchQuery}
+              search={{
+                value: searchInput,
+                onChange: setSearchInput,
+                placeholder: t('oauth.searchPlaceholder') || 'Search by name, provider or ID...',
+              }}
+              filters={[
+                {
+                  id: 'provider',
+                  label: t('oauth.provider') || 'Provider',
+                  multiple: false,
+                  value: providerFilter === 'all' ? [] : [providerFilter],
+                  onChange: (next) => applyProviderFilter(next[0] ?? 'all'),
+                  options: ALLOWED_PROVIDERS.map((p) => ({
+                    value: p.value,
+                    label: p.label,
+                    count: providers.filter((provider) => provider.provider === p.value).length,
+                  })),
+                },
+                {
+                  id: 'status',
+                  label: t('oauth.tableState'),
+                  multiple: false,
+                  value: statusFilter === 'all' ? [] : [statusFilter],
+                  onChange: (next) =>
+                    applyStatusFilter(next[0] === 'enabled' || next[0] === 'disabled' ? next[0] : 'all'),
+                  options: [
+                    { value: 'enabled', label: t('oauth.enabled') || 'Enabled', count: providers.filter((p) => p.enabled).length },
+                    { value: 'disabled', label: t('oauth.disabled') || 'Disabled', count: providers.filter((p) => !p.enabled).length },
+                  ],
+                },
+              ]}
+              columnsButton
+              selectable
+              bulkActions={(rows) => <DeleteSelectionButton onClick={() => setBulkTargets(rows)} />}
               onRowClick={(p) => setSelectedProvider(p)}
               getRowProps={(p) => (p.enabled ? undefined : { terminal: true })}
               loading={loading}
               loadingRowCount={5}
               error={loadError ? { title: t('oauth.errorLoad'), retry: { label: t('common.retry'), onClick: () => { void fetchProviders(); } } } : undefined}
               emptyState={
-                // The two selects filter `data` before DataTable sees it, so a
-                // select-only wipeout lands here, not on `noResultsState` —
+                // The two facets filter `data` before the table sees it, so a
+                // facet-only wipeout lands here, not on `noResultsState` —
                 // §16 still demands the "clear filters" exit.
                 filtersActive
                   ? {
@@ -1141,15 +1094,46 @@ function OAuthProvidersPageContent() {
                   </Button>
                 ),
               }}
-              labels={{
-                loading: t('common.loading'),
-                of: (shown, total) =>
-                  t('common.countOf', { shown, total, entity: t('sidebar.oauthProviders') }),
-              }}
+              footer={
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon icon={ShieldCheck} size={12} />
+                  {t('oauth.consultingWith')}
+                  <code className="font-mono">{truncateKey(savedSecretKey ?? '')}</code>
+                </span>
+              }
             />
           </div>
         )}
       </motion.div>
+
+      {/* §17 — the confirmation behind «Eliminar selección»: names the count,
+          the button says the verb, and every deletion resolves before it closes. */}
+      <DeleteSelectionDialog<OAuthConfig>
+        targets={bulkTargets}
+        onClose={() => setBulkTargets(null)}
+        entity={t('sidebar.oauthProviders')}
+        deleteOne={async (provider) => {
+          const res = await fetch(apiUrl(`/api/oauth-configs/${encodeURIComponent(provider.id)}`), {
+            method: 'DELETE',
+            headers: { 'X-Secret-API-Key': savedSecretKey ?? '' },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!(data.success || res.ok)) {
+            throw new Error(data.error?.message || data.error?.Message || `HTTP ${res.status}`);
+          }
+        }}
+        onFinished={async ({ done, failed }) => {
+          if (failed.length === 0) {
+            showNotification(t('common.deleteSelectedDone', { count: done, entity: t('sidebar.oauthProviders') }), 'success');
+          } else {
+            showNotification(
+              t('common.deleteSelectedPartial', { done, total: done + failed.length, failed: failed.length }),
+              'error'
+            );
+          }
+          await fetchProviders();
+        }}
+      />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
