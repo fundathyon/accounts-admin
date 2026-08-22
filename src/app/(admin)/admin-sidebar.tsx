@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -12,18 +12,11 @@ import {
   Puzzle,
   Key,
   LogIn,
-  LogOut,
-  Loader2,
   ChevronsUpDown,
   Mail,
-  BookOpen,
-  Languages,
-  Sun,
-  Moon,
   Ticket,
   Palette,
   Image as ImageIcon,
-  Bell,
   ScrollText,
   ListFilter,
 } from 'lucide-react';
@@ -41,8 +34,6 @@ import {
   DropdownMenuGroupLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSubmenu,
-  DropdownMenuSubmenuTrigger,
   DropdownMenuTrigger,
   FormField,
   Input,
@@ -57,9 +48,7 @@ import {
 import { cn, BASE_PATH } from '@/lib/utils';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
-import { SUPPORTED_LOCALES } from '@/lib/i18n/types';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useTheme } from 'next-themes';
 
 const ADMIN_VERSION = '0.2.0';
 
@@ -89,34 +78,17 @@ interface AppInfo {
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { savedSecretKey, apiUrl, pendingOAuthLegacyMigration } = useAdmin();
-  const { t, locale, setLocale } = useI18n();
-  const { theme, setTheme } = useTheme();
+  const { savedSecretKey, apiUrl } = useAdmin();
+  const { t } = useI18n();
   const { collapsed, setCollapsed } = useSidebar();
   const isMobile = useIsMobile();
-  const [logoutLoading, setLogoutLoading] = useState(false);
   const [app, setApp] = useState<AppInfo | null>(null);
-  const [adminUser, setAdminUser] = useState<string | null>(null);
 
   // Entering mobile closes the panel, and so does navigating to another page;
   // the stored desktop preference is left alone.
   useEffect(() => {
     if (isMobile) setCollapsed(true);
   }, [isMobile, pathname, setCollapsed]);
-
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const res = await fetch(apiUrl('/api/admin/session'), { credentials: 'include' });
-        const data = await res.json();
-        if (data.ok && data.user) setAdminUser(data.user);
-      } catch {
-        /* ignore */
-      }
-    };
-    fetchSession();
-  }, [apiUrl]);
 
   useEffect(() => {
     const fetchApps = async () => {
@@ -134,21 +106,6 @@ export function AdminSidebar() {
     };
     fetchApps();
   }, [apiUrl]);
-
-  const handleLogout = async () => {
-    if (logoutLoading) return;
-    setLogoutLoading(true);
-    try {
-      await fetch(apiUrl('/api/admin/logout'), { method: 'POST', credentials: 'include' });
-    } catch {
-      /* continue */
-    } finally {
-      const loginPath = `${BASE_PATH}/login`.replace(/\/+/g, '/') || '/login';
-      router.push(loginPath);
-      router.refresh();
-      setLogoutLoading(false);
-    }
-  };
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateForm, setUpdateForm] = useState({ name: '', image: '' });
@@ -380,132 +337,6 @@ export function AdminSidebar() {
             render={(props) => <Link href={buildHref('/release-notes')} {...props} />}
           />
         </SidebarSection>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={cn(
-              'mx-2 flex h-12 min-w-0 items-center gap-2 rounded-md px-2 text-left',
-              'transition-colors duration-150 hover:bg-surface-hover data-[popup-open]:bg-surface-hover',
-              collapsed && 'mx-0 justify-center px-0'
-            )}
-          >
-            <Tooltip
-              content={t('sidebar.pendingOAuthMigrationAlert')}
-              side="right"
-              disabled={!pendingOAuthLegacyMigration}
-            >
-              <div
-                className={cn(
-                  'relative flex shrink-0 aspect-square size-8 items-center justify-center rounded-full bg-accent-solid text-accent-on-solid font-semibold text-xs',
-                  pendingOAuthLegacyMigration && 'cursor-help'
-                )}
-              >
-                {(adminUser || 'A').charAt(0).toUpperCase()}
-                {pendingOAuthLegacyMigration && (
-                  <span
-                    className="pointer-events-none absolute right-0 top-0 size-2.5 translate-x-px -translate-y-px rounded-full bg-orange-500 ring-2 ring-[var(--fdn-bg)]"
-                    aria-hidden
-                  />
-                )}
-              </div>
-            </Tooltip>
-            <div
-              className={cn(
-                'grid min-w-0 flex-1 text-left text-sm leading-tight truncate',
-                collapsed && 'hidden'
-              )}
-            >
-              <span className="truncate font-medium">{adminUser ?? t('sidebar.adminUser')}</span>
-              <span className="truncate text-xs text-text-muted">
-                {adminUser ? `${adminUser}@admin` : ''}
-              </span>
-            </div>
-            <ChevronsUpDown className={cn('ml-auto size-4 shrink-0', collapsed && 'hidden')} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[var(--anchor-width)] min-w-56"
-            align="start"
-            side={isMobile ? 'top' : 'right'}
-            sideOffset={4}
-          >
-            <div className="flex flex-col gap-1 px-2 py-1.5">
-              <p className="text-sm font-medium text-text">{adminUser ?? t('sidebar.adminUser')}</p>
-              <p className="text-xs text-text-muted">
-                {adminUser ? `${adminUser}@admin` : ''}
-              </p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem icon={Settings} render={<Link href={buildHref('/settings')} />}>
-              {t('sidebar.settings')}
-            </DropdownMenuItem>
-            <DropdownMenuItem icon={Bell} render={<Link href={buildHref('/notifications')} />}>
-              <span className="flex items-center gap-2">
-                <span className="flex-1 truncate">{t('sidebar.notifications')}</span>
-                {pendingOAuthLegacyMigration ? (
-                  <span
-                    className="size-2 shrink-0 rounded-full bg-orange-500"
-                    aria-hidden
-                  />
-                ) : null}
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuSubmenu>
-              <DropdownMenuSubmenuTrigger icon={Languages}>
-                {t('common.language')}
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuContent>
-                {SUPPORTED_LOCALES.map(({ code, label }) => (
-                  <DropdownMenuItem
-                    key={code}
-                    onClick={() => setLocale(code)}
-                    className={locale === code ? 'bg-accent-bg' : ''}
-                  >
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenuSubmenu>
-            <DropdownMenuSubmenu>
-              <DropdownMenuSubmenuTrigger icon={(theme ?? 'dark') === 'dark' ? Moon : Sun}>
-                {t('sidebar.theme')}
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  icon={Sun}
-                  onClick={() => setTheme('light')}
-                  className={(theme ?? 'dark') === 'light' ? 'bg-accent-bg' : ''}
-                >
-                  {t('sidebar.themeLight')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  icon={Moon}
-                  onClick={() => setTheme('dark')}
-                  className={(theme ?? 'dark') === 'dark' ? 'bg-accent-bg' : ''}
-                >
-                  {t('sidebar.themeDark')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenuSubmenu>
-            <DropdownMenuItem
-              icon={BookOpen}
-              render={<a href="https://accounts.authify.dev/" target="_blank" rel="noopener noreferrer" />}
-            >
-              {t('sidebar.docs')}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              icon={logoutLoading ? Loader2 : LogOut}
-              onClick={handleLogout}
-              disabled={logoutLoading}
-              className={cn(
-                'text-text-muted data-[highlighted]:bg-danger-bg data-[highlighted]:text-danger',
-                logoutLoading && '[&_svg]:animate-spin'
-              )}
-            >
-              {logoutLoading ? t('sidebar.loggingOut') : t('sidebar.logout')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         <div className={cn('px-2 py-3 border-t border-border', collapsed && 'hidden')}>
           <p className="text-[10px] text-text-muted truncate" title={`v${ADMIN_VERSION} · ${t('sidebar.poweredBy')}`}>

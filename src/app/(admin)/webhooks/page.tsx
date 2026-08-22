@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Webhook,
@@ -91,6 +92,12 @@ export default function WebhooksPage() {
   const [eventsByCategory, setEventsByCategory] = useState<EventsByCategory>({});
   const [loading, setLoading] = useState(true);
   const [isWebhookModalOpen, setIsWebhookModalOpen] = useState(false);
+
+  // Deep link from the command palette's "Acciones" group.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setIsWebhookModalOpen(true);
+  }, [searchParams]);
   const initialWebhookForm = {
     name: '',
     description: '',

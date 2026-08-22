@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Key,
@@ -55,6 +56,12 @@ export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+
+  // Deep link from the command palette's "Acciones" group.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setIsRoleModalOpen(true);
+  }, [searchParams]);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '' });

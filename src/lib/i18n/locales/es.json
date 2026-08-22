@@ -134,6 +134,13 @@
     "edit": "Editar",
     "all": "Todo"
   },
+  "commandPalette": {
+    "placeholder": "Buscar o ir a…",
+    "goTo": "Ir a",
+    "actions": "Acciones",
+    "search": "Buscar",
+    "shortcut": "⌘K"
+  },
   "dashboard": {
     "title": "Dashboard",
     "badge": "API Accounts · Community",
