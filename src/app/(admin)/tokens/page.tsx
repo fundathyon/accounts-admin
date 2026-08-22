@@ -229,7 +229,7 @@ const JwtTextarea = forwardRef<
         onChange={(e) => onChange(e.target.value)}
         onScroll={syncScroll}
         className={cn(
-          'relative z-10 w-full flex-1 min-h-[200px] rounded-md border border-transparent bg-transparent px-3 py-2 text-xs font-mono resize-none caret-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring',
+          'relative z-10 w-full flex-1 min-h-[200px] rounded-md border border-transparent bg-transparent px-3 py-2 text-xs font-mono resize-none caret-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[var(--fdn-focus)]',
           className
         )}
         spellCheck={false}
@@ -385,7 +385,7 @@ function TokenSection({
           className={cn(
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             active === 'json'
-              ? 'text-foreground border-primary'
+              ? 'text-foreground border-accent-border'
               : 'text-muted-foreground border-transparent hover:text-foreground'
           )}
         >
@@ -397,7 +397,7 @@ function TokenSection({
           className={cn(
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             active === 'table'
-              ? 'text-foreground border-primary'
+              ? 'text-foreground border-accent-border'
               : 'text-muted-foreground border-transparent hover:text-foreground'
           )}
         >
@@ -734,7 +734,7 @@ export default function TokensPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <Heading level={1} className="flex items-center gap-2">
-            <Key className="w-8 h-8 text-primary" />
+            <Key className="w-8 h-8 text-accent" />
             {t('tokens.title')}
           </Heading>
           <Text tone="secondary" as="p" className="mt-1">{t('tokens.subtitle')}</Text>

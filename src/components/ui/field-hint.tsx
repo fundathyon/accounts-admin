@@ -34,7 +34,7 @@ export function FieldHint({ text, href, linkLabel, className, side = 'top' }: Fi
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1.5 inline-block underline text-primary hover:text-primary/80"
+            className="mt-1.5 inline-block underline text-accent hover:text-accent"
           >
             {linkLabel || 'Learn more →'}
           </a>

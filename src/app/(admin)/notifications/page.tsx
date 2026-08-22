@@ -150,7 +150,7 @@ export default function NotificationsPage() {
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Heading level={1} visual="h2" className="flex items-center gap-2">
-            <Bell className="size-7 text-primary shrink-0" />
+            <Bell className="size-7 text-accent shrink-0" />
             {t('notifications.title')}
           </Heading>
           <Text tone="secondary" className="mt-1">

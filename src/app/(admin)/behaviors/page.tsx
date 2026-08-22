@@ -114,7 +114,7 @@ export default function BehaviorsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {behaviors.map((behavior) => (
                   <Link key={behavior.id} href={behaviorsHref(behavior.id)}>
-                    <Card className="gap-6 p-6 cursor-pointer hover:border-primary/30 transition-all group">
+                    <Card className="gap-6 p-6 cursor-pointer hover:border-accent-border transition-all group">
                       <div className="flex justify-between items-start mb-4">
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
                           <Puzzle className="w-5 h-5" />

@@ -185,7 +185,7 @@ export function EmailAuthConfigForm({
                         className={cn(
                             "flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap",
                             activeTab === tab.id
-                                ? "border-primary text-primary"
+                                ? "border-accent-border text-accent"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                         )}
                     >

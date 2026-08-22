@@ -54,11 +54,11 @@ export default function ReleaseNotesPage() {
   return (
     <Stack gap={8} className="mx-auto max-w-3xl p-6">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-        <Inline gap={2} className="text-primary">
+        <Inline gap={2} className="text-accent">
           <ScrollText className="size-8" aria-hidden />
-          {/* text-primary repeated on the Heading: `Heading` paints `text-text`,
+          {/* text-accent repeated on the Heading: `Heading` paints `text-text`,
               which would otherwise override the colour inherited from the row. */}
-          <Heading level={1} visual="h2" className="text-primary">
+          <Heading level={1} visual="h2" className="text-accent">
             {t('releaseNotes.title')}
           </Heading>
         </Inline>

@@ -361,10 +361,10 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.18 }}
             onSubmit={handleAdd}
-            className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3 overflow-hidden"
+            className="rounded-lg border border-accent-border bg-accent-bg p-3 space-y-3 overflow-hidden"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-primary">
+              <p className="text-xs font-medium text-accent">
                 {t('oauth.audiences.addTitle')}
               </p>
               <Button

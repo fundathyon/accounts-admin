@@ -84,7 +84,7 @@ export default function DashboardPage() {
               {/* `primary` (the app's cyan) is kept deliberately: community-ui's
                   `.text-accent` is shadowed by the app's shadcn `--accent`
                   (a neutral grey) because globals.css loads last. */}
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center text-accent mb-4">
                 <card.icon className="w-6 h-6" />
               </div>
               <Text as="div" variant="label" tone="muted">

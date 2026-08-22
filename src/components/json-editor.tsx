@@ -34,7 +34,7 @@ export function JsonEditor({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-input [&_.cm-editor]:outline-none [&_.cm-editor]:ring-0 [&_.cm-focused]:ring-2 [&_.cm-focused]:ring-ring [&_.cm-scroller]:overflow-auto ${className}`}
+      className={`overflow-hidden rounded-xl border border-input [&_.cm-editor]:outline-none [&_.cm-editor]:ring-0 [&_.cm-focused]:ring-2 [&_.cm-focused]:ring-[var(--fdn-focus)] [&_.cm-scroller]:overflow-auto ${className}`}
       style={{ minHeight, maxHeight }}
     >
       <CodeMirror

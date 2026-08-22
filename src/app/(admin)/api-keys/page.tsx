@@ -412,8 +412,8 @@ export default function ApiKeysPage() {
             {apps.length > 0 && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Icon icon={Key} size={20} className="text-primary" />
+                  <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center shrink-0">
+                    <Icon icon={Key} size={20} className="text-accent" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <Heading level={3} className="mb-2">{t('apiKeys.generateNew')}</Heading>
@@ -440,7 +440,7 @@ export default function ApiKeysPage() {
         <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Icon icon={Key} size={20} className="text-primary" />
+              <Icon icon={Key} size={20} className="text-accent" />
               {generatedKeys ? t('apiKeys.keysGenerated') : t('apiKeys.generateModalTitle')}
             </DialogTitle>
             <DialogDescription>
@@ -545,7 +545,7 @@ export default function ApiKeysPage() {
         <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Icon icon={Key} size={20} className="text-primary" />
+              <Icon icon={Key} size={20} className="text-accent" />
               {t('apiKeys.detailsTitle')}
               {selectedApiKey && (
                 <span className="text-text-secondary font-normal">({selectedApiKey.name})</span>

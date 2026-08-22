@@ -204,7 +204,7 @@ export function AdminSidebar() {
               <div
                 className={cn(
                   'flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg font-bold text-sm overflow-hidden',
-                  !app?.image && 'bg-sidebar-primary text-sidebar-primary-foreground'
+                  !app?.image && 'bg-accent-solid text-accent-on-solid'
                 )}
               >
                 {app?.image ? (
@@ -217,7 +217,7 @@ export function AdminSidebar() {
                 {/* Brand colours stay on the app's own `sidebar-primary`/`primary`
                     tokens: community-ui's `.text-accent` / `.bg-accent` are shadowed
                     by shadcn's neutral `--accent` because globals.css loads last. */}
-                <span className="truncate font-semibold text-sidebar-primary">
+                <span className="truncate font-semibold text-accent">
                   {app?.name ?? 'Accounts Admin'}
                 </span>
                 <span className="truncate text-[10px] text-text-muted uppercase tracking-wider font-bold">
@@ -243,7 +243,7 @@ export function AdminSidebar() {
                     disabled={!savedSecretKey}
                   >
                     <span className="flex items-center gap-2">
-                      <Palette className="size-4 shrink-0 text-primary" />
+                      <Palette className="size-4 shrink-0 text-accent" />
                       <span className="font-medium">{t('sidebar.editApp')}</span>
                     </span>
                   </DropdownMenuItem>
@@ -263,7 +263,7 @@ export function AdminSidebar() {
           <form onSubmit={handleUpdateApp} className="flex min-w-0 flex-col gap-3">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Palette className="w-5 h-5 text-primary" />
+                <Palette className="w-5 h-5 text-accent" />
                 {t('sidebar.editApp')}
               </DialogTitle>
               <DialogDescription>
@@ -396,7 +396,7 @@ export function AdminSidebar() {
             >
               <div
                 className={cn(
-                  'relative flex shrink-0 aspect-square size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs',
+                  'relative flex shrink-0 aspect-square size-8 items-center justify-center rounded-full bg-accent-solid text-accent-on-solid font-semibold text-xs',
                   pendingOAuthLegacyMigration && 'cursor-help'
                 )}
               >

@@ -145,7 +145,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           <Card className="p-8">
             <Inline gap={3} className="mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+              <div className="w-10 h-10 rounded-2xl bg-accent-bg flex items-center justify-center text-accent">
                 <Icon icon={Key} size={20} />
               </div>
               <div>

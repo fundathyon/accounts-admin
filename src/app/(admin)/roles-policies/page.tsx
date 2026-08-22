@@ -260,7 +260,7 @@ export default function RolesPage() {
         <DialogContent size="md" className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Icon icon={Shield} size={20} className="text-primary" />
+              <Icon icon={Shield} size={20} className="text-accent" />
               {isEditing ? t('roles.editRole') : t('roles.newRole')}
             </DialogTitle>
             <DialogDescription>{isEditing ? t('roles.editRoleDescription') : t('roles.roleDescription')}</DialogDescription>
@@ -299,7 +299,7 @@ export default function RolesPage() {
         <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Icon icon={Shield} size={20} className="text-primary" />
+              <Icon icon={Shield} size={20} className="text-accent" />
               {t('roles.roleDetails')}
               {selectedRole && (
                 <span className="text-text-secondary font-normal">({selectedRole.name})</span>

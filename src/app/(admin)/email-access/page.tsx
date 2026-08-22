@@ -492,7 +492,7 @@ export default function EmailAccessPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <Heading level={1} className="flex items-center gap-3">
-              <Icon icon={ListFilter} size={20} className="text-primary" />
+              <Icon icon={ListFilter} size={20} className="text-accent" />
               {t('sidebar.emailAccess')}
             </Heading>
             <Text tone="secondary" className="mt-1">{t('emailAccess.desc')}</Text>

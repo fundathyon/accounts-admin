@@ -815,7 +815,7 @@ export default function UsersPage() {
                   leading={<Icon icon={Users} size={14} />}
                   className={cn(
                     "h-9",
-                    isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
+                    isGroupedByRole ? "text-accent bg-accent-bg" : "text-muted-foreground"
                   )}
                 >
                   {t('users.groupByRole') || "Group by Role"}
@@ -886,7 +886,7 @@ export default function UsersPage() {
                             >
                               <TableCell className="px-6 py-3">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
+                                  <div className="w-8 h-8 rounded-full bg-accent-bg flex items-center justify-center text-accent font-semibold text-xs shrink-0">
                                     {(displayName || 'U').charAt(0).toUpperCase()}
                                   </div>
                                   <div className="min-w-0">
@@ -1028,7 +1028,7 @@ export default function UsersPage() {
         <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
+              <Users className="w-5 h-5 text-accent" />
               {signupResult
                 ? 'Usuario registrado'
                 : resendCodeMode
@@ -1336,7 +1336,7 @@ export default function UsersPage() {
         <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-primary" />
+              <Lock className="w-5 h-5 text-accent" />
               {signinResult ? 'Sesión iniciada' : 'Iniciar sesión'}
             </DialogTitle>
             <DialogDescription>
@@ -1461,7 +1461,7 @@ export default function UsersPage() {
         <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-primary" />
+              <KeyRound className="w-5 h-5 text-accent" />
               {t('users.publicKeyJwt')}
             </DialogTitle>
             <DialogDescription>
@@ -1511,7 +1511,7 @@ export default function UsersPage() {
         <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShieldOff className="w-5 h-5 text-primary" />
+              <ShieldOff className="w-5 h-5 text-accent" />
               Revocar refresh token
             </DialogTitle>
             <DialogDescription>

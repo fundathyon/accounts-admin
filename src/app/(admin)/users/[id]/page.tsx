@@ -160,7 +160,7 @@ export default function UserDetailPage() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-accent-border border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -195,7 +195,7 @@ export default function UserDetailPage() {
         <Card className="overflow-hidden">
           <CardBody className="p-6">
             <Inline gap={6} align="start">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
+              <div className="w-16 h-16 rounded-full bg-accent-bg flex items-center justify-center text-accent font-bold text-2xl shrink-0">
                 {(user.name || user.user_name || 'U').charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">

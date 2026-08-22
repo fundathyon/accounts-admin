@@ -167,7 +167,7 @@ export default function BehaviorDetailPage() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center">
-        <Spinner size={20} label={t('common.loading')} className="text-primary" />
+        <Spinner size={20} label={t('common.loading')} className="text-accent" />
       </div>
     );
   }
@@ -273,7 +273,7 @@ export default function BehaviorDetailPage() {
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-primary" />
+              <Settings className="w-5 h-5 text-accent" />
               {t('behaviors.editBehavior')}
             </DialogTitle>
             <DialogDescription>

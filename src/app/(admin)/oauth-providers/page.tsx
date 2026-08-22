@@ -957,7 +957,7 @@ export default function OAuthProvidersPage() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LogIn className="w-5 h-5 text-primary" />
+              <LogIn className="w-5 h-5 text-accent" />
               {editingProvider ? t('oauth.editProviderTitle') : t('oauth.newProviderTitle')}
             </DialogTitle>
             <DialogDescription>
@@ -982,8 +982,8 @@ export default function OAuthProvidersPage() {
                     title={prov.label}
                     disabled={!!editingProvider}
                     onClick={() => !editingProvider && setFormData((p) => ({ ...p, provider: prov.value }))}
-                    className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-primary/50 disabled:opacity-70 disabled:cursor-not-allowed ${formData.provider === prov.value
-                      ? 'border-primary bg-primary/40'
+                    className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all hover:border-accent-border disabled:opacity-70 disabled:cursor-not-allowed ${formData.provider === prov.value
+                      ? 'border-accent-border bg-accent-bg'
                       : 'border-input bg-muted/30'
                       }`}
                   >
@@ -1077,7 +1077,7 @@ export default function OAuthProvidersPage() {
                   icon={Copy}
                   label={t('oauth.copyUri')}
                   variant="secondary"
-                  className={`shrink-0 transition-colors ${copyJustClicked ? 'bg-primary/20' : ''}`}
+                  className={`shrink-0 transition-colors ${copyJustClicked ? 'bg-accent-bg' : ''}`}
                   onClick={() => {
                     if (formData.callback_uri) {
                       navigator.clipboard.writeText(formData.callback_uri);
@@ -1238,7 +1238,7 @@ export default function OAuthProvidersPage() {
         <DialogContent className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LogIn className="w-5 h-5 text-primary" />
+              <LogIn className="w-5 h-5 text-accent" />
               {t('oauth.providerDetails')}
               {selectedProvider && (
                 <span className="capitalize text-muted-foreground font-normal">
@@ -1546,7 +1546,7 @@ export default function OAuthProvidersPage() {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-primary" />
+              <Link2 className="w-5 h-5 text-accent" />
               {t('oauth.getLink')}
               {linkDialogProvider && (
                 <span className="capitalize text-muted-foreground font-normal">

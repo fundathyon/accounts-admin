@@ -511,8 +511,8 @@ export default function WebhooksPage() {
             {webhooks.length === 0 ? (
               <Card className="border-dashed">
                 <CardBody className="p-16 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <Webhook className="w-8 h-8 text-primary" />
+                  <div className="w-16 h-16 rounded-2xl bg-accent-bg flex items-center justify-center mx-auto mb-4">
+                    <Webhook className="w-8 h-8 text-accent" />
                   </div>
                   <Heading level={2} visual="h4" className="mb-2">{t('webhooks.noWebhooks')}</Heading>
                   <Text tone="secondary" as="p" className="mb-6">{t('webhooks.createFirst')}</Text>
@@ -659,7 +659,7 @@ export default function WebhooksPage() {
           <DialogHeader>
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="w-10 h-10 rounded-2xl bg-accent-bg flex items-center justify-center text-accent">
                   <Webhook className="w-5 h-5" />
                 </div>
                 <DialogTitle>{editingWebhook ? t('webhooks.editWebhookTitle') : t('webhooks.newWebhook')}</DialogTitle>
@@ -768,7 +768,7 @@ export default function WebhooksPage() {
                       <Text variant="label" className="flex items-center gap-2">
                         <Icon icon={Zap} size={14} /> {t('webhooks.eventsToSubscribe')}
                       </Text>
-                      <span className="text-xs text-primary font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
+                      <span className="text-xs text-accent font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
                     </Inline>
 
                     {/* Eventos más comunes - siempre visible arriba */}
@@ -785,10 +785,10 @@ export default function WebhooksPage() {
                             <div
                               className={cn(
                                 'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                                selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                                selectedEvents.has(ev.code) ? 'bg-accent-solid border-accent-border' : 'border-border group-hover:border-accent-border'
                               )}
                             >
-                              {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                              {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-accent-on-solid" />}
                             </div>
                             <input
                               type="checkbox"
@@ -830,7 +830,7 @@ export default function WebhooksPage() {
                                   type="button"
                                   variant="ghost"
                                   size="xs"
-                                  className="text-xs text-muted-foreground hover:text-primary h-auto py-0 px-2"
+                                  className="text-xs text-muted-foreground hover:text-accent h-auto py-0 px-2"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     selectAllInCategory(category, filteredEvents);
@@ -863,10 +863,10 @@ export default function WebhooksPage() {
                                         <div
                                           className={cn(
                                             'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                                            selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                                            selectedEvents.has(ev.code) ? 'bg-accent-solid border-accent-border' : 'border-border group-hover:border-accent-border'
                                           )}
                                         >
-                                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-accent-on-solid" />}
                                         </div>
                                         <input
                                           type="checkbox"
