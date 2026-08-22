@@ -172,11 +172,11 @@ export default function NotificationsPage() {
       )}
 
       <section className="space-y-3">
-        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted">
+        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted-foreground">
           {t('notifications.pendingSection')}
         </Heading>
         {loading ? (
-          <Inline gap={2} className="text-muted">
+          <Inline gap={2} className="text-muted-foreground">
             <Spinner size={16} label={null} />
             <Text tone="muted">{t('common.loading')}</Text>
           </Inline>
@@ -204,9 +204,9 @@ export default function NotificationsPage() {
                     <li key={item.oauth_config_id} className="flex flex-wrap gap-x-2 gap-y-0.5">
                       <span className="font-medium capitalize">{item.provider}</span>
                       {item.name ? (
-                        <span className="text-muted">({item.name})</span>
+                        <span className="text-muted-foreground">({item.name})</span>
                       ) : null}
-                      <span className="text-muted font-mono text-xs">· {item.oauth_config_id}</span>
+                      <span className="text-muted-foreground font-mono text-xs">· {item.oauth_config_id}</span>
                     </li>
                   ))}
                 </ul>
@@ -249,7 +249,7 @@ export default function NotificationsPage() {
       </section>
 
       <section className="space-y-3">
-        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted">
+        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted-foreground">
           {t('notifications.recentSection')}
         </Heading>
         <Card className={cn('border-dashed', 'opacity-80')}>

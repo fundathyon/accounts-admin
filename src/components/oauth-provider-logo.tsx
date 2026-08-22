@@ -94,7 +94,7 @@ export function OAuthProviderLogo({ provider, className, size = 24 }: OAuthProvi
 
   if (!logo) {
     return (
-      <span className={cn('font-semibold capitalize text-muted', className)}>
+      <span className={cn('font-semibold capitalize text-muted-foreground', className)}>
         {provider || '—'}
       </span>
     );

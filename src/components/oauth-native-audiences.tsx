@@ -256,7 +256,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                     className={`text-[10px] px-2 py-0.5 rounded-full border ${
                       active
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                        : 'border-border/60 bg-subtle/30 text-muted'
+                        : 'border-border/60 bg-subtle/30 text-muted-foreground'
                     }`}
                   >
                     {pl.label} · {count}
@@ -286,7 +286,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
 
       {loading ? (
         <div className="py-6 flex justify-center">
-          <Spinner size={20} label={t('common.loading')} className="text-muted" />
+          <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
         </div>
       ) : sortedAudiences.length > 0 ? (
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -307,13 +307,13 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                       {a.platform}
                     </Badge>
                     {a.label?.trim() && (
-                      <span className="text-xs text-muted truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {a.label}
                       </span>
                     )}
                   </div>
                   {a.created_at && (
-                    <span className="text-[10px] font-mono text-muted/70 shrink-0">
+                    <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
                       {new Date(a.created_at).toLocaleDateString()}
                     </span>
                   )}
@@ -333,7 +333,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                     icon={Trash2}
                     label={t('oauth.audiences.delete')}
                     variant="secondary"
-                    className="shrink-0 h-8 w-8 text-muted hover:text-danger hover:border-danger-border/40"
+                    className="shrink-0 h-8 w-8 text-muted-foreground hover:text-danger hover:border-danger-border/40"
                     loading={deletingId === a.id}
                     disabled={deletingId === a.id}
                     onClick={() => handleDelete(a)}
@@ -345,7 +345,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-border/60 bg-subtle/20 p-4 text-center">
-          <p className="text-xs text-muted">
+          <p className="text-xs text-muted-foreground">
             {t('oauth.audiences.empty')}
           </p>
         </div>
@@ -384,7 +384,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
               <FormField
                 label={
-                  <span className="text-[10px] uppercase tracking-wide text-muted">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                     {t('oauth.audiences.platform')}
                   </span>
                 }
@@ -399,7 +399,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               <FormField
                 className="min-w-0"
                 label={
-                  <span className="text-[10px] uppercase tracking-wide text-muted flex items-center gap-1">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                     {t('oauth.audiences.audience')}
                     <FieldHint text={t('oauth.audiences.audienceHint')} />
                   </span>
@@ -418,7 +418,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             </div>
             <FormField
               label={
-                <span className="text-[10px] uppercase tracking-wide text-muted">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                   {t('oauth.audiences.label')}
                 </span>
               }

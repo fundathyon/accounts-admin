@@ -77,7 +77,7 @@ function ConfigSection({ icon, title, children }: ConfigSectionProps) {
 
 function BoolBadge({ value }: { value?: boolean }) {
   const { t } = useI18n();
-  if (value == null) return <span className="text-muted">—</span>;
+  if (value == null) return <span className="text-muted-foreground">—</span>;
   return (
     <Badge variant="tonal" tone={value ? 'success' : 'danger'}>
       {value ? t('emailAuth.yes') : t('emailAuth.no')}
@@ -88,7 +88,7 @@ function BoolBadge({ value }: { value?: boolean }) {
 function ConfigRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
-      <span className="text-muted">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <span className="text-text font-medium">{value}</span>
     </div>
   );
@@ -125,7 +125,7 @@ export function EmailAuthConfigView({
     <div className="space-y-6">
       {config.identifier && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted uppercase tracking-wider">{t('emailAuth.identifier')}</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">{t('emailAuth.identifier')}</span>
           <Badge variant="tonal" tone="neutral" className="font-mono">
             {config.identifier}
           </Badge>
@@ -139,7 +139,7 @@ export function EmailAuthConfigView({
           <ConfigRow label={t('emailAuth.allowPlusAlias')} value={<BoolBadge value={email.allow_plus_alias} />} />
           {email.normalize && (
             <div className="pt-2 mt-2 border-t border-border/50">
-              <div className="text-xs text-muted mb-1">{t('emailAuth.normalization')}</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('emailAuth.normalization')}</div>
               <div className="flex gap-2 flex-wrap">
                 <Badge variant="outline" className="text-xs">
                   lowercase: {email.normalize.lowercase ? t('emailAuth.yes') : t('emailAuth.no')}
@@ -169,7 +169,7 @@ export function EmailAuthConfigView({
             value={
               magic.redirect_base_url
                 ? <span className="font-mono text-xs truncate max-w-[220px] inline-block align-bottom">{magic.redirect_base_url}</span>
-                : <span className="text-muted">—</span>
+                : <span className="text-muted-foreground">—</span>
             }
           />
           <ConfigRow
@@ -179,7 +179,7 @@ export function EmailAuthConfigView({
 
           {magic.email_branding && (
             <div className="pt-3 mt-2 border-t border-border/50 space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider">
                 <Palette className="w-3.5 h-3.5" />
                 {t('emailAuth.branding')}
               </div>
@@ -196,7 +196,7 @@ export function EmailAuthConfigView({
                 value={
                   magic.email_branding.logo_url
                     ? <span className="font-mono text-xs truncate max-w-[200px] inline-block align-bottom">{magic.email_branding.logo_url}</span>
-                    : <span className="text-muted">—</span>
+                    : <span className="text-muted-foreground">—</span>
                 }
               />
               <ConfigRow
@@ -210,7 +210,7 @@ export function EmailAuthConfigView({
                       />
                       <span className="font-mono text-xs">{magic.email_branding.button_color}</span>
                     </span>
-                  ) : <span className="text-muted">—</span>
+                  ) : <span className="text-muted-foreground">—</span>
                 }
               />
             </div>
@@ -238,7 +238,7 @@ export function EmailAuthConfigView({
           <ConfigRow label={t('emailAuth.active')} value={<BoolBadge value={password.enabled} />} />
           {policy && (
             <div className="pt-2 mt-2 space-y-1 border-t border-border/50">
-              <div className="text-xs text-muted mb-1">{t('emailAuth.policy')}</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('emailAuth.policy')}</div>
               <ConfigRow label={t('emailAuth.minLength')} value={<span className="font-mono">{policy.min_length ?? '—'}</span>} />
               <ConfigRow label={t('emailAuth.maxLength')} value={<span className="font-mono">{policy.max_length ?? '—'}</span>} />
               <ConfigRow label={t('emailAuth.minUppercase')} value={<span className="font-mono">{policy.min_uppercase ?? '—'}</span>} />
@@ -315,7 +315,7 @@ export function EmailAuthConfigView({
           />
           {metadataSchema.scheme && metadataSchema.scheme.length > 0 && (
             <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
-              <div className="text-xs text-muted mb-2">{t('emailAuth.metadataFields')}</div>
+              <div className="text-xs text-muted-foreground mb-2">{t('emailAuth.metadataFields')}</div>
               {metadataSchema.scheme.map((field) => (
                 <div key={field.name} className="flex items-center justify-between gap-2 py-1 pl-2 border-l-2 border-indigo-500/30">
                   <div className="flex items-center gap-2 min-w-0">
@@ -327,7 +327,7 @@ export function EmailAuthConfigView({
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 text-[10px] text-muted">
+                  <div className="flex items-center gap-1 shrink-0 text-[10px] text-muted-foreground">
                     {field.enum && field.enum.length > 0 && (
                       <span className="font-mono">[{field.enum.join(', ')}]</span>
                     )}

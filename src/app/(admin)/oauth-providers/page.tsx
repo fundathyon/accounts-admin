@@ -446,7 +446,7 @@ function OAuthProvidersPageContent() {
         header: t('oauth.tableClientId'),
         accessor: (p) => p.client_id,
         cell: (p) => (
-          <span className="block max-w-[200px] truncate font-mono text-xs text-text-muted" title={p.client_id}>
+          <span className="block max-w-[200px] truncate font-mono text-xs text-text-muted-foreground" title={p.client_id}>
             {p.client_id}
           </span>
         ),
@@ -468,7 +468,7 @@ function OAuthProvidersPageContent() {
         id: 'callbackUri',
         header: t('oauth.tableCallbackUri'),
         cell: (p) => (
-          <span className="block max-w-[220px] truncate font-mono text-xs text-text-muted" title={p.callback_uri}>
+          <span className="block max-w-[220px] truncate font-mono text-xs text-text-muted-foreground" title={p.callback_uri}>
             {p.callback_uri}
           </span>
         ),
@@ -1240,7 +1240,7 @@ function OAuthProvidersPageContent() {
                 readOnly
                 placeholder={t('oauth.callbackKeyPlaceholder')}
                 value={formData.callback_key}
-                className="font-mono text-sm text-muted cursor-not-allowed"
+                className="font-mono text-sm text-muted-foreground cursor-not-allowed"
               />
             </div>
 
@@ -1252,7 +1252,7 @@ function OAuthProvidersPageContent() {
                   placeholder={t('oauth.callbackUriPlaceholder')}
                   value={formData.callback_uri}
                   wrapperClassName="flex-1 min-w-0"
-                  className="font-mono text-sm text-muted cursor-not-allowed"
+                  className="font-mono text-sm text-muted-foreground cursor-not-allowed"
                 />
                 <IconButton
                   type="button"
@@ -1294,7 +1294,7 @@ function OAuthProvidersPageContent() {
                   {t('oauth.redirectWhitelist')}
                   <FieldHint text={t('oauth.hints.redirectWhitelist')} />
                 </Text>
-                <p className="text-xs text-muted mt-1">{t('oauth.redirectWhitelistHint')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('oauth.redirectWhitelistHint')}</p>
               </div>
               <div className="space-y-3">
                 {formData.redirects.map((row, idx) => (
@@ -1302,9 +1302,9 @@ function OAuthProvidersPageContent() {
                     <FormField
                       className="sm:w-[130px]"
                       label={
-                        <span className="text-xs text-muted flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                           {t('oauth.platformLabel')}
-                          {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted/60" />}
+                          {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted-foreground/60" />}
                         </span>
                       }
                     >
@@ -1323,7 +1323,7 @@ function OAuthProvidersPageContent() {
                     </FormField>
                     <FormField
                       className="flex-1 min-w-0"
-                      label={<span className="text-xs text-muted">{t('oauth.redirectUrlRow')}</span>}
+                      label={<span className="text-xs text-muted-foreground">{t('oauth.redirectUrlRow')}</span>}
                     >
                       <Input
                         placeholder={t('oauth.redirectWebPlaceholder')}
@@ -1341,9 +1341,9 @@ function OAuthProvidersPageContent() {
                     <FormField
                       className="flex-1 min-w-0 sm:max-w-[200px]"
                       label={
-                        <span className="text-xs text-muted flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                           {t('oauth.rowNameOptional')}
-                          {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted/60" />}
+                          {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted-foreground/60" />}
                         </span>
                       }
                     >
@@ -1364,7 +1364,7 @@ function OAuthProvidersPageContent() {
                       icon={MinusCircle}
                       label={t('common.delete')}
                       variant="ghost"
-                      className="shrink-0 h-9 w-9 text-muted hover:text-danger"
+                      className="shrink-0 h-9 w-9 text-muted-foreground hover:text-danger"
                       onClick={() => {
                         setFormData((p) => ({
                           ...p,
@@ -1423,7 +1423,7 @@ function OAuthProvidersPageContent() {
               <LogIn className="w-5 h-5 text-accent" />
               {t('oauth.providerDetails')}
               {selectedProvider && (
-                <span className="capitalize text-muted font-normal">
+                <span className="capitalize text-muted-foreground font-normal">
                   ({selectedProvider.provider}{selectedProvider.name ? ` · ${selectedProvider.name}` : ''})
                 </span>
               )}
@@ -1537,7 +1537,7 @@ function OAuthProvidersPageContent() {
                                 {row.platform}
                               </Badge>
                               {row.name?.trim() && (
-                                <span className="text-xs text-muted truncate">{row.name}</span>
+                                <span className="text-xs text-muted-foreground truncate">{row.name}</span>
                               )}
                               {row.legacy && (
                                 <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300">
@@ -1546,7 +1546,7 @@ function OAuthProvidersPageContent() {
                               )}
                             </div>
                             {row.rt && (
-                              <span className="text-[10px] font-mono text-muted/70 shrink-0">
+                              <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
                                 rt: {row.rt.slice(0, 6)}…
                               </span>
                             )}
@@ -1584,7 +1584,7 @@ function OAuthProvidersPageContent() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted italic">
+                  <p className="text-xs text-muted-foreground italic">
                     {t('oauth.detailsRedirectsEmpty')}
                   </p>
                 )}
@@ -1731,7 +1731,7 @@ function OAuthProvidersPageContent() {
               <Link2 className="w-5 h-5 text-accent" />
               {t('oauth.getLink')}
               {linkDialogProvider && (
-                <span className="capitalize text-muted font-normal">
+                <span className="capitalize text-muted-foreground font-normal">
                   ({linkDialogProvider.provider})
                 </span>
               )}
@@ -1790,9 +1790,9 @@ function OAuthProvidersPageContent() {
                 {!savedSecretKey ? (
                   <p className="text-sm text-amber-400">{t('oauth.secretKeyRequiredForRedirects')}</p>
                 ) : linkRedirectsLoading ? (
-                  <p className="text-sm text-muted">{t('oauth.linkRedirectsLoading')}</p>
+                  <p className="text-sm text-muted-foreground">{t('oauth.linkRedirectsLoading')}</p>
                 ) : linkRedirectsForPlatform.length === 0 ? (
-                  <p className="text-sm text-muted">{t('oauth.noRedirectsForPlatform')}</p>
+                  <p className="text-sm text-muted-foreground">{t('oauth.noRedirectsForPlatform')}</p>
                 ) : (
                   <Select
                     value={linkRedirectUrl || linkRedirectsForPlatform[0]?.url || ''}

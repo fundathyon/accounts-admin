@@ -226,7 +226,7 @@ function RolesPageContent() {
         header: t('roles.appId'),
         cell: (role) => (
           <span
-            className="block max-w-[200px] truncate font-mono text-code text-text-muted"
+            className="block max-w-[200px] truncate font-mono text-code text-text-muted-foreground"
             title={role.app_id}
           >
             {role.app_id}
@@ -241,7 +241,7 @@ function RolesPageContent() {
         header: t('roles.created'),
         align: 'right',
         cell: (role) => (
-          <span className="tabular-nums text-caption text-text-muted">
+          <span className="tabular-nums text-caption text-text-muted-foreground">
             {role.created_at ? new Date(role.created_at).toLocaleDateString() : '\u2014'}
           </span>
         ),

@@ -217,34 +217,34 @@ export default function UserDetailPage() {
             </Heading>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">User ID</dt>
+                <dt className="text-muted-foreground">User ID</dt>
                 <dd className="font-mono text-xs truncate max-w-[200px]" title={user.id}>
                   {user.id}
                 </dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">Nombre</dt>
+                <dt className="text-muted-foreground">Nombre</dt>
                 <dd>{user.name || '—'}</dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">{t('userDetail.userName')}</dt>
+                <dt className="text-muted-foreground">{t('userDetail.userName')}</dt>
                 <dd>{user.user_name || '—'}</dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">App ID</dt>
+                <dt className="text-muted-foreground">App ID</dt>
                 <dd className="font-mono text-xs truncate max-w-[200px]" title={user.app_id}>
                   {user.app_id}
                 </dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4 items-center">
-                <dt className="text-muted">{t('userDetail.role') || 'Rol'}</dt>
+                <dt className="text-muted-foreground">{t('userDetail.role') || 'Rol'}</dt>
                 <dd className="flex items-center gap-2">
                   {updatingRole ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted" />
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   ) : roles.length > 0 ? (
                     <Select
                       value={user.role_details?.name || null}
@@ -262,12 +262,12 @@ export default function UserDetailPage() {
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">Creado</dt>
+                <dt className="text-muted-foreground">Creado</dt>
                 <dd>{new Date(user.created_at).toLocaleString('es')}</dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">Última actividad</dt>
+                <dt className="text-muted-foreground">Última actividad</dt>
                 <dd>{new Date(user.updated_at).toLocaleString('es')}</dd>
               </div>
             </dl>
@@ -376,22 +376,22 @@ export default function UserDetailPage() {
                         ) : (
                           <XCircle className="w-4 h-4 text-rose-400" />
                         )}
-                        {emailToCopy && <Copy className="w-3.5 h-3.5 text-muted ml-auto shrink-0" />}
+                        {emailToCopy && <Copy className="w-3.5 h-3.5 text-muted-foreground ml-auto shrink-0" />}
                       </div>
                       <dl className="space-y-1 text-xs">
                         <div className="flex gap-2">
-                          <dt className="text-muted shrink-0">ID:</dt>
+                          <dt className="text-muted-foreground shrink-0">ID:</dt>
                           <dd className="font-mono truncate">{lm.entity_id}</dd>
                         </div>
                         {lm.details?.email && (
                           <div className="flex gap-2">
-                            <dt className="text-muted shrink-0">Email:</dt>
+                            <dt className="text-muted-foreground shrink-0">Email:</dt>
                             <dd className="truncate">{lm.details.email}</dd>
                           </div>
                         )}
                         {lm.details?.created_at && (
                           <div className="flex gap-2">
-                            <dt className="text-muted shrink-0">Creado:</dt>
+                            <dt className="text-muted-foreground shrink-0">Creado:</dt>
                             <dd>{new Date(lm.details.created_at).toLocaleString('es')}</dd>
                           </div>
                         )}

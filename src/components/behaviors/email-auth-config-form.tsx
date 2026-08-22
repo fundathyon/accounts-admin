@@ -41,7 +41,7 @@ function HintIcon({ text, className }: { text: string; className?: string }) {
     return (
         <span className="inline-flex" onClick={(e) => e.preventDefault()}>
             <Tooltip content={text} className={cn('whitespace-normal', className)}>
-                <Info className="w-3.5 h-3.5 text-muted cursor-help" />
+                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
             </Tooltip>
         </span>
     );
@@ -186,7 +186,7 @@ export function EmailAuthConfigForm({
                             "flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap",
                             activeTab === tab.id
                                 ? "border-accent-border text-accent"
-                                : "border-transparent text-muted hover:text-text"
+                                : "border-transparent text-muted-foreground hover:text-text"
                         )}
                     >
                         <tab.icon className="w-3.5 h-3.5 shrink-0" />
@@ -428,7 +428,7 @@ export function EmailAuthConfigForm({
                                     {t('emailAuth.branding')}
                                 </Text>
                             </div>
-                            <p className="text-xs text-muted -mt-2">{t('emailAuth.helpers.branding')}</p>
+                            <p className="text-xs text-muted-foreground -mt-2">{t('emailAuth.helpers.branding')}</p>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField label={t('emailAuth.fromName')}>
@@ -596,7 +596,7 @@ export function EmailAuthConfigForm({
                             <Input
                                 value={config.verification?.mode || ''}
                                 readOnly
-                                className="text-muted cursor-not-allowed"
+                                className="text-muted-foreground cursor-not-allowed"
                             />
                         </FormField>
                     </div>
@@ -634,7 +634,7 @@ export function EmailAuthConfigForm({
                             </div>
 
                             {(metadataSchema.scheme ?? []).length === 0 && (
-                                <p className="text-xs text-muted text-center py-6 border rounded-xl border-dashed">
+                                <p className="text-xs text-muted-foreground text-center py-6 border rounded-xl border-dashed">
                                     {t('emailAuth.metadataNoFields')}
                                 </p>
                             )}
@@ -642,7 +642,7 @@ export function EmailAuthConfigForm({
                             {(metadataSchema.scheme ?? []).map((field, idx) => (
                                 <div key={idx} className="rounded-xl border bg-subtle/20 p-4 space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                             {t('emailAuth.metadataField')} #{idx + 1}
                                         </span>
                                         <IconButton

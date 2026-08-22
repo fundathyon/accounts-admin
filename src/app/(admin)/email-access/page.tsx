@@ -471,7 +471,7 @@ function EmailAccessPageContent() {
         hideBelow: 'sm',
         align: 'right',
         cell: (row) => (
-          <span className="tabular-nums text-caption text-text-muted">
+          <span className="tabular-nums text-caption text-text-muted-foreground">
             {new Date(row.created_at).toLocaleString()}
           </span>
         ),
@@ -644,7 +644,7 @@ function EmailAccessPageContent() {
                   <Text tone="secondary">
                     {t('emailAccess.desc')}
                     {settings?.app_id ? (
-                      <span className="mt-2 block font-mono text-code text-text-muted">
+                      <span className="mt-2 block font-mono text-code text-text-muted-foreground">
                         app_id: {settings.app_id}
                       </span>
                     ) : null}
@@ -653,7 +653,7 @@ function EmailAccessPageContent() {
                 <CardBody className="p-6 pt-0">
                   {settingsLoading && !settings ? (
                     <div className="py-12 flex justify-center">
-                      <Spinner size={20} label={t('common.loading')} className="text-muted" />
+                      <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
                     </div>
                   ) : (
                     <form onSubmit={handleSaveSettings} className="space-y-8 max-w-lg">
@@ -908,12 +908,12 @@ function EmailAccessPageContent() {
                   )}
                 </div>
                 {testResult.scope && (
-                  <div className="mt-1 text-xs text-muted">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     scope: <code className="font-mono">{testResult.scope}</code>
                   </div>
                 )}
                 {testResult.reason && (
-                  <div className="mt-1 text-xs text-muted">{testResult.reason}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{testResult.reason}</div>
                 )}
               </div>
             )}

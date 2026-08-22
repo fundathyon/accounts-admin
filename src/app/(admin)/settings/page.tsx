@@ -272,7 +272,7 @@ export default function SettingsPage() {
             <Alert tone="danger" title={t('common.error')} className="mx-6 mt-4">
               {envError}
               {envError.includes('disabled') && (
-                <span className="block mt-1 text-muted">
+                <span className="block mt-1 text-muted-foreground">
                   {t('settings.exposeEnvHint')}
                 </span>
               )}
@@ -336,11 +336,11 @@ export default function SettingsPage() {
                               className={cn(
                                 'truncate block',
                                 envVar.value === 'false'
-                                  ? 'text-muted'
+                                  ? 'text-muted-foreground'
                                   : envVar.value === 'true'
                                     ? 'text-emerald-400'
                                     : envVar.value === ''
-                                      ? 'text-muted italic'
+                                      ? 'text-muted-foreground italic'
                                       : 'text-text'
                               )}
                             >
@@ -358,7 +358,7 @@ export default function SettingsPage() {
 
         <Card className="p-6">
           <Heading level={2} visual="h4" className="mb-3">{t('settings.securityNotes')}</Heading>
-          <ul className="space-y-1.5 text-sm text-muted list-disc list-inside">
+          <ul className="space-y-1.5 text-sm text-muted-foreground list-disc list-inside">
             <li>{t('settings.securityNote1')}</li>
             <li>{t('settings.securityNote2')}</li>
             <li>{t('settings.securityNote3')}</li>

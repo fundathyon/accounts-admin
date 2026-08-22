@@ -45,7 +45,7 @@ const JSON_KEY_CLASS = 'text-blue-600 dark:text-blue-400';
 const JSON_STRING_CLASS = 'text-amber-700 dark:text-amber-300';
 const JSON_NUMBER_CLASS = 'text-emerald-600 dark:text-emerald-400';
 const JSON_BOOLEAN_CLASS = 'text-purple-600 dark:text-purple-400';
-const JSON_NULL_CLASS = 'text-muted';
+const JSON_NULL_CLASS = 'text-muted-foreground';
 
 function JsonSyntaxHighlight({
   data,
@@ -235,7 +235,7 @@ const JwtTextarea = forwardRef<
         onChange={(e) => onChange(e.target.value)}
         onScroll={syncScroll}
         className={cn(
-          'relative z-10 w-full flex-1 min-h-[200px] rounded-md border border-transparent bg-transparent px-3 py-2 text-xs font-mono resize-none caret-foreground placeholder:text-muted focus-visible:ring-2 focus-visible:ring-[var(--fdn-focus)]',
+          'relative z-10 w-full flex-1 min-h-[200px] rounded-md border border-transparent bg-transparent px-3 py-2 text-xs font-mono resize-none caret-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[var(--fdn-focus)]',
           className
         )}
         spellCheck={false}
@@ -320,7 +320,7 @@ function TokenSection({
                 const expTooltip = key === 'exp' ? formatExpirationTooltip(value) : null;
                 return (
                   <TableRow key={key}>
-                    <TableCell className="font-mono text-text-muted">{key}</TableCell>
+                    <TableCell className="font-mono text-text-muted-foreground">{key}</TableCell>
                     <TableCell className="font-mono break-all">
                       {expTooltip ? (
                         <Tooltip
@@ -331,7 +331,7 @@ function TokenSection({
                             <span className="flex flex-col gap-0.5">
                               <span>{expTooltip.dateStr}</span>
                               <span>{expTooltip.timeStr}</span>
-                              {expTooltip.tzName && <span className="text-muted">{expTooltip.tzName}</span>}
+                              {expTooltip.tzName && <span className="text-muted-foreground">{expTooltip.tzName}</span>}
                             </span>
                           }
                         >
@@ -396,7 +396,7 @@ function TokenSection({
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             active === 'json'
               ? 'text-text border-accent-border'
-              : 'text-muted border-transparent hover:text-text'
+              : 'text-muted-foreground border-transparent hover:text-text'
           )}
         >
           JSON
@@ -408,7 +408,7 @@ function TokenSection({
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             active === 'table'
               ? 'text-text border-accent-border'
-              : 'text-muted border-transparent hover:text-text'
+              : 'text-muted-foreground border-transparent hover:text-text'
           )}
         >
           {t('tokens.claimsTable')}
@@ -485,7 +485,7 @@ function TokenSection({
                 {tokenValue.trim() && (
                   <p className={cn(
                     'text-xs',
-                    isValidStructure ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted'
+                    isValidStructure ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
                   )}>
                     {isValidStructure ? t('tokens.validJwtStructure') : t('tokens.invalidJwtStructure')}
                   </p>
@@ -540,7 +540,7 @@ function TokenSection({
                     <ClaimsTable data={decoded.header} contentMinHeight="min-h-[120px] max-h-[200px]" />
                   )
                 ) : (
-                  <p className="text-xs text-muted p-6 text-center min-h-[120px] flex items-center justify-center">
+                  <p className="text-xs text-muted-foreground p-6 text-center min-h-[120px] flex items-center justify-center">
                     {t('tokens.pasteTokenToDecode')}
                   </p>
                 )}
@@ -578,7 +578,7 @@ function TokenSection({
                     <ClaimsTable data={decoded.payload} contentMinHeight="min-h-[220px] max-h-[280px]" />
                   )
                 ) : (
-                  <p className="text-xs text-muted p-6 text-center min-h-[220px] flex items-center justify-center">
+                  <p className="text-xs text-muted-foreground p-6 text-center min-h-[220px] flex items-center justify-center">
                     {t('tokens.pasteTokenToDecode')}
                   </p>
                 )}

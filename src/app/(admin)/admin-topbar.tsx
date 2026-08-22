@@ -29,7 +29,7 @@ export function AdminTopbar() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex h-7 w-full max-w-80 items-center gap-2 rounded-md border border-border bg-subtle px-2.5 text-caption text-muted transition-colors duration-150 hover:bg-surface-hover"
+          className="flex h-7 w-full max-w-80 items-center gap-2 rounded-md border border-border bg-subtle px-2.5 text-caption text-muted-foreground transition-colors duration-150 hover:bg-surface-hover"
         >
           <Icon icon={Search} size={14} />
           <span className="flex-1 truncate text-left">{t('commandPalette.placeholder')}</span>
@@ -42,7 +42,7 @@ export function AdminTopbar() {
             <Link
               href={buildHref('/notifications')}
               aria-label={t('sidebar.notifications')}
-              className="relative flex size-8 items-center justify-center rounded-md text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text"
+              className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-hover hover:text-text"
             >
               <Icon icon={Bell} size={16} />
               {pendingOAuthLegacyMigration && (

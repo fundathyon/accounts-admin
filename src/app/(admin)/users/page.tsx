@@ -897,7 +897,7 @@ export default function UsersPage() {
                 )}
               </Badge>
             )
-          ) || <span className="text-text-muted text-xs">—</span>}
+          ) || <span className="text-text-muted-foreground text-xs">—</span>}
         </div>
       ),
     },
@@ -908,7 +908,7 @@ export default function UsersPage() {
         user.role_details ? (
           <RoleBadge role={user.role_details.name} />
         ) : (
-          <span className="text-text-muted text-xs">—</span>
+          <span className="text-text-muted-foreground text-xs">—</span>
         ),
     },
     {
@@ -1227,7 +1227,7 @@ export default function UsersPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-muted"
+                  className="text-muted-foreground"
                   leading={<Icon icon={RefreshCw} size={14} />}
                   onClick={() => {
                     setResendEmail(signupForm.email);
@@ -1373,7 +1373,7 @@ export default function UsersPage() {
                         label={
                           <>
                             {field.name}
-                            <span className="ml-2 text-[10px] text-muted font-mono">{field.type}</span>
+                            <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
                           </>
                         }
                       >
@@ -1411,7 +1411,7 @@ export default function UsersPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="text-muted"
+                    className="text-muted-foreground"
                     leading={<Icon icon={RefreshCw} size={14} />}
                     onClick={() => {
                       setResendEmail(signupForm.email || '');
@@ -1595,7 +1595,7 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           {publicKeyLoading ? (
-            <div className="py-8 flex items-center justify-center gap-2 text-muted">
+            <div className="py-8 flex items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin" />
               {t('common.loading')}
             </div>
@@ -1763,7 +1763,7 @@ export default function UsersPage() {
           {!bulkProgress ? (
             <div className="space-y-4">
               <div className="rounded-lg border border-danger-border/30 bg-danger-bg/5 p-3 text-sm">
-                <p className="text-muted">{t('users.deleteAllConfirmHint')}</p>
+                <p className="text-muted-foreground">{t('users.deleteAllConfirmHint')}</p>
                 <p className="mt-1 font-mono font-semibold text-danger">
                   {bulkPhrase}
                 </p>
@@ -1814,13 +1814,13 @@ export default function UsersPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted">
+                  <span className="flex items-center gap-2 text-muted-foreground">
                     {bulkProgress.running && <Loader2 className="w-4 h-4 animate-spin" />}
                     {bulkProgress.finished
                       ? t('users.deleteAllDone')
                       : t('users.deleteAllInProgress')}
                   </span>
-                  <span className="font-mono text-xs text-muted">
+                  <span className="font-mono text-xs text-muted-foreground">
                     {t('users.deleteAllProgress', {
                       done: bulkProgress.done,
                       total: bulkProgress.total,
@@ -1844,7 +1844,7 @@ export default function UsersPage() {
                   />
                 </div>
                 {bulkProgress.finished && (
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-muted-foreground">
                     {t('users.deleteAllDoneSummary', {
                       ok: bulkProgress.done - bulkProgress.errors.length,
                       failed: bulkProgress.errors.length,
@@ -1858,7 +1858,7 @@ export default function UsersPage() {
                   <p className="font-semibold text-amber-500">
                     {t('users.deleteAllErrors', { count: bulkProgress.errors.length })}
                   </p>
-                  <ul className="space-y-0.5 text-muted">
+                  <ul className="space-y-0.5 text-muted-foreground">
                     {bulkProgress.errors.slice(0, 50).map((err) => (
                       <li key={err.id} className="font-mono">
                         <span className="text-text">{err.email || err.id}</span>

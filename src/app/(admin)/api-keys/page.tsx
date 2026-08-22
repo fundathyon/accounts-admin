@@ -504,7 +504,7 @@ export default function ApiKeysPage() {
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Spinner size={20} label={t('common.loading')} className="text-muted" />
+            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
           </div>
         ) : apps.length === 0 && apiKeys.length === 0 ? (
           <Card className="border-dashed">

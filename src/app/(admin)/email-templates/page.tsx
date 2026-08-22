@@ -202,7 +202,7 @@ export default function EmailTemplatesPage() {
 
       {loading ? (
         <div className="py-20 flex justify-center">
-          <Spinner size={20} label={t('common.loading')} className="text-muted" />
+          <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
         </div>
       ) : error ? (
         <Card className="border-danger-border/30">
