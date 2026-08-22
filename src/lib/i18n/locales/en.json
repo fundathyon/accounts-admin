@@ -136,7 +136,9 @@
     "retry": "Retry",
     "noResults": "No results",
     "noResultsDesc": "No items match the filters you applied.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "removeFilter": "Remove filter",
+    "countOf": "{shown} of {total} {entity}"
   },
   "commandPalette": {
     "placeholder": "Search or jump to…",

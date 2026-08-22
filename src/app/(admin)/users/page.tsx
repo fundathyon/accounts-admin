@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Plus,
   Lock,
@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Trash2,
   ChevronRight,
-  ChevronDown,
+  Ellipsis,
   KeyRound,
   Download,
   FileCode,
@@ -44,6 +44,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSubmenu,
+  DropdownMenuSubmenuTrigger,
   DropdownMenuTrigger,
   FormField,
   Heading,
@@ -54,6 +57,7 @@ import {
   RoleBadge,
   Select,
   Stack,
+  Tag,
   Text,
   Textarea,
   Tooltip,
@@ -80,6 +84,30 @@ function primaryEmailOf(user: User) {
   return user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
 }
 
+/** Values the `type` URL param accepts; `all` is the default and is never written. */
+const LOGIN_TYPE_FILTERS = ['all', 'email', 'oauth', 'google', 'apple', 'microsoft'] as const;
+type LoginTypeFilter = (typeof LOGIN_TYPE_FILTERS)[number];
+
+/**
+ * Login-method names as the Select already rendered them — provider names and
+ * protocol labels, not product copy. Hoisted so the applied-filter chip can
+ * show the same label the picker does.
+ */
+const LOGIN_TYPE_LABELS: Record<Exclude<LoginTypeFilter, 'all'>, string> = {
+  email: 'Email / Password',
+  oauth: 'Any OAuth',
+  google: 'Google',
+  apple: 'Apple',
+  microsoft: 'Microsoft',
+};
+
+function parseLoginTypeFilter(value: string | null): LoginTypeFilter {
+  return LOGIN_TYPE_FILTERS.includes(value as LoginTypeFilter) ? (value as LoginTypeFilter) : 'all';
+}
+
+/** §16 search debounce: 250 ms before the query reaches the table and the URL. */
+const SEARCH_DEBOUNCE_MS = 250;
+
 /**
  * Searchable text of a row. This is the `user` column's `accessor`, so it is
  * what `DataTable`'s `globalFilter` matches on — and the group-by-role view
@@ -102,6 +130,8 @@ function timestampOf(value?: string | null) {
 
 export default function UsersPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { apiUrl, showNotification, savedSecretKey, savedPublishableKey } = useAdmin();
   const { t } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
@@ -130,9 +160,13 @@ export default function UsersPage() {
   const [publicKeyValue, setPublicKeyValue] = useState<string | null>(null);
   const [publicKeyLoading, setPublicKeyLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  // `searchInput` is what the field shows (always controlled, never remounted so
+  // it keeps the caret and the focus when rows arrive); `searchQuery` is the
+  // debounced value the table filters by and the URL carries.
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [loginFilter, setLoginFilter] = useState('all');
+  const [loginFilter, setLoginFilter] = useState<LoginTypeFilter>('all');
   const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
   const [isGroupedByRole, setIsGroupedByRole] = useState(false);
   const [isRevokeRefreshOpen, setIsRevokeRefreshOpen] = useState(false);
@@ -151,6 +185,76 @@ export default function UsersPage() {
     total: number;
     errors: { id: string; email?: string; message: string }[];
   } | null>(null);
+
+  // §16 — the URL IS the state: `?q=` + `?role=` + `?type=` + `?group=role`
+  // make a filtered view shareable. The query string seeds the filters once,
+  // and every change is written back with `replace` (never `push`: filtering
+  // must not fill the history).
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setSearchInput(q);
+    setSearchQuery(q);
+    setRoleFilter(searchParams.get('role') || 'all');
+    setLoginFilter(parseLoginTypeFilter(searchParams.get('type')));
+    setIsGroupedByRole(searchParams.get('group') === 'role');
+    // Mount-only on purpose: from here on the page writes the URL, not the
+    // reverse. Seeding in an effect (rather than during render) also keeps the
+    // controls out of any prerendered markup, so nothing can mismatch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reads the live query string so unrelated params survive, and never depends
+  // on the `searchParams` object — that would re-fire on every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  // Defaults are omitted from the URL so an unfiltered view keeps a clean one.
+  const applyRoleFilter = (value: string) => {
+    setRoleFilter(value);
+    writeUrl((params) => {
+      if (value !== 'all') params.set('role', value);
+      else params.delete('role');
+    });
+  };
+
+  const applyLoginFilter = (value: LoginTypeFilter) => {
+    setLoginFilter(value);
+    writeUrl((params) => {
+      if (value !== 'all') params.set('type', value);
+      else params.delete('type');
+    });
+  };
+
+  const toggleGroupByRole = () => {
+    const next = !isGroupedByRole;
+    setIsGroupedByRole(next);
+    writeUrl((params) => {
+      if (next) params.set('group', 'role');
+      else params.delete('group');
+    });
+  };
 
   const handleRevokeByToken = async () => {
     const token = revokeByTokenValue.trim();
@@ -622,10 +726,15 @@ export default function UsersPage() {
   // table per role and applies the search itself — through `userSearchText`,
   // the very accessor the table's own `globalFilter` matches on.
   const searchLower = searchQuery.trim().toLowerCase();
+  // The rows that survive every filter — the same set the table shows, since
+  // `userSearchText` is the accessor its `globalFilter` matches on. Feeds the
+  // grouped view and the §30 header count so both agree with the table.
+  const searchedUsers = filteredUsers.filter(
+    (user) => !searchLower || userSearchText(user).toLowerCase().includes(searchLower)
+  );
   const groupedUsers = isGroupedByRole
     ? Object.entries(
-      filteredUsers
-        .filter((user) => !searchLower || userSearchText(user).toLowerCase().includes(searchLower))
+      searchedUsers
         .reduce((acc, user) => {
           const roleName = user.role_details?.name || 'default';
           if (!acc[roleName]) acc[roleName] = [];
@@ -695,7 +804,64 @@ export default function UsersPage() {
   const usersTableLabels = {
     loading: t('common.loading'),
     actions: t('commandPalette.actions'),
-    of: (shown: number, total: number) => `${shown}/${total}`,
+    of: (shown: number, total: number) =>
+      t('common.countOf', { shown, total, entity: t('users.title').toLowerCase() }),
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    writeUrl((params) => { params.delete('q'); });
+  };
+
+  // §16 — the one exit out of «Sin resultados»: it drops every applied filter,
+  // the search term included. Grouping is a view mode, so it survives.
+  const clearAllFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setRoleFilter('all');
+    setLoginFilter('all');
+    writeUrl((params) => {
+      params.delete('q');
+      params.delete('role');
+      params.delete('type');
+    });
+  };
+
+  // §16 — every applied filter is visible as a removable chip, the search term
+  // included. §09: a filter is data the user set, so it is a Tag, never a Badge.
+  // Grouping is a view mode, not a filter, so it keeps its own pressed toggle.
+  const activeFilters: { id: string; label: string; onRemove: () => void }[] = [
+    ...(searchQuery.trim()
+      ? [{ id: 'q', label: `“${searchQuery.trim()}”`, onRemove: clearSearch }]
+      : []),
+    ...(roleFilter !== 'all'
+      ? [{
+        id: 'role',
+        label: `${t('users.role')}: ${roles.find((role) => role.id === roleFilter)?.name ?? roleFilter}`,
+        onRemove: () => applyRoleFilter('all'),
+      }]
+      : []),
+    ...(loginFilter !== 'all'
+      ? [{
+        id: 'type',
+        label: `${t('users.loginType')}: ${LOGIN_TYPE_LABELS[loginFilter]}`,
+        onRemove: () => applyLoginFilter('all'),
+      }]
+      : []),
+  ];
+
+  // §16 — «Sin resultados» is not an empty state: it says nothing matched and
+  // offers the way out, which clears every filter including the search term.
+  const noResultsStateCopy = {
+    icon: Search,
+    title: t('common.noResults'),
+    description: t('common.noResultsDesc'),
+    action: (
+      <Button variant="secondary" onClick={clearAllFilters}>
+        {t('common.clearFilters')}
+      </Button>
+    ),
   };
 
   const userColumns = useMemo<DataTableColumn<User>[]>(() => [
@@ -818,13 +984,13 @@ export default function UsersPage() {
       error={usersError ? { title: t('users.errorLoadUsers'), description: usersError, retry: { label: t('common.retry'), onClick: () => { void fetchUsers(); } } } : undefined}
       // The DataTable derives "no results" from `globalFilter` alone, so the
       // page-level role/login filters decide the copy here: rows exist, they
-      // just did not survive a filter.
+      // just did not survive a filter — and then the exit is clearing them.
       emptyState={
-        users.length === 0
-          ? { icon: Users, title: t('users.noUsers') }
-          : { title: t('users.noUsers') }
+        activeFilters.length > 0
+          ? noResultsStateCopy
+          : { icon: Users, title: t('users.noUsers') }
       }
-      noResultsState={{ title: t('users.noUsers') }}
+      noResultsState={noResultsStateCopy}
       globalFilter={globalFilter}
       sorting={{ state: sort, onChange: setSort }}
       rowActions={userRowActions}
@@ -836,80 +1002,28 @@ export default function UsersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <Inline justify="between" className="mb-6">
-          <Heading level={1}>{t('users.title')}</Heading>
-          <Inline gap={2}>
-            {savedSecretKey && (
-              <>
-                <Tooltip content={t('tooltips.registerUser')}>
-                  <Button variant="primary" onClick={openSignupModal} leading={<Icon icon={Plus} size={14} />}>
-                    {t('users.registerUser')}
-                  </Button>
-                </Tooltip>
-
-                <Tooltip content={t('tooltips.testLogin')}>
-                  <Button variant="secondary" onClick={() => setIsSigninModalOpen(true)} leading={<Icon icon={Lock} size={14} />}>
-                    {t('users.testLogin')}
-                  </Button>
-                </Tooltip>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="secondary"
-                        leading={<Icon icon={Download} size={14} />}
-                        trailing={<Icon icon={ChevronDown} size={12} className="opacity-50" />}
-                      >
-                        {t('users.export')}
-                      </Button>
-                    }
-                  />
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleExportCSV} icon={Download} className="cursor-pointer text-emerald-500 data-[highlighted]:text-emerald-500 data-[highlighted]:bg-emerald-500/10">
-                      CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportJSON} icon={FileCode} className="cursor-pointer text-sky-500 data-[highlighted]:text-sky-500 data-[highlighted]:bg-sky-500/10">
-                      JSON
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {!IS_PRODUCTION && users.length > 0 && (
-                  <Tooltip content={t('users.deleteAllTooltip')}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setBulkConfirmPhrase('');
-                        setBulkProgress(null);
-                        setIsBulkDeleteOpen(true);
-                      }}
-                      leading={<Icon icon={Trash2} size={14} />}
-                      className="border-danger-border/30 text-danger hover:bg-danger-bg/10 hover:text-danger"
-                    >
-                      {t('users.deleteAll')}
-                    </Button>
-                  </Tooltip>
-                )}
-              </>
+        {/* §30 — título, subtítulo con el recuento, acciones a la derecha: una
+            sola primaria. "Registrar usuario" is that primary; everything else
+            (test login, export, revoke, public key, delete all) lives behind
+            the overflow menu with its handlers and dialogs untouched. */}
+        <Inline justify="between" align="start" className="mb-6">
+          <div>
+            <Heading level={1}>{t('users.title')}</Heading>
+            {/* §30 — the header states the count that matters. */}
+            {savedSecretKey && !loading && users.length > 0 && (
+              <Text variant="caption" tone="muted" as="span" className="mt-1 block">
+                {t('common.countOf', { shown: searchedUsers.length, total: users.length, entity: t('users.title').toLowerCase() })}
+              </Text>
             )}
-            <Tooltip content="Revocar un refresh token por JWT o por ID (cierre de sesión en un dispositivo).">
-              <Button
-                variant="secondary"
-                onClick={() => setIsRevokeRefreshOpen(true)}
-                leading={<Icon icon={ShieldOff} size={14} />}
-              >
-                Revocar refresh token
-              </Button>
-            </Tooltip>
-            <Tooltip content={t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}>
-              <Button
-                variant="secondary"
-                onClick={fetchPublicKeyJWT}
-                leading={<Icon icon={KeyRound} size={14} />}
-              >
-                {t('users.publicKeyJwt')}
-              </Button>
-            </Tooltip>
-            {!savedSecretKey && (
+          </div>
+          <Inline gap={2}>
+            {savedSecretKey ? (
+              <Tooltip content={t('tooltips.registerUser')}>
+                <Button variant="primary" onClick={openSignupModal} leading={<Icon icon={Plus} size={14} />}>
+                  {t('users.registerUser')}
+                </Button>
+              </Tooltip>
+            ) : (
               <Link
                 href={settingsHref}
                 className={cn(
@@ -920,71 +1034,147 @@ export default function UsersPage() {
                 <Icon icon={Key} size={14} /> {t('users.configSecretKey')}
               </Link>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="secondary" leading={<Icon icon={Ellipsis} size={14} />}>
+                    {t('commandPalette.actions')}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                {savedSecretKey && (
+                  <>
+                    <DropdownMenuItem onClick={() => setIsSigninModalOpen(true)} icon={Lock}>
+                      {t('users.testLogin')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSubmenu>
+                      <DropdownMenuSubmenuTrigger icon={Download}>
+                        {t('users.export')}
+                      </DropdownMenuSubmenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={handleExportCSV} icon={Download} className="cursor-pointer text-emerald-500 data-[highlighted]:text-emerald-500 data-[highlighted]:bg-emerald-500/10">
+                          CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportJSON} icon={FileCode} className="cursor-pointer text-sky-500 data-[highlighted]:text-sky-500 data-[highlighted]:bg-sky-500/10">
+                          JSON
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenuSubmenu>
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => setIsRevokeRefreshOpen(true)} icon={ShieldOff}>
+                  Revocar refresh token
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={fetchPublicKeyJWT} icon={KeyRound}>
+                  {t('users.publicKeyJwt')}
+                </DropdownMenuItem>
+                {/* §12 — destructive goes last, separated, and it only opens the
+                    phrase confirmation: the item never deletes anything itself. */}
+                {savedSecretKey && !IS_PRODUCTION && users.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      destructive
+                      icon={Trash2}
+                      onClick={() => {
+                        setBulkConfirmPhrase('');
+                        setBulkProgress(null);
+                        setIsBulkDeleteOpen(true);
+                      }}
+                    >
+                      {t('users.deleteAll')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </Inline>
         </Inline>
 
         {savedSecretKey && (
-          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-subtle/30 rounded-2xl border border-border/50">
-            <div className="flex-1 min-w-[300px]">
-              <Input
-                leading={<Icon icon={Search} size={14} />}
-                aria-label={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
-                placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                wrapperClassName="h-10 border-none bg-bg shadow-none"
-              />
+          <div className="mb-6 space-y-3">
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
+              <div className="flex-1 min-w-[300px]">
+                <Input
+                  leading={<Icon icon={Search} size={14} />}
+                  aria-label={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
+                  placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  wrapperClassName="h-10 border-none bg-bg shadow-none"
+                />
+              </div>
+
+              <Inline gap={2}>
+                <Text variant="overline" tone="secondary">{t('users.role')}</Text>
+                <Select
+                  value={roleFilter}
+                  onValueChange={(v) => applyRoleFilter(v ?? 'all')}
+                  placeholder="All Roles"
+                  aria-label={t('users.role')}
+                  items={[
+                    { value: 'all', label: t('users.allRoles') || "All Roles" },
+                    ...roles.map((role) => ({ value: role.id, label: role.name })),
+                  ]}
+                  className="w-[160px] h-9 bg-bg border-none shadow-none"
+                />
+              </Inline>
+
+              <Inline gap={2}>
+                <Text variant="overline" tone="secondary">{t('users.loginType')}</Text>
+                <Select
+                  value={loginFilter}
+                  onValueChange={(v) => applyLoginFilter(parseLoginTypeFilter(v))}
+                  placeholder="Any Type"
+                  aria-label={t('users.loginType')}
+                  items={[
+                    { value: 'all', label: t('users.allTypes') || "Any Type" },
+                    { value: 'email', label: LOGIN_TYPE_LABELS.email },
+                    { value: 'oauth', label: LOGIN_TYPE_LABELS.oauth },
+                    { value: 'google', label: LOGIN_TYPE_LABELS.google },
+                    { value: 'apple', label: LOGIN_TYPE_LABELS.apple },
+                    { value: 'microsoft', label: LOGIN_TYPE_LABELS.microsoft },
+                  ]}
+                  className="w-[160px] h-9 bg-bg border-none shadow-none"
+                />
+              </Inline>
+
+              <Inline gap={2} className="ml-auto">
+                <Tooltip content={t('tooltips.groupByRole')}>
+                  <Button
+                    variant="ghost"
+                    aria-pressed={isGroupedByRole}
+                    onClick={toggleGroupByRole}
+                    leading={<Icon icon={Users} size={14} />}
+                    className={cn(
+                      "h-9",
+                      isGroupedByRole ? "text-accent bg-accent-bg" : "text-muted"
+                    )}
+                  >
+                    {t('users.groupByRole') || "Group by Role"}
+                  </Button>
+                </Tooltip>
+              </Inline>
             </div>
 
-            <Inline gap={2}>
-              <Text variant="overline" tone="secondary">{t('users.role')}</Text>
-              <Select
-                value={roleFilter}
-                onValueChange={(v) => setRoleFilter(v ?? 'all')}
-                placeholder="All Roles"
-                aria-label={t('users.role')}
-                items={[
-                  { value: 'all', label: t('users.allRoles') || "All Roles" },
-                  ...roles.map((role) => ({ value: role.id, label: role.name })),
-                ]}
-                className="w-[160px] h-9 bg-bg border-none shadow-none"
-              />
-            </Inline>
-
-            <Inline gap={2}>
-              <Text variant="overline" tone="secondary">{t('users.loginType')}</Text>
-              <Select
-                value={loginFilter}
-                onValueChange={(v) => setLoginFilter(v ?? 'all')}
-                placeholder="Any Type"
-                aria-label={t('users.loginType')}
-                items={[
-                  { value: 'all', label: t('users.allTypes') || "Any Type" },
-                  { value: 'email', label: 'Email / Password' },
-                  { value: 'oauth', label: 'Any OAuth' },
-                  { value: 'google', label: 'Google' },
-                  { value: 'apple', label: 'Apple' },
-                  { value: 'microsoft', label: 'Microsoft' },
-                ]}
-                className="w-[160px] h-9 bg-bg border-none shadow-none"
-              />
-            </Inline>
-
-            <Inline gap={2} className="ml-auto">
-              <Tooltip content={t('tooltips.groupByRole')}>
-                <Button
-                  variant="ghost"
-                  onClick={() => setIsGroupedByRole(!isGroupedByRole)}
-                  leading={<Icon icon={Users} size={14} />}
-                  className={cn(
-                    "h-9",
-                    isGroupedByRole ? "text-accent bg-accent-bg" : "text-muted"
-                  )}
-                >
-                  {t('users.groupByRole') || "Group by Role"}
-                </Button>
-              </Tooltip>
-            </Inline>
+            {/* §16 — applied filters live in the open, right under the toolbar,
+                each one removable. "Limpiar filtros" appears once more than one
+                is applied. */}
+            {activeFilters.length > 0 && (
+              <Inline gap={2} wrap className="px-1">
+                {activeFilters.map((filter) => (
+                  <Tag key={filter.id} onRemove={filter.onRemove} removeLabel={t('common.removeFilter')}>
+                    {filter.label}
+                  </Tag>
+                ))}
+                {activeFilters.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+                    {t('common.clearFilters')}
+                  </Button>
+                )}
+              </Inline>
+            )}
           </div>
         )}
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Key,
@@ -39,6 +39,7 @@ import {
   Select,
   Spinner,
   StatusBadge,
+  Tag,
   Text,
   Tooltip,
 } from '@foundathyon/community-ui';
@@ -52,6 +53,28 @@ function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
+
+/** Values the `env` URL param accepts; `all` is the default and is never written. */
+const ENV_FILTERS = ['all', 'production', 'staging', 'development'] as const;
+type EnvFilter = (typeof ENV_FILTERS)[number];
+
+/**
+ * Environment names are proper nouns of the platform, not product copy — the
+ * Select rendered these exact literals before they were hoisted here so the
+ * filter chip can reuse them.
+ */
+const ENV_LABELS: Record<Exclude<EnvFilter, 'all'>, string> = {
+  production: 'Production',
+  staging: 'Staging',
+  development: 'Development',
+};
+
+function parseEnvFilter(value: string | null): EnvFilter {
+  return ENV_FILTERS.includes(value as EnvFilter) ? (value as EnvFilter) : 'all';
+}
+
+/** §16 search debounce: 250 ms before the query reaches the table and the URL. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 /**
  * Epoch value for the `date` cell. A number rather than the raw ISO string
@@ -79,11 +102,17 @@ export default function ApiKeysPage() {
   const [keysLoading, setKeysLoading] = useState(true);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
-  // Deep link from the command palette's "Acciones" group.
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Deep link from the command palette's "Acciones" group. Depending on the
+  // VALUE (not on the searchParams object) keeps `router.replace` from
+  // re-opening the dialog every time a filter is written back to the URL.
+  const newParam = searchParams.get('new');
   useEffect(() => {
-    if (searchParams.get('new') === '1') setIsGenerateModalOpen(true);
-  }, [searchParams]);
+    if (newParam === '1') setIsGenerateModalOpen(true);
+  }, [newParam]);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKeyListItem | null>(null);
@@ -94,10 +123,65 @@ export default function ApiKeysPage() {
     app_id?: string;
     created_at?: string;
   } | null>(null);
+  // `searchInput` is what the field shows (always controlled, never remounted so
+  // it keeps the caret and the focus when rows arrive); `searchQuery` is the
+  // debounced value the table filters by and the URL carries.
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [envFilter, setEnvFilter] = useState<'all' | 'production' | 'staging' | 'development'>('all');
+  const [envFilter, setEnvFilter] = useState<EnvFilter>('all');
   const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
   const [keysError, setKeysError] = useState<string | null>(null);
+
+  // §16 — the URL IS the state: `?q=` + `?env=` make a filtered view shareable.
+  // The query string seeds the filters once, and every change is written back
+  // with `replace` (never `push`: filtering must not fill the history).
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setSearchInput(q);
+    setSearchQuery(q);
+    setEnvFilter(parseEnvFilter(searchParams.get('env')));
+    // Mount-only on purpose: from here on the page writes the URL, not the
+    // reverse. Seeding in an effect (rather than during render) also keeps the
+    // controls out of any prerendered markup, so nothing can mismatch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reads the live query string so unrelated params (the palette's `new=1`)
+  // survive, and never depends on the `searchParams` object — that would
+  // re-fire on every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  // Defaults are omitted from the URL so an unfiltered view keeps a clean one.
+  const applyEnvFilter = (value: EnvFilter) => {
+    setEnvFilter(value);
+    writeUrl((params) => {
+      if (value !== 'all') params.set('env', value);
+      else params.delete('env');
+    });
+  };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -161,7 +245,54 @@ export default function ApiKeysPage() {
   // the footer summary ("3 of 128"), so it renders as a language-neutral ratio.
   const keysTableLabels = {
     loading: t('common.loading'),
-    of: (shown: number, total: number) => `${shown}/${total}`,
+    of: (shown: number, total: number) =>
+      t('common.countOf', { shown, total, entity: t('apiKeys.title') }),
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    writeUrl((params) => { params.delete('q'); });
+  };
+
+  // §16 — the one exit out of «Sin resultados»: it drops every applied filter,
+  // the search term included.
+  const clearAllFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setEnvFilter('all');
+    writeUrl((params) => {
+      params.delete('q');
+      params.delete('env');
+    });
+  };
+
+  // §16 — every applied filter is visible as a removable chip, the search term
+  // included. §09: a filter is data the user set, so it is a Tag, never a Badge.
+  const activeFilters: { id: string; label: string; onRemove: () => void }[] = [
+    ...(searchQuery.trim()
+      ? [{ id: 'q', label: `“${searchQuery.trim()}”`, onRemove: clearSearch }]
+      : []),
+    ...(envFilter !== 'all'
+      ? [{
+        id: 'env',
+        label: `${t('apiKeys.environment')}: ${ENV_LABELS[envFilter]}`,
+        onRemove: () => applyEnvFilter('all'),
+      }]
+      : []),
+  ];
+
+  // §16 — «Sin resultados» is not an empty state: it says nothing matched and
+  // offers the way out, which clears every filter including the search term.
+  const noResultsStateCopy = {
+    icon: Search,
+    title: t('common.noResults'),
+    description: t('common.noResultsDesc'),
+    action: (
+      <Button variant="secondary" size="lg" onClick={clearAllFilters}>
+        {t('common.clearFilters')}
+      </Button>
+    ),
   };
 
   // Shared copy for the two "no rows" states — the only existing page copy that
@@ -229,6 +360,19 @@ export default function ApiKeysPage() {
       sortable: true,
     },
   ], [t]);
+
+  // Mirrors DataTable's own `globalFilter` (it matches the query against every
+  // column accessor) so the header count and the table always agree on what
+  // "shown" means.
+  const searchLower = searchQuery.trim().toLowerCase();
+  const shownKeysCount = !searchLower
+    ? envFilteredKeys.length
+    : envFilteredKeys.filter((key) =>
+      keyColumns.some((col) => {
+        const value = col.accessor?.(key);
+        return value !== null && value !== undefined && String(value).toLowerCase().includes(searchLower);
+      })
+    ).length;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,6 +484,12 @@ export default function ApiKeysPage() {
             <Text tone="secondary" className="mt-1">
               {t('apiKeys.subtitle')}
             </Text>
+            {/* §30 — the header states the count that matters. */}
+            {savedSecretKey && !keysLoading && apiKeys.length > 0 && (
+              <Text variant="caption" tone="muted" as="span" className="mt-1 block">
+                {t('common.countOf', { shown: shownKeysCount, total: apiKeys.length, entity: t('apiKeys.title') })}
+              </Text>
+            )}
           </div>
           {!savedSecretKey ? (
             <Link
@@ -411,8 +561,9 @@ export default function ApiKeysPage() {
                   size="lg"
                   leading={<Icon icon={Search} size={16} />}
                   placeholder={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   wrapperClassName="border-none bg-bg shadow-none"
                 />
               </div>
@@ -424,20 +575,38 @@ export default function ApiKeysPage() {
                     <Select
                       size="lg"
                       value={envFilter}
-                      onValueChange={(v) => setEnvFilter((v ?? 'all') as typeof envFilter)}
+                      onValueChange={(v) => applyEnvFilter(parseEnvFilter(v))}
                       placeholder={t('apiKeys.environment') || "Env"}
                       className="w-[140px] border-none bg-bg shadow-none"
                       items={[
                         { value: 'all', label: t('common.all') || "All Envs" },
-                        { value: 'production', label: 'Production' },
-                        { value: 'staging', label: 'Staging' },
-                        { value: 'development', label: 'Development' },
+                        { value: 'production', label: ENV_LABELS.production },
+                        { value: 'staging', label: ENV_LABELS.staging },
+                        { value: 'development', label: ENV_LABELS.development },
                       ]}
                     />
                   </div>
                 </Tooltip>
               </Inline>
             </div>
+
+            {/* §16 — applied filters live in the open, right under the toolbar,
+                each one removable. "Limpiar filtros" appears once more than one
+                is applied. */}
+            {activeFilters.length > 0 && (
+              <Inline gap={2} wrap className="px-1">
+                {activeFilters.map((filter) => (
+                  <Tag key={filter.id} onRemove={filter.onRemove} removeLabel={t('common.removeFilter')}>
+                    {filter.label}
+                  </Tag>
+                ))}
+                {activeFilters.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+                    {t('common.clearFilters')}
+                  </Button>
+                )}
+              </Inline>
+            )}
 
             <DataTable<APIKeyListItem>
               columns={keyColumns}
@@ -447,12 +616,12 @@ export default function ApiKeysPage() {
               loading={keysLoading}
               loadingRowCount={5}
               error={keysError ? { title: t('apiKeys.errorLoadKeys'), description: keysError, retry: { label: t('common.retry'), onClick: () => { void fetchAPIKeys(); } } } : undefined}
-              // Both no-row states share the page's "generate keys" copy: the
-              // dictionary has no "filtered to nothing" string for API keys and
-              // the DataTable's own fallback headline is English. They still
-              // differ in kind (`data-kind`) and icon.
-              emptyState={{ ...noKeysStateCopy, icon: Key }}
-              noResultsState={{ ...noKeysStateCopy, icon: Search }}
+              // The table derives "no results" from `globalFilter` alone, so the
+              // page-level environment filter decides the copy here: when a
+              // filter is applied and nothing survives it, the rows did not run
+              // out — they were filtered away, and the exit is clearing them.
+              emptyState={activeFilters.length > 0 ? noResultsStateCopy : { ...noKeysStateCopy, icon: Key }}
+              noResultsState={noResultsStateCopy}
               globalFilter={searchQuery}
               sorting={{ state: sort, onChange: setSort }}
               onRowClick={(key) => setSelectedApiKey(key)}
@@ -464,7 +633,7 @@ export default function ApiKeysPage() {
             {/* The table's empty / no-results state carries this exact headline
                 and CTA, so the persistent card steps aside while the list is
                 filtered — otherwise both render at once. */}
-            {apps.length > 0 && envFilteredKeys.length > 0 && !searchQuery.trim() && (
+            {apps.length > 0 && envFilteredKeys.length > 0 && activeFilters.length === 0 && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center shrink-0">

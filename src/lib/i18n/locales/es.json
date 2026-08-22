@@ -136,7 +136,9 @@
     "retry": "Reintentar",
     "noResults": "Sin resultados",
     "noResultsDesc": "Ningún elemento coincide con los filtros aplicados.",
-    "clearFilters": "Limpiar filtros"
+    "clearFilters": "Limpiar filtros",
+    "removeFilter": "Quitar filtro",
+    "countOf": "{shown} de {total} {entity}"
   },
   "commandPalette": {
     "placeholder": "Buscar o ir a…",

@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useMemo, useState, useEffect, useCallback, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Key,
@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Pencil,
   Search,
+  SearchX,
   ArrowDownAZ,
   ArrowUpAZ,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ import {
   Input,
   KeyValue,
   Spinner,
+  Tag,
   Text,
   Tooltip,
   DataTable,
@@ -46,7 +48,10 @@ function truncateKey(key: string) {
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
 
-export default function RolesPage() {
+/** Debounce for the search box — §16 fixes it at 250 ms. */
+const SEARCH_DEBOUNCE_MS = 250;
+
+function RolesPageContent() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
   const { t } = useI18n();
   const [roles, setRoles] = useState<Role[]>([]);
@@ -54,17 +59,75 @@ export default function RolesPage() {
   const [loadError, setLoadError] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
-  // Deep link from the command palette's "Acciones" group.
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Deep link from the command palette's "Acciones" group. Depending on the
+  // VALUE (not on the searchParams object) keeps `router.replace` from
+  // re-opening the dialog every time a filter is written back to the URL.
+  const newParam = searchParams.get('new');
   useEffect(() => {
-    if (searchParams.get('new') === '1') setIsRoleModalOpen(true);
-  }, [searchParams]);
+    if (newParam === '1') setIsRoleModalOpen(true);
+  }, [newParam]);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '' });
   const [isRoleSubmitting, setIsRoleSubmitting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+
+  // §16 — the URL IS the state: a filtered view is shareable. The query string
+  // seeds the filters once, and every change is written back with `replace`
+  // (never `push`: filtering must not fill the history).
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>(() =>
+    searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest'
+  );
+
+  // Reads the live query string so unrelated params (e.g. `new=1`) survive,
+  // and never depends on the `searchParams` object — that would re-fire on
+  // every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  const toggleSort = () => {
+    const next = sortBy === 'newest' ? 'oldest' : 'newest';
+    setSortBy(next);
+    writeUrl((params) => {
+      if (next === 'oldest') params.set('sort', 'oldest');
+      else params.delete('sort');
+    });
+  };
+
+  // The search term is the only filter on this list — the newest/oldest toggle
+  // orders, it does not filter — so "clear filters" clears exactly it.
+  const clearFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    writeUrl((params) => params.delete('q'));
+  };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -197,13 +260,35 @@ export default function RolesPage() {
     [t]
   );
 
+  // Mirrors DataTable's own global-filter rule (any column accessor contains
+  // the query, case-insensitive) so the header count matches the rows shown.
+  const shownCount = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return roles.length;
+    return roles.filter((role) =>
+      roleColumns.some((col) => {
+        const value = col.accessor?.(role);
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(query);
+      })
+    ).length;
+  }, [roles, roleColumns, searchQuery]);
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <Heading level={1}>{t('sidebar.roles')}</Heading>
-            <Text tone="secondary" className="mt-1">{t('roles.manageDesc')}</Text>
+            {/* §30 — subtitle carries the count that matters. */}
+            {savedSecretKey && !loading && !loadError && (
+              <Text tone="secondary" className="mt-1" tabular>
+                {shownCount === roles.length
+                  ? `${roles.length} ${t('sidebar.roles')}`
+                  : t('common.countOf', { shown: shownCount, total: roles.length, entity: t('sidebar.roles') })}
+              </Text>
+            )}
+            <Text variant="caption" tone="muted" className="mt-1 block">{t('roles.manageDesc')}</Text>
           </div>
           {!savedSecretKey ? (
             <Link
@@ -236,8 +321,8 @@ export default function RolesPage() {
                 size="lg"
                 leading={<Icon icon={Search} size={16} />}
                 placeholder={t('roles.searchPlaceholder') || "Search by name, description or ID..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 wrapperClassName="border-none bg-bg shadow-none"
               />
             </div>
@@ -247,7 +332,7 @@ export default function RolesPage() {
                 <Button
                   variant="ghost"
                   size="lg"
-                  onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                  onClick={toggleSort}
                   className="bg-bg hover:bg-bg/80"
                   leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={16} />}
                 >
@@ -256,6 +341,16 @@ export default function RolesPage() {
               </Tooltip>
             </Inline>
           </div>
+        )}
+
+        {/* §16 — applied filters are always visible as removable chips, never
+            hidden behind a closed panel. §09: Tag (user data), never Badge. */}
+        {savedSecretKey && searchQuery.trim() !== '' && (
+          <Inline gap={2} wrap className="-mt-2 mb-6">
+            <Tag onRemove={clearFilters} removeLabel={t('common.removeFilter')}>
+              {searchQuery}
+            </Tag>
+          </Inline>
         )}
 
         {!savedSecretKey ? (
@@ -303,16 +398,21 @@ export default function RolesPage() {
                 ),
               }}
               noResultsState={{
-                title: t('roles.noRoles'),
+                // §16 — «Sin resultados» is not an empty state: it offers to
+                // clear the filters, and clears every one of them.
+                icon: SearchX,
+                title: t('common.noResults'),
+                description: t('common.noResultsDesc'),
                 action: (
-                  <Button variant="secondary" size="lg" onClick={() => setSearchQuery('')}>
+                  <Button variant="secondary" size="lg" onClick={clearFilters}>
                     {t('common.clearFilters')}
                   </Button>
                 ),
               }}
               labels={{
                 loading: t('common.loading'),
-                of: (shown, total) => `${shown} / ${total}`,
+                of: (shown, total) =>
+                  t('common.countOf', { shown, total, entity: t('sidebar.roles') }),
               }}
             />
           </div>
@@ -421,5 +521,20 @@ export default function RolesPage() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function RolesPageFallback() {
+  const { t } = useI18n();
+  return <Text tone="muted">{t('common.loading')}</Text>;
+}
+
+/** `useSearchParams` needs a Suspense boundary in a statically prerendered
+ *  page — this route is one (§16 puts the filters in the URL). */
+export default function RolesPage() {
+  return (
+    <Suspense fallback={<RolesPageFallback />}>
+      <RolesPageContent />
+    </Suspense>
   );
 }

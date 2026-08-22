@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Key,
@@ -56,12 +57,31 @@ type SegmentPreset = 'all' | 'email' | 'google' | 'apple' | 'microsoft' | 'githu
 
 const SEGMENT_CUSTOM_RE = /^[a-z][a-z0-9_-]{0,31}$/;
 
-export default function EmailAccessPage() {
+/** `?list=` values that select a list tab; anything else means "settings". */
+function parseListParam(value: string | null): Tab {
+  return value === 'allow' || value === 'block' ? value : 'settings';
+}
+
+/** `?page=` is 1-based in the URL, 0-based in state. */
+function parsePageParam(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed - 1 : 0;
+}
+
+function EmailAccessPageContent() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
   const { t } = useI18n();
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
-  const [tab, setTab] = useState<Tab>('settings');
+  // §16 — the URL IS the state: `list` picks the tab and `page` the server-side
+  // page, so a view is shareable. Both are written back with `replace` (never
+  // `push`: navigating a list must not fill the history) and omitted while at
+  // their default.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [tab, setTab] = useState<Tab>(() => parseListParam(searchParams.get('list')));
 
   const [settings, setSettings] = useState<EmailAccessSettingsView | null>(null);
   const [signupMode, setSignupMode] = useState<'open' | 'allowlist_required'>('open');
@@ -71,8 +91,12 @@ export default function EmailAccessPage() {
 
   const [allowRows, setAllowRows] = useState<EmailAccessEntryView[]>([]);
   const [blockRows, setBlockRows] = useState<EmailAccessEntryView[]>([]);
-  const [allowPage, setAllowPage] = useState(0);
-  const [blockPage, setBlockPage] = useState(0);
+  const [allowPage, setAllowPage] = useState(() =>
+    parseListParam(searchParams.get('list')) === 'allow' ? parsePageParam(searchParams.get('page')) : 0
+  );
+  const [blockPage, setBlockPage] = useState(() =>
+    parseListParam(searchParams.get('list')) === 'block' ? parsePageParam(searchParams.get('page')) : 0
+  );
   const [allowMeta, setAllowMeta] = useState<{ totalPages: number; total: number } | null>(null);
   const [blockMeta, setBlockMeta] = useState<{ totalPages: number; total: number } | null>(null);
   const [allowLoading, setAllowLoading] = useState(false);
@@ -92,6 +116,47 @@ export default function EmailAccessPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: 'allow' | 'block'; id: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Reads the live query string so unrelated params survive, and never depends
+  // on the `searchParams` object — that would re-fire on every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    // Each list keeps its own page; the URL always shows the active one.
+    const page = next === 'allow' ? allowPage : next === 'block' ? blockPage : 0;
+    writeUrl((params) => {
+      if (next === 'settings') {
+        params.delete('list');
+        params.delete('page');
+        return;
+      }
+      params.set('list', next);
+      if (page > 0) params.set('page', String(page + 1));
+      else params.delete('page');
+    });
+  };
+
+  const goToPage = useCallback(
+    (kind: 'allow' | 'block', nextPage: number) => {
+      if (kind === 'allow') setAllowPage(nextPage);
+      else setBlockPage(nextPage);
+      writeUrl((params) => {
+        params.set('list', kind);
+        if (nextPage > 0) params.set('page', String(nextPage + 1));
+        else params.delete('page');
+      });
+    },
+    [writeUrl]
+  );
 
   // Test dialog (POST /api/email-access/test)
   const [testOpen, setTestOpen] = useState(false);
@@ -303,10 +368,10 @@ export default function EmailAccessPage() {
         showNotification(t('emailAccess.entryCreated'), 'success');
         setAddOpen(false);
         if (addListKind === 'allow') {
-          setAllowPage(0);
+          goToPage('allow', 0);
           fetchList('allow', 0);
         } else {
-          setBlockPage(0);
+          goToPage('block', 0);
           fetchList('block', 0);
         }
       } else {
@@ -355,7 +420,7 @@ export default function EmailAccessPage() {
       variant={tab === id ? 'primary' : 'secondary'}
       size="md"
       className="rounded-full"
-      onClick={() => setTab(id)}
+      onClick={() => selectTab(id)}
     >
       {label}
     </Button>
@@ -418,8 +483,7 @@ export default function EmailAccessPage() {
     loading: boolean,
     listError: boolean,
     page: number,
-    meta: { totalPages: number; total: number } | null,
-    setPage: (n: number) => void
+    meta: { totalPages: number; total: number } | null
   ) => {
     const totalPages = meta?.totalPages ?? 1;
     const addButton = (
@@ -438,16 +502,11 @@ export default function EmailAccessPage() {
       // produced a double frame.
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Heading level={2} visual="h3">
-              {kind === 'allow' ? t('emailAccess.tabAllow') : t('emailAccess.tabBlock')}
-            </Heading>
-            {meta != null && (
-              <Text tone="secondary" className="mt-1">
-                {t('emailAccess.totalEntries', { count: meta.total })}
-              </Text>
-            )}
-          </div>
+          {/* The count moved up to the page header (§30) — it is not repeated
+              here. */}
+          <Heading level={2} visual="h3">
+            {kind === 'allow' ? t('emailAccess.tabAllow') : t('emailAccess.tabBlock')}
+          </Heading>
           {addButton}
         </div>
 
@@ -477,7 +536,8 @@ export default function EmailAccessPage() {
           pagination={{
             pageSize: PAGE_SIZE,
             page: page + 1,
-            onPageChange: (next) => setPage(next - 1),
+            // §16 — the page number lives in the URL, so a page is shareable.
+            onPageChange: (next) => goToPage(kind, next - 1),
             total: meta?.total ?? rows.length,
             manual: true,
           }}
@@ -491,6 +551,8 @@ export default function EmailAccessPage() {
     );
   };
 
+  const activeListMeta = tab === 'allow' ? allowMeta : tab === 'block' ? blockMeta : null;
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -500,7 +562,14 @@ export default function EmailAccessPage() {
               <Icon icon={ListFilter} size={20} className="text-accent" />
               {t('sidebar.emailAccess')}
             </Heading>
-            <Text tone="secondary" className="mt-1">{t('emailAccess.desc')}</Text>
+            {/* §30 — subtitle carries the count that matters: the size of the
+                list currently open (settings has none). */}
+            {activeListMeta != null && (
+              <Text tone="secondary" className="mt-1" tabular>
+                {t('emailAccess.totalEntries', { count: activeListMeta.total })}
+              </Text>
+            )}
+            <Text variant="caption" tone="muted" className="mt-1 block max-w-2xl">{t('emailAccess.desc')}</Text>
             <Text variant="caption" tone="muted" className="mt-2 block max-w-2xl">{t('emailAccess.descSeg')}</Text>
           </div>
           <div className="flex gap-2">
@@ -614,9 +683,9 @@ export default function EmailAccessPage() {
             )}
 
             {tab === 'allow' &&
-              renderList('allow', allowRows, allowLoading, allowError, allowPage, allowMeta, setAllowPage)}
+              renderList('allow', allowRows, allowLoading, allowError, allowPage, allowMeta)}
             {tab === 'block' &&
-              renderList('block', blockRows, blockLoading, blockError, blockPage, blockMeta, setBlockPage)}
+              renderList('block', blockRows, blockLoading, blockError, blockPage, blockMeta)}
           </div>
         )}
       </motion.div>
@@ -815,5 +884,20 @@ export default function EmailAccessPage() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function EmailAccessPageFallback() {
+  const { t } = useI18n();
+  return <Text tone="muted">{t('common.loading')}</Text>;
+}
+
+/** `useSearchParams` needs a Suspense boundary in a statically prerendered
+ *  page — this route is one (§16 puts the active list and page in the URL). */
+export default function EmailAccessPage() {
+  return (
+    <Suspense fallback={<EmailAccessPageFallback />}>
+      <EmailAccessPageContent />
+    </Suspense>
   );
 }

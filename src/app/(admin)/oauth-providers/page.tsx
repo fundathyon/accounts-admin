@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, SearchX, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -23,11 +24,13 @@ import {
   Heading,
   Icon,
   IconButton,
+  Inline,
   Input,
   Select,
   Spinner,
   StatusBadge,
   Switch,
+  Tag,
   Text,
   Tooltip,
   DataTable,
@@ -156,7 +159,12 @@ const initialForm: OAuthConfigForm = {
   redirects: [],
 };
 
-export default function OAuthProvidersPage() {
+/** Debounce for the search box — §16 fixes it at 250 ms. */
+const SEARCH_DEBOUNCE_MS = 250;
+
+type OAuthStatusFilter = 'all' | 'enabled' | 'disabled';
+
+function OAuthProvidersPageContent() {
   const {
     apiUrl,
     showNotification,
@@ -185,9 +193,24 @@ export default function OAuthProvidersPage() {
   const [linkLegacyDeprecation, setLinkLegacyDeprecation] = useState<RedirectsLegacyDeprecation | null>(null);
   const [linkRedirectsLoading, setLinkRedirectsLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
-  const [providerFilter, setProviderFilter] = useState<string>('all');
+
+  // §16 — the URL IS the state: a filtered view is shareable. `q` seeds the
+  // search, `provider` and `status` the two selects; each is written back with
+  // `replace` (never `push`: filtering must not fill the history) and omitted
+  // from the URL while it sits at its default.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
+  const [statusFilter, setStatusFilter] = useState<OAuthStatusFilter>(() => {
+    const value = searchParams.get('status');
+    return value === 'enabled' || value === 'disabled' ? value : 'all';
+  });
+  const [providerFilter, setProviderFilter] = useState<string>(() => {
+    const value = searchParams.get('provider');
+    return ALLOWED_PROVIDERS.some((p) => p.value === value) ? (value as string) : 'all';
+  });
   const [migrationPendingIds, setMigrationPendingIds] = useState<Set<string>>(new Set());
   const [migrationPending, setMigrationPending] = useState(false);
   const [migrationApplyLoading, setMigrationApplyLoading] = useState(false);
@@ -317,6 +340,50 @@ export default function OAuthProvidersPage() {
     }
   };
 
+  // Reads the live query string so unrelated params survive, and never depends
+  // on the `searchParams` object — that would re-fire on every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  const applyProviderFilter = (value: string) => {
+    const next = ALLOWED_PROVIDERS.some((p) => p.value === value) ? value : 'all';
+    setProviderFilter(next);
+    writeUrl((params) => {
+      if (next === 'all') params.delete('provider');
+      else params.set('provider', next);
+    });
+  };
+
+  const applyStatusFilter = (value: OAuthStatusFilter) => {
+    setStatusFilter(value);
+    writeUrl((params) => {
+      if (value === 'all') params.delete('status');
+      else params.set('status', value);
+    });
+  };
+
   // The two selects stay in the page: DataTable exposes a single global text
   // filter, no per-column facets. The free-text search IS handed over to it.
   const visibleProviders = providers.filter((p) => {
@@ -326,13 +393,29 @@ export default function OAuthProvidersPage() {
     return true;
   });
 
-  const filtersActive =
-    searchQuery.trim() !== '' || statusFilter !== 'all' || providerFilter !== 'all';
+  const activeFilterCount =
+    (searchQuery.trim() !== '' ? 1 : 0) +
+    (statusFilter !== 'all' ? 1 : 0) +
+    (providerFilter !== 'all' ? 1 : 0);
+  const filtersActive = activeFilterCount > 0;
 
+  /** Clears EVERY applied filter — search and both selects — and the URL with them. */
   const clearFilters = () => {
+    setSearchInput('');
     setSearchQuery('');
     setStatusFilter('all');
     setProviderFilter('all');
+    writeUrl((params) => {
+      params.delete('q');
+      params.delete('provider');
+      params.delete('status');
+    });
+  };
+
+  const clearSearchFilter = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    writeUrl((params) => params.delete('q'));
   };
 
   const providerColumns = useMemo<DataTableColumn<OAuthConfig>[]>(
@@ -406,6 +489,20 @@ export default function OAuthProvidersPage() {
     ],
     [t, migrationPendingIds]
   );
+
+  // Mirrors DataTable's own global-filter rule (any column accessor contains
+  // the query, case-insensitive) so the header count matches the rows shown.
+  const shownCount = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return visibleProviders.length;
+    return visibleProviders.filter((p) =>
+      providerColumns.some((col) => {
+        const value = col.accessor?.(p);
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(query);
+      })
+    ).length;
+  }, [visibleProviders, providerColumns, searchQuery]);
 
   const fetchRoles = async () => {
     if (!savedSecretKey) return;
@@ -842,9 +939,17 @@ export default function OAuthProvidersPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">{t('oauth.title')}</h1>
-            <p className="text-muted text-sm mt-1">
+            {/* §30 — subtitle carries the count that matters. */}
+            {savedSecretKey && !loading && !loadError && (
+              <Text tone="secondary" className="mt-1" tabular>
+                {shownCount === providers.length
+                  ? `${providers.length} ${t('sidebar.oauthProviders')}`
+                  : t('common.countOf', { shown: shownCount, total: providers.length, entity: t('sidebar.oauthProviders') })}
+              </Text>
+            )}
+            <Text variant="caption" tone="muted" className="mt-1 block">
               {t('oauth.subtitle')}
-            </p>
+            </Text>
           </div>
           {!savedSecretKey ? (
             <Link
@@ -859,7 +964,7 @@ export default function OAuthProvidersPage() {
           ) : (
             <Tooltip content={t('tooltips.newOAuth')}>
               <Button variant="primary" onClick={openCreateModal} className="gap-2">
-                <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
+                <Plus className="w-4 h-4" /> {t('oauth.addProvider')}
               </Button>
             </Tooltip>
           )}
@@ -917,8 +1022,8 @@ export default function OAuthProvidersPage() {
                 <Input
                   leading={<Search className="w-4 h-4 text-muted" />}
                   placeholder={t('oauth.searchPlaceholder') || "Search by name, provider or ID..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   wrapperClassName="h-10 border-none bg-bg shadow-none"
                 />
               </div>
@@ -929,7 +1034,7 @@ export default function OAuthProvidersPage() {
                     <Filter className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted" />
                     <Select
                       value={providerFilter}
-                      onValueChange={(v) => setProviderFilter(v ?? 'all')}
+                      onValueChange={(v) => applyProviderFilter(v ?? 'all')}
                       placeholder={t('oauth.provider') || "Provider"}
                       className="w-[140px] h-10 pl-8 border-none bg-bg shadow-none"
                       items={[
@@ -945,7 +1050,7 @@ export default function OAuthProvidersPage() {
                     <ShieldCheck className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted" />
                     <Select
                       value={statusFilter}
-                      onValueChange={(v) => setStatusFilter((v ?? 'all') as 'all' | 'enabled' | 'disabled')}
+                      onValueChange={(v) => applyStatusFilter((v ?? 'all') as OAuthStatusFilter)}
                       placeholder={t('users.state') || "State"}
                       className="w-[140px] h-10 pl-8 border-none bg-bg shadow-none"
                       items={[
@@ -959,6 +1064,34 @@ export default function OAuthProvidersPage() {
               </div>
             </div>
 
+            {/* §16 — applied filters are always visible as removable chips,
+                never hidden behind a closed panel. §09: Tag (user data), never
+                Badge. "Clear all" appears once more than one filter is on. */}
+            {filtersActive && (
+              <Inline gap={2} wrap>
+                {searchQuery.trim() !== '' && (
+                  <Tag onRemove={clearSearchFilter} removeLabel={t('common.removeFilter')}>
+                    {searchQuery}
+                  </Tag>
+                )}
+                {providerFilter !== 'all' && (
+                  <Tag onRemove={() => applyProviderFilter('all')} removeLabel={t('common.removeFilter')}>
+                    {ALLOWED_PROVIDERS.find((p) => p.value === providerFilter)?.label ?? providerFilter}
+                  </Tag>
+                )}
+                {statusFilter !== 'all' && (
+                  <Tag onRemove={() => applyStatusFilter('all')} removeLabel={t('common.removeFilter')}>
+                    {statusFilter === 'enabled' ? t('oauth.enabled') : t('oauth.disabled')}
+                  </Tag>
+                )}
+                {activeFilterCount > 1 && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    {t('common.clearFilters')}
+                  </Button>
+                )}
+              </Inline>
+            )}
+
             <DataTable<OAuthConfig>
               columns={providerColumns}
               data={visibleProviders}
@@ -971,10 +1104,14 @@ export default function OAuthProvidersPage() {
               loadingRowCount={5}
               error={loadError ? { title: t('oauth.errorLoad'), retry: { label: t('common.retry'), onClick: () => { void fetchProviders(); } } } : undefined}
               emptyState={
+                // The two selects filter `data` before DataTable sees it, so a
+                // select-only wipeout lands here, not on `noResultsState` —
+                // §16 still demands the "clear filters" exit.
                 filtersActive
                   ? {
                     icon: SearchX,
-                    title: t('oauth.noProviders'),
+                    title: t('common.noResults'),
+                    description: t('common.noResultsDesc'),
                     action: (
                       <Button variant="secondary" onClick={clearFilters}>
                         {t('common.clearFilters')}
@@ -993,8 +1130,11 @@ export default function OAuthProvidersPage() {
                   }
               }
               noResultsState={{
+                // §16 — «Sin resultados» is not an empty state: it offers to
+                // clear the filters, and clears every one of them.
                 icon: SearchX,
-                title: t('oauth.noProviders'),
+                title: t('common.noResults'),
+                description: t('common.noResultsDesc'),
                 action: (
                   <Button variant="secondary" onClick={clearFilters}>
                     {t('common.clearFilters')}
@@ -1003,7 +1143,8 @@ export default function OAuthProvidersPage() {
               }}
               labels={{
                 loading: t('common.loading'),
-                of: (shown, total) => `${shown} / ${total}`,
+                of: (shown, total) =>
+                  t('common.countOf', { shown, total, entity: t('sidebar.oauthProviders') }),
               }}
             />
           </div>
@@ -1753,5 +1894,20 @@ export default function OAuthProvidersPage() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function OAuthProvidersPageFallback() {
+  const { t } = useI18n();
+  return <Text tone="muted">{t('common.loading')}</Text>;
+}
+
+/** `useSearchParams` needs a Suspense boundary in a statically prerendered
+ *  page — this route is one (§16 puts the filters in the URL). */
+export default function OAuthProvidersPage() {
+  return (
+    <Suspense fallback={<OAuthProvidersPageFallback />}>
+      <OAuthProvidersPageContent />
+    </Suspense>
   );
 }
