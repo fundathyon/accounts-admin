@@ -197,4 +197,87 @@ body {
   --color-info-border: var(--fdn-info-border);
   --color-info-solid: var(--fdn-info-solid);
   --color-on-solid: var(--fdn-on-solid);
+
+  /* Non-colour theme extensions from the package's theme.css, copied the same
+     way as the colours above: this build only picked up --color-*, so every
+     custom utility below (text-body, h-control-lg, w-modal-md, ease-standard…)
+     has been silently generating NO CSS this whole time — Tailwind has no
+     built-in fallback for names it doesn't recognise, unlike shadow-* or
+     rounded-*, which merely fell back to Tailwind's own defaults instead of
+     breaking outright. This is why every Button/Input/IconButton across the
+     app has been rendering at its unstyled content height regardless of its
+     size prop. */
+  --font-sans: var(--fdn-font-sans);
+  --font-mono: var(--fdn-font-mono);
+
+  --text-display: 2.375rem;
+  --text-display--line-height: 2.75rem;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-h1: 1.875rem;
+  --text-h1--line-height: 2.25rem;
+  --text-h1--font-weight: 700;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.75rem;
+  --text-h2--font-weight: 700;
+  --text-h2--letter-spacing: -0.015em;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.5rem;
+  --text-h3--font-weight: 600;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h4: 0.9375rem;
+  --text-h4--line-height: 1.25rem;
+  --text-h4--font-weight: 600;
+  --text-h5: 0.8125rem;
+  --text-h5--line-height: 1.125rem;
+  --text-h5--font-weight: 600;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.25rem;
+  --text-body-sm: 0.75rem;
+  --text-body-sm--line-height: 1.125rem;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1rem;
+  --text-label--font-weight: 500;
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: 0.9375rem;
+  --text-overline: 0.65625rem;
+  --text-overline--line-height: 0.875rem;
+  --text-overline--font-weight: 600;
+  --text-overline--letter-spacing: 0.05em;
+  --text-code: 0.71875rem;
+  --text-code--line-height: 1.125rem;
+
+  /* Elevation — Tailwind's default shadow-* would otherwise silently stand in
+     for these, so this only changes the exact shadow values, never breaks. */
+  --shadow-xs: var(--fdn-shadow-xs);
+  --shadow-sm: var(--fdn-shadow-sm);
+  --shadow-md: var(--fdn-shadow-md);
+  --shadow-lg: var(--fdn-shadow-lg);
+  --shadow-xl: var(--fdn-shadow-xl);
+
+  --ease-standard: var(--fdn-ease-standard);
+  --ease-enter: var(--fdn-ease-enter);
+  --ease-exit: var(--fdn-ease-exit);
+
+  /* Control heights (§04) — h-control-* / w-control-* (Button, Input, Select,
+     IconButton…) and h-control follows density. This is the block whose
+     absence collapsed every control to its unstyled content height. */
+  --spacing-control-xs: var(--fdn-control-xs);
+  --spacing-control-sm: var(--fdn-control-sm);
+  --spacing-control-md: var(--fdn-control-md);
+  --spacing-control-lg: var(--fdn-control-lg);
+  --spacing-control: var(--fdn-control-height);
+
+  --spacing-sidebar: var(--fdn-sidebar-width);
+  --spacing-sidebar-collapsed: var(--fdn-sidebar-collapsed);
+  --spacing-header: var(--fdn-header-height);
+  --spacing-container-max: var(--fdn-container-max);
+  --spacing-prose-max: var(--fdn-prose-max);
+  --spacing-modal-sm: var(--fdn-modal-sm);
+  --spacing-modal-md: var(--fdn-modal-md);
+  --spacing-modal-lg: var(--fdn-modal-lg);
+  --spacing-drawer-sm: var(--fdn-drawer-sm);
+  --spacing-drawer-md: var(--fdn-drawer-md);
+  --spacing-drawer-lg: var(--fdn-drawer-lg);
 }
