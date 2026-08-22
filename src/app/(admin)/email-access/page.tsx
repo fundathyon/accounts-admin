@@ -6,7 +6,6 @@ import {
   Key,
   ShieldCheck,
   ShieldOff,
-  Loader2,
   ListFilter,
   Plus,
   Trash2,
@@ -15,38 +14,40 @@ import {
   PlayCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH, cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
+  CardHeader,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
+  EmptyState,
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+  Spinner,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Text,
+  Textarea,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, cn } from '@/lib/utils';
 import type { EmailAccessEntryView, EmailAccessSettingsView } from '@/lib/admin-types';
 
 const PAGE_SIZE = 20;
@@ -352,8 +353,8 @@ export default function EmailAccessPage() {
   const tabBtn = (id: Tab, label: string) => (
     <Button
       type="button"
-      variant={tab === id ? 'default' : 'outline'}
-      size="sm"
+      variant={tab === id ? 'primary' : 'secondary'}
+      size="md"
       className="rounded-full"
       onClick={() => setTab(id)}
     >
@@ -372,33 +373,41 @@ export default function EmailAccessPage() {
     const totalPages = meta?.totalPages ?? 1;
     return (
       <Card className="border-border/60">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardHeader
+          className="items-center p-6 pb-4"
+          actions={
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => openAdd(kind)}
+              leading={<Icon icon={Plus} size={14} />}
+            >
+              {t('emailAccess.addEntry')}
+            </Button>
+          }
+        >
           <div>
-            <CardTitle className="text-lg">
+            <Heading level={2} visual="h3">
               {kind === 'allow' ? t('emailAccess.tabAllow') : t('emailAccess.tabBlock')}
-            </CardTitle>
+            </Heading>
             {meta != null && (
-              <CardDescription className="mt-1">
+              <Text tone="secondary" className="mt-1">
                 {t('emailAccess.totalEntries', { count: meta.total })}
-              </CardDescription>
+              </Text>
             )}
           </div>
-          <Button size="sm" className="gap-2" onClick={() => openAdd(kind)}>
-            <Plus className="w-4 h-4" />
-            {t('emailAccess.addEntry')}
-          </Button>
         </CardHeader>
-        <CardContent>
+        <CardBody className="p-6 pt-0">
           {loading ? (
             <div className="py-16 flex justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
             </div>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">{t('emailAccess.emptyList')}</p>
+            <Text tone="muted" className="py-8 text-center">{t('emailAccess.emptyList')}</Text>
           ) : (
             <>
-              <Table>
-                <TableHeader>
+              <Table className="rounded-none border-0 bg-transparent">
+                <TableHeader className="bg-transparent">
                   <TableRow>
                     <TableHead>{t('emailAccess.colType')}</TableHead>
                     <TableHead className="hidden lg:table-cell">{t('emailAccess.colSegment')}</TableHead>
@@ -412,70 +421,67 @@ export default function EmailAccessPage() {
                   {rows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell>
-                        <Badge variant="secondary" className="font-mono text-xs">
+                        <Badge className="font-mono">
                           {row.entry_type}
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <Badge variant="outline" className="font-mono text-xs">
+                        <Badge variant="outline" className="font-mono">
                           {row.access_segment || 'all'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">{row.value_normalized}</TableCell>
-                      <TableCell className="hidden md:table-cell max-w-[200px] truncate text-muted-foreground text-sm">
+                      <TableCell className="font-mono">{row.value_normalized}</TableCell>
+                      <TableCell className="hidden md:table-cell max-w-[200px] truncate text-text-secondary">
                         {row.note || '—'}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                      <TableCell className="hidden sm:table-cell text-caption text-text-muted">
                         {new Date(row.created_at).toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
+                        <IconButton
+                          icon={Trash2}
+                          label={t('emailAccess.deleteEntry')}
+                          variant="destructive-subtle"
                           onClick={() => {
                             setDeleteTarget({ kind, id: row.id });
                             setDeleteOpen(true);
                           }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground">
+                <Text variant="caption" tone="muted">
                   {t('emailAccess.page')} {page + 1} {t('emailAccess.of')} {totalPages}
-                </p>
+                </Text>
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="outline"
-                    size="sm"
+                    variant="secondary"
+                    size="md"
                     disabled={page <= 0}
                     onClick={() => setPage(page - 1)}
+                    leading={<Icon icon={ChevronLeft} size={14} />}
                   >
-                    <ChevronLeft className="w-4 h-4" />
                     {t('emailAccess.prev')}
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
-                    size="sm"
+                    variant="secondary"
+                    size="md"
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage(page + 1)}
+                    trailing={<Icon icon={ChevronRight} size={14} />}
                   >
                     {t('emailAccess.next')}
-                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
             </>
           )}
-        </CardContent>
+        </CardBody>
       </Card>
     );
   };
@@ -485,45 +491,55 @@ export default function EmailAccessPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <ListFilter className="w-8 h-8 text-primary" />
+            <Heading level={1} className="flex items-center gap-3">
+              <Icon icon={ListFilter} size={20} className="text-primary" />
               {t('sidebar.emailAccess')}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">{t('emailAccess.desc')}</p>
-            <p className="text-muted-foreground text-xs mt-2 max-w-2xl">{t('emailAccess.descSeg')}</p>
+            </Heading>
+            <Text tone="secondary" className="mt-1">{t('emailAccess.desc')}</Text>
+            <Text variant="caption" tone="muted" className="mt-2 block max-w-2xl">{t('emailAccess.descSeg')}</Text>
           </div>
           <div className="flex gap-2">
             {savedSecretKey && (
-              <Button variant="outline" className="gap-2" onClick={openTestDialog}>
-                <PlayCircle className="w-4 h-4" />
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={openTestDialog}
+                leading={<Icon icon={PlayCircle} size={16} />}
+              >
                 Probar email
               </Button>
             )}
             {!savedSecretKey && (
-              <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-                <Link href={settingsHref}>
-                  <Key className="w-4 h-4" /> {t('emailAccess.configSecretKey')}
-                </Link>
-              </Button>
+              <Link
+                href={settingsHref}
+                className={cn(
+                  buttonVariants({ variant: 'secondary', size: 'lg' }),
+                  'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                )}
+              >
+                <Icon icon={Key} size={16} /> {t('emailAccess.configSecretKey')}
+              </Link>
             )}
           </div>
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('emailAccess.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">{t('emailAccess.secretKeyRequiredDesc')}</CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
-            </Button>
+          <Card className="border-amber-500/20">
+            <EmptyState
+              icon={Key}
+              title={<span className="text-amber-300">{t('emailAccess.secretKeyRequired')}</span>}
+              description={t('emailAccess.secretKeyRequiredDesc')}
+              action={
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}>
+                  {t('users.goToSettings')}
+                </Link>
+              }
+            />
           </Card>
         ) : (
           <div className="space-y-6">
             <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <Icon icon={ShieldCheck} size={16} />
               <span>
                 {t('roles.consultingWith')}{' '}
                 <span className="font-mono">{truncateKey(savedSecretKey)}</span>
@@ -538,69 +554,57 @@ export default function EmailAccessPage() {
 
             {tab === 'settings' && (
               <Card>
-                <CardHeader>
-                  <CardTitle>{t('emailAccess.tabSettings')}</CardTitle>
-                  <CardDescription>
+                <CardHeader className="p-6 pb-4">
+                  <Heading level={2} visual="h3">{t('emailAccess.tabSettings')}</Heading>
+                  <Text tone="secondary">
                     {t('emailAccess.desc')}
                     {settings?.app_id ? (
-                      <span className="mt-2 block font-mono text-xs text-muted-foreground">
+                      <span className="mt-2 block font-mono text-code text-text-muted">
                         app_id: {settings.app_id}
                       </span>
                     ) : null}
-                  </CardDescription>
+                  </Text>
                 </CardHeader>
-                <CardContent>
+                <CardBody className="p-6 pt-0">
                   {settingsLoading && !settings ? (
                     <div className="py-12 flex justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                      <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
                     </div>
                   ) : (
                     <form onSubmit={handleSaveSettings} className="space-y-8 max-w-lg">
-                      <div className="space-y-2">
-                        <Label>{t('emailAccess.signupMode')}</Label>
+                      <FormField label={t('emailAccess.signupMode')}>
                         <Select
                           value={signupMode}
-                          onValueChange={(v) => setSignupMode(v as 'open' | 'allowlist_required')}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">{t('emailAccess.modeOpen')}</SelectItem>
-                            <SelectItem value="allowlist_required">
-                              {t('emailAccess.modeAllowlist')}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          onValueChange={(v) => setSignupMode((v ?? 'open') as 'open' | 'allowlist_required')}
+                          items={[
+                            { value: 'open', label: t('emailAccess.modeOpen') },
+                            { value: 'allowlist_required', label: t('emailAccess.modeAllowlist') },
+                          ]}
+                        />
+                      </FormField>
 
-                      <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 p-4">
-                        <div className="space-y-1">
-                          <Label htmlFor="eval-block" className="text-base">
-                            {t('emailAccess.evalBlockOnLogin')}
-                          </Label>
-                          <p className="text-xs text-muted-foreground">{t('emailAccess.evalBlockOnLoginHint')}</p>
-                        </div>
+                      <div className="rounded-xl border border-border/60 p-4">
                         <Switch
                           id="eval-block"
                           checked={evalBlockOnLogin}
                           onCheckedChange={setEvalBlockOnLogin}
+                          label={t('emailAccess.evalBlockOnLogin')}
+                          description={t('emailAccess.evalBlockOnLoginHint')}
                         />
                       </div>
 
-                      <Button type="submit" disabled={settingsSaving} className="gap-2">
-                        {settingsSaving ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            {t('emailAccess.savingSettings')}
-                          </>
-                        ) : (
-                          t('emailAccess.saveSettings')
-                        )}
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        disabled={settingsSaving}
+                        leading={settingsSaving ? <Spinner size={16} label={null} /> : undefined}
+                      >
+                        {settingsSaving ? t('emailAccess.savingSettings') : t('emailAccess.saveSettings')}
                       </Button>
                     </form>
                   )}
-                </CardContent>
+                </CardBody>
               </Card>
             )}
 
@@ -613,7 +617,7 @@ export default function EmailAccessPage() {
       </motion.div>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent size="md" className="sm:max-w-lg">
           <form onSubmit={handleCreateEntry}>
             <DialogHeader>
               <DialogTitle>{t('emailAccess.addEntryTitle')}</DialogTitle>
@@ -622,40 +626,33 @@ export default function EmailAccessPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>{t('emailAccess.entryType')}</Label>
+              <FormField label={t('emailAccess.entryType')}>
                 <Select
                   value={formEntryType}
-                  onValueChange={(v) => setFormEntryType(v as 'email' | 'domain')}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="email">{t('emailAccess.typeEmail')}</SelectItem>
-                    <SelectItem value="domain">{t('emailAccess.typeDomain')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('emailAccess.accessSegmentLabel')}</Label>
+                  onValueChange={(v) => setFormEntryType((v ?? 'email') as 'email' | 'domain')}
+                  items={[
+                    { value: 'email', label: t('emailAccess.typeEmail') },
+                    { value: 'domain', label: t('emailAccess.typeDomain') },
+                  ]}
+                />
+              </FormField>
+              <FormField
+                label={t('emailAccess.accessSegmentLabel')}
+                description={t('emailAccess.segmentHint')}
+              >
                 <Select
                   value={formSegmentPreset}
-                  onValueChange={(v) => setFormSegmentPreset(v as SegmentPreset)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('emailAccess.segmentAll')}</SelectItem>
-                    <SelectItem value="email">{t('emailAccess.segmentEmail')}</SelectItem>
-                    <SelectItem value="google">{t('emailAccess.segmentGoogle')}</SelectItem>
-                    <SelectItem value="apple">{t('emailAccess.segmentApple')}</SelectItem>
-                    <SelectItem value="microsoft">{t('emailAccess.segmentMicrosoft')}</SelectItem>
-                    <SelectItem value="github">{t('emailAccess.segmentGithub')}</SelectItem>
-                    <SelectItem value="custom">{t('emailAccess.segmentCustom')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onValueChange={(v) => setFormSegmentPreset((v ?? 'all') as SegmentPreset)}
+                  items={[
+                    { value: 'all', label: t('emailAccess.segmentAll') },
+                    { value: 'email', label: t('emailAccess.segmentEmail') },
+                    { value: 'google', label: t('emailAccess.segmentGoogle') },
+                    { value: 'apple', label: t('emailAccess.segmentApple') },
+                    { value: 'microsoft', label: t('emailAccess.segmentMicrosoft') },
+                    { value: 'github', label: t('emailAccess.segmentGithub') },
+                    { value: 'custom', label: t('emailAccess.segmentCustom') },
+                  ]}
+                />
                 {formSegmentPreset === 'custom' && (
                   <Input
                     id="ea-seg-custom"
@@ -666,10 +663,8 @@ export default function EmailAccessPage() {
                     autoComplete="off"
                   />
                 )}
-                <p className="text-xs text-muted-foreground">{t('emailAccess.segmentHint')}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ea-value">{t('emailAccess.value')}</Label>
+              </FormField>
+              <FormField label={t('emailAccess.value')}>
                 <Input
                   id="ea-value"
                   value={formValue}
@@ -682,34 +677,28 @@ export default function EmailAccessPage() {
                   className="font-mono"
                   required
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ea-note">{t('emailAccess.note')}</Label>
-                <textarea
+              </FormField>
+              <FormField label={t('emailAccess.note')}>
+                <Textarea
                   id="ea-note"
                   value={formNote}
                   onChange={(e) => setFormNote(e.target.value)}
                   rows={2}
-                  className={cn(
-                    'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs',
-                    'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                  )}
                 />
-              </div>
+              </FormField>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+              <Button type="button" variant="secondary" size="lg" onClick={() => setAddOpen(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" disabled={formSubmitting}>
-                {formSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    {t('emailAccess.creating')}
-                  </>
-                ) : (
-                  t('emailAccess.createEntry')
-                )}
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={formSubmitting}
+                leading={formSubmitting ? <Spinner size={16} label={null} /> : undefined}
+              >
+                {formSubmitting ? t('emailAccess.creating') : t('emailAccess.createEntry')}
               </Button>
             </DialogFooter>
           </form>
@@ -723,18 +712,18 @@ export default function EmailAccessPage() {
             <DialogDescription>{t('emailAccess.confirmDelete')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button type="button" variant="secondary" size="lg" onClick={() => setDeleteOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="button" variant="destructive" onClick={confirmDelete} disabled={deleteLoading}>
-              {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('emailAccess.deleteEntry')}
+            <Button type="button" variant="destructive" size="lg" onClick={confirmDelete} loading={deleteLoading}>
+              {t('emailAccess.deleteEntry')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={testOpen} onOpenChange={setTestOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Probar email</DialogTitle>
             <DialogDescription>
@@ -742,51 +731,40 @@ export default function EmailAccessPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="ea-test-email">Email</Label>
+            <FormField label="Email">
               <Input
                 id="ea-test-email"
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
                 placeholder="user@example.com"
-                className="font-mono text-sm"
+                className="font-mono"
                 disabled={testLoading}
               />
-            </div>
+            </FormField>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Canal</Label>
+              <FormField label="Canal">
                 <Select
                   value={testSegment}
-                  onValueChange={(v) => setTestSegment(v as typeof testSegment)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="email">Email/password</SelectItem>
-                    <SelectItem value="google">Google</SelectItem>
-                    <SelectItem value="microsoft">Microsoft</SelectItem>
-                    <SelectItem value="apple">Apple</SelectItem>
-                    <SelectItem value="github">GitHub</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Flujo</Label>
+                  onValueChange={(v) => setTestSegment((v ?? 'email') as typeof testSegment)}
+                  items={[
+                    { value: 'email', label: 'Email/password' },
+                    { value: 'google', label: 'Google' },
+                    { value: 'microsoft', label: 'Microsoft' },
+                    { value: 'apple', label: 'Apple' },
+                    { value: 'github', label: 'GitHub' },
+                  ]}
+                />
+              </FormField>
+              <FormField label="Flujo">
                 <Select
                   value={testFlow}
-                  onValueChange={(v) => setTestFlow(v as typeof testFlow)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="registration">Registro (signup)</SelectItem>
-                    <SelectItem value="login">Login (existente)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  onValueChange={(v) => setTestFlow((v ?? 'registration') as typeof testFlow)}
+                  items={[
+                    { value: 'registration', label: 'Registro (signup)' },
+                    { value: 'login', label: 'Login (existente)' },
+                  ]}
+                />
+              </FormField>
             </div>
             {testResult && (
               <div
@@ -800,33 +778,32 @@ export default function EmailAccessPage() {
                 <div className="flex items-center gap-2 font-medium">
                   {testResult.allowed ? (
                     <>
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      <Icon icon={ShieldCheck} size={16} className="text-emerald-500" />
                       Permitido
                     </>
                   ) : (
                     <>
-                      <ShieldOff className="h-4 w-4 text-red-500" />
+                      <Icon icon={ShieldOff} size={16} className="text-red-500" />
                       Bloqueado
                     </>
                   )}
                 </div>
                 {testResult.scope && (
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="mt-1 text-xs text-text-muted">
                     scope: <code className="font-mono">{testResult.scope}</code>
                   </div>
                 )}
                 {testResult.reason && (
-                  <div className="mt-1 text-xs text-muted-foreground">{testResult.reason}</div>
+                  <div className="mt-1 text-xs text-text-muted">{testResult.reason}</div>
                 )}
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setTestOpen(false)} disabled={testLoading}>
+            <Button type="button" variant="secondary" size="lg" onClick={() => setTestOpen(false)} disabled={testLoading}>
               Cerrar
             </Button>
-            <Button type="button" onClick={runEmailAccessTest} disabled={testLoading} className="gap-2">
-              {testLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button type="button" variant="primary" size="lg" onClick={runEmailAccessTest} loading={testLoading}>
               Evaluar
             </Button>
           </DialogFooter>

@@ -6,27 +6,28 @@ import {
   Users,
   Server,
   RefreshCw,
-  AlertCircle,
-  Loader2,
   Eye,
   EyeOff,
-  AlertTriangle,
-  LogOut,
-  ShieldCheck,
 } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  FormField,
+  Heading,
+  Icon,
+  Inline,
+  Input,
+  Spinner,
+  Text,
+  Tooltip,
+} from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { apiUrl } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { EnvVar } from '@/lib/admin-types';
 
@@ -139,139 +140,149 @@ export default function SettingsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-3xl font-bold mb-8">{t('settings.title')}</h1>
+      <Heading level={1} className="mb-8">{t('settings.title')}</Heading>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          <Card className="p-8 flex flex-col">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8">
+            <Inline gap={3} className="mb-6">
               <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <Key className="w-5 h-5" />
+                <Icon icon={Key} size={20} />
               </div>
               <div>
-                <CardTitle className="text-lg">{t('settings.secretKey')}</CardTitle>
-                <CardDescription>{t('settings.secretKeyDesc')}</CardDescription>
+                <Heading level={2} visual="h3">{t('settings.secretKey')}</Heading>
+                <Text tone="secondary">{t('settings.secretKeyDesc')}</Text>
               </div>
-            </div>
+            </Inline>
             <div className="flex flex-col flex-1 space-y-4">
-              <div className="space-y-2">
-                <Label>{t('settings.secretKey')}</Label>
-                <div className="relative">
-                  <Input
-                    type="password"
-                    placeholder={savedSecretKey ? t('settings.secretKeySetPlaceholder') : t('settings.secretKeyPlaceholder')}
-                    value={secretApiKey}
-                    onChange={(e) => setSecretApiKey(e.target.value)}
-                    className="font-mono"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-auto pt-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={handleSaveKey} className="flex-1 gap-2">
-                      <Key className="w-4 h-4" /> {t('settings.saveKey')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.saveSettings')}
-                  </TooltipContent>
+              <FormField label={t('settings.secretKey')}>
+                <Input
+                  type="password"
+                  placeholder={savedSecretKey ? t('settings.secretKeySetPlaceholder') : t('settings.secretKeyPlaceholder')}
+                  value={secretApiKey}
+                  onChange={(e) => setSecretApiKey(e.target.value)}
+                  className="font-mono"
+                />
+              </FormField>
+              <Inline gap={3} className="mt-auto pt-4">
+                <Tooltip content={t('tooltips.saveSettings')}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={handleSaveKey}
+                    className="flex-1"
+                    leading={<Icon icon={Key} size={16} />}
+                  >
+                    {t('settings.saveKey')}
+                  </Button>
                 </Tooltip>
 
                 {savedSecretKey && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" onClick={handleClearKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
-                        {t('common.delete')}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('tooltips.clearKey')}
-                    </TooltipContent>
+                  <Tooltip content={t('tooltips.clearKey')}>
+                    <Button variant="destructive-subtle" size="lg" onClick={handleClearKey}>
+                      {t('common.delete')}
+                    </Button>
                   </Tooltip>
                 )}
-              </div>
+              </Inline>
             </div>
           </Card>
 
-          <Card className="p-8 flex flex-col">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8">
+            <Inline gap={3} className="mb-6">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                <Users className="w-5 h-5" />
+                <Icon icon={Users} size={20} />
               </div>
               <div>
-                <CardTitle className="text-lg">{t('settings.publishableKey')}</CardTitle>
-                <CardDescription>{t('settings.publishableKeyDesc')}</CardDescription>
+                <Heading level={2} visual="h3">{t('settings.publishableKey')}</Heading>
+                <Text tone="secondary">{t('settings.publishableKeyDesc')}</Text>
               </div>
-            </div>
+            </Inline>
             <div className="flex flex-col flex-1 space-y-4">
-              <div className="space-y-2">
-                <Label>{t('settings.publishableKey')}</Label>
-                <div className="relative">
-                  <Input
-                    type={showPublishableKey ? 'text' : 'password'}
-                    placeholder={t('settings.publishableKeyPlaceholder')}
-                    value={publishableApiKey}
-                    onChange={(e) => setPublishableApiKey(e.target.value)}
-                    className="pr-12 font-mono"
-                  />
-                  <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowPublishableKey((v) => !v)}>
-                    {showPublishableKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground px-1">
-                  {t('settings.getPublishableHint')}
-                </p>
-              </div>
-              <div className="flex gap-3 mt-auto pt-4">
-                <Button onClick={handleSavePublishableKey} className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-500">
-                  <Users className="w-4 h-4" /> {t('settings.savePublishableKey')}
+              <FormField
+                label={t('settings.publishableKey')}
+                description={t('settings.getPublishableHint')}
+              >
+                <Input
+                  type={showPublishableKey ? 'text' : 'password'}
+                  placeholder={t('settings.publishableKeyPlaceholder')}
+                  value={publishableApiKey}
+                  onChange={(e) => setPublishableApiKey(e.target.value)}
+                  className="font-mono"
+                  trailing={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      className="w-6 px-0"
+                      onClick={() => setShowPublishableKey((v) => !v)}
+                    >
+                      <Icon icon={showPublishableKey ? EyeOff : Eye} size={14} />
+                    </Button>
+                  }
+                />
+              </FormField>
+              <Inline gap={3} className="mt-auto pt-4">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handleSavePublishableKey}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
+                  leading={<Icon icon={Users} size={16} />}
+                >
+                  {t('settings.savePublishableKey')}
                 </Button>
                 {savedPublishableKey && (
-                  <Button variant="outline" onClick={handleClearPublishableKey} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                  <Button variant="destructive-subtle" size="lg" onClick={handleClearPublishableKey}>
                     {t('common.delete')}
                   </Button>
                 )}
-              </div>
+              </Inline>
             </div>
           </Card>
         </div>
 
         <Card className="overflow-hidden">
-          <CardHeader className="flex-row items-center justify-between p-6 border-b">
-            <div className="flex items-center gap-3">
+          <CardHeader
+            className="items-center border-b border-border p-6"
+            actions={
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => fetchEnvVars()}
+                disabled={envLoading}
+                className="bg-sky-600 hover:bg-sky-500 text-white"
+                leading={envLoading ? <Spinner size={16} label={null} /> : <Icon icon={RefreshCw} size={16} />}
+              >
+                {envLoading ? t('common.loading') : t('settings.loadVars')}
+              </Button>
+            }
+          >
+            <Inline gap={3}>
               <div className="w-10 h-10 rounded-2xl bg-sky-500/10 flex items-center justify-center text-sky-400">
-                <Server className="w-5 h-5" />
+                <Icon icon={Server} size={20} />
               </div>
               <div>
-                <CardTitle className="text-lg">{t('settings.envVars')}</CardTitle>
-                <CardDescription>{t('settings.envVarsDesc')}</CardDescription>
+                <Heading level={2} visual="h3">{t('settings.envVars')}</Heading>
+                <Text tone="secondary">{t('settings.envVarsDesc')}</Text>
               </div>
-            </div>
-            <Button onClick={() => fetchEnvVars()} disabled={envLoading} className="gap-2 bg-sky-600 hover:bg-sky-500">
-              {envLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {envLoading ? t('common.loading') : t('settings.loadVars')}
-            </Button>
+            </Inline>
           </CardHeader>
 
           {envError && (
-            <div className="mx-6 mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <div>
-                <span className="font-semibold">{t('common.error')}: </span>
-                {envError}
-                {envError.includes('disabled') && (
-                  <span className="block mt-1 text-muted-foreground text-xs">
-                    {t('settings.exposeEnvHint')}
-                  </span>
-                )}
-              </div>
-            </div>
+            <Alert tone="danger" title={t('common.error')} className="mx-6 mt-4">
+              {envError}
+              {envError.includes('disabled') && (
+                <span className="block mt-1 text-text-muted">
+                  {t('settings.exposeEnvHint')}
+                </span>
+              )}
+            </Alert>
           )}
 
           {envVars.length === 0 && !envError && (
-            <div className="p-10 text-center text-muted-foreground text-sm">
-              <Server className="w-8 h-8 mx-auto mb-3 opacity-30" />
-              {t('settings.envEmptyHint')}
+            <div className="p-10 text-center">
+              <Icon icon={Server} size={20} className="mx-auto mb-3 block opacity-30" />
+              <Text tone="muted">{t('settings.envEmptyHint')}</Text>
             </div>
           )}
 
@@ -280,58 +291,61 @@ export default function SettingsPage() {
               {Array.from(new Set(envVars.map((e) => e.category))).map((category) => (
                 <div key={category}>
                   <div className="px-6 py-2 bg-muted/30">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{category}</span>
+                    <Text variant="overline" tone="muted" className="font-bold tracking-widest">{category}</Text>
                   </div>
                   {envVars
                     .filter((e) => e.category === category)
                     .map((envVar) => (
                       <div key={envVar.key} className="px-6 py-3 hover:bg-muted/50 transition-colors flex items-center gap-4">
                         <div className="w-64 shrink-0">
-                          <span
+                          <Text
+                            variant="code"
                             className={cn(
-                              'text-xs font-mono font-semibold',
+                              'font-semibold',
                               envVar.sensitive ? 'text-amber-400' : 'text-sky-400'
                             )}
                           >
                             {envVar.key}
-                          </span>
+                          </Text>
                           {envVar.sensitive && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded text-[10px] font-semibold">
+                            <Badge tone="warning" className="ml-2">
                               {t('settings.sensitive')}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           {envVar.sensitive ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-mono text-muted-foreground truncate">
+                            <Inline gap={2}>
+                              <Text variant="code" tone="muted" className="truncate">
                                 {showSensitiveValues[envVar.key] ? envVar.value : '••••••••'}
-                              </span>
+                              </Text>
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                                size="xs"
+                                className="w-6 shrink-0 px-0"
                                 onClick={() => handleToggleSensitive(envVar.key)}
                                 disabled={envLoading}
                               >
-                                {showSensitiveValues[envVar.key] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                <Icon icon={showSensitiveValues[envVar.key] ? EyeOff : Eye} size={12} />
                               </Button>
-                            </div>
+                            </Inline>
                           ) : (
-                            <span
+                            <Text
+                              variant="code"
+                              as="span"
                               className={cn(
-                                'text-sm font-mono truncate block',
+                                'truncate block',
                                 envVar.value === 'false'
-                                  ? 'text-muted-foreground'
+                                  ? 'text-text-muted'
                                   : envVar.value === 'true'
                                     ? 'text-emerald-400'
                                     : envVar.value === ''
-                                      ? 'text-muted-foreground italic'
-                                      : 'text-foreground'
+                                      ? 'text-text-muted italic'
+                                      : 'text-text'
                               )}
                             >
                               {envVar.value === '' ? t('settings.empty') : envVar.value}
-                            </span>
+                            </Text>
                           )}
                         </div>
                       </div>
@@ -343,8 +357,8 @@ export default function SettingsPage() {
         </Card>
 
         <Card className="p-6">
-          <CardTitle className="text-base mb-3">{t('settings.securityNotes')}</CardTitle>
-          <ul className="space-y-1.5 text-sm text-muted-foreground list-disc list-inside">
+          <Heading level={2} visual="h4" className="mb-3">{t('settings.securityNotes')}</Heading>
+          <ul className="space-y-1.5 text-sm text-text-muted list-disc list-inside">
             <li>{t('settings.securityNote1')}</li>
             <li>{t('settings.securityNote2')}</li>
             <li>{t('settings.securityNote3')}</li>

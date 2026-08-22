@@ -5,9 +5,7 @@ import Link from 'next/link';
 import {
   Key,
   Plus,
-  Loader2,
   Copy,
-  AlertCircle,
   Layers,
   ShieldCheck,
   Trash2,
@@ -18,42 +16,40 @@ import {
   ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
+  EmptyState,
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Inline,
+  Input,
+  KeyValue,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
+  Spinner,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Text,
   Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, cn } from '@/lib/utils';
 import type { App, APIKeyListItem } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
@@ -251,175 +247,186 @@ export default function ApiKeysPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">{t('apiKeys.title')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <Heading level={1}>{t('apiKeys.title')}</Heading>
+            <Text tone="secondary" className="mt-1">
               {t('apiKeys.subtitle')}
-            </p>
+            </Text>
           </div>
           {!savedSecretKey ? (
-            <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-              <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> {t('apiKeys.configSecretKey')}
-              </Link>
-            </Button>
+            <Link
+              href={settingsHref}
+              className={cn(
+                buttonVariants({ variant: 'secondary', size: 'lg' }),
+                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+              )}
+            >
+              <Icon icon={Key} size={16} /> {t('apiKeys.configSecretKey')}
+            </Link>
           ) : (
-            <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2" disabled={loading}>
-              <Plus className="w-4 h-4" /> Generar API Keys
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => setIsGenerateModalOpen(true)}
+              disabled={loading}
+              leading={<Icon icon={Plus} size={16} />}
+            >
+              Generar API Keys
             </Button>
           )}
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('apiKeys.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">
-              {t('apiKeys.configSecretKeyCard')}
-            </CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('apiKeys.goToSettings')}</Link>
-            </Button>
+          <Card className="border-amber-500/20">
+            <EmptyState
+              icon={Key}
+              title={<span className="text-amber-300">{t('apiKeys.secretKeyRequired')}</span>}
+              description={t('apiKeys.configSecretKeyCard')}
+              action={
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}>
+                  {t('apiKeys.goToSettings')}
+                </Link>
+              }
+            />
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
           </div>
         ) : apps.length === 0 && apiKeys.length === 0 ? (
-          <Card className="border-dashed p-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Layers className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="mb-2">{t('apiKeys.noApps')}</CardTitle>
-            <CardDescription className="mb-6">
-              {t('apiKeys.noAppsDesc')}
-            </CardDescription>
-            <Button asChild>
-              <Link href={BASE_PATH ? `${BASE_PATH}`.replace(/\/+/g, '/') : '/'}>{t('apiKeys.goToDashboard')}</Link>
-            </Button>
+          <Card className="border-dashed">
+            <EmptyState
+              icon={Layers}
+              title={t('apiKeys.noApps')}
+              description={t('apiKeys.noAppsDesc')}
+              action={
+                <Link
+                  href={BASE_PATH ? `${BASE_PATH}`.replace(/\/+/g, '/') : '/'}
+                  className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}
+                >
+                  {t('apiKeys.goToDashboard')}
+                </Link>
+              }
+            />
           </Card>
         ) : (
           <div className="space-y-4">
             {savedSecretKey && (
               <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-                <ShieldCheck className="w-4 h-4" /> {t('apiKeys.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+                <Icon icon={ShieldCheck} size={16} /> {t('apiKeys.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
               </div>
             )}
 
             <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
-              <div className="relative flex-1 min-w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="flex-1 min-w-[300px]">
                 <Input
+                  size="lg"
+                  leading={<Icon icon={Search} size={16} />}
                   placeholder={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                  wrapperClassName="border-none bg-background shadow-none"
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Select value={envFilter} onValueChange={(v: any) => setEnvFilter(v)}>
-                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                        <div className="flex items-center gap-2">
-                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                          <SelectValue placeholder={t('apiKeys.environment') || "Env"} />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t('common.all') || "All Envs"}</SelectItem>
-                        <SelectItem value="production">Production</SelectItem>
-                        <SelectItem value="staging">Staging</SelectItem>
-                        <SelectItem value="development">Development</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.state')}
-                  </TooltipContent>
+              <Inline gap={3}>
+                <Tooltip content={t('tooltips.state')}>
+                  <div className="flex items-center gap-2">
+                    <Icon icon={Filter} size={14} className="text-text-muted" />
+                    <Select
+                      size="lg"
+                      value={envFilter}
+                      onValueChange={(v) => setEnvFilter((v ?? 'all') as typeof envFilter)}
+                      placeholder={t('apiKeys.environment') || "Env"}
+                      className="w-[140px] border-none bg-background shadow-none"
+                      items={[
+                        { value: 'all', label: t('common.all') || "All Envs" },
+                        { value: 'production', label: 'Production' },
+                        { value: 'staging', label: 'Staging' },
+                        { value: 'development', label: 'Development' },
+                      ]}
+                    />
+                  </div>
                 </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                      className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
-                    >
-                      {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                      {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.sortBy')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.sortBy')}>
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                    className="bg-background hover:bg-background/80"
+                    leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={16} />}
+                  >
+                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
+                  </Button>
                 </Tooltip>
-              </div>
+              </Inline>
             </div>
 
             {keysLoading ? (
               <div className="py-12 flex justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
               </div>
             ) : apiKeys.length > 0 ? (
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b">
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableName')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableDescription')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.publishableKey')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableState')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableEnv')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableCreated')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredApiKeys.map((k) => (
-                        <TableRow
-                          key={k.id}
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => setSelectedApiKey(k)}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-8 py-4">{t('apiKeys.tableName')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('apiKeys.tableDescription')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('apiKeys.publishableKey')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('apiKeys.tableState')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('apiKeys.tableEnv')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('apiKeys.tableCreated')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredApiKeys.map((k) => (
+                    <TableRow
+                      key={k.id}
+                      interactive
+                      className="group"
+                      onClick={() => setSelectedApiKey(k)}
+                    >
+                      <TableCell className="px-8 py-4 font-medium">{k.name}</TableCell>
+                      <TableCell className="px-8 py-4 text-text-secondary">{k.description || '—'}</TableCell>
+                      <TableCell className="px-8 py-4 font-mono text-code text-text-muted max-w-[200px] truncate" title={k.publishable_key}>
+                        {k.publishable_key}
+                      </TableCell>
+                      <TableCell className="px-8 py-4">
+                        <Badge
+                          variant={k.is_active ? 'tonal' : 'outline'}
+                          tone={k.is_active ? 'success' : 'neutral'}
                         >
-                          <TableCell className="px-8 py-4 font-medium">{k.name}</TableCell>
-                          <TableCell className="px-8 py-4 text-muted-foreground">{k.description || '—'}</TableCell>
-                          <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={k.publishable_key}>
-                            {k.publishable_key}
-                          </TableCell>
-                          <TableCell className="px-8 py-4">
-                            <Badge variant={k.is_active ? 'secondary' : 'outline'} className={k.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
-                              {k.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-8 py-4 text-muted-foreground capitalize">{k.environment}</TableCell>
-                          <TableCell className="px-8 py-4 text-xs text-muted-foreground">
-                            {k.created_at ? new Date(k.created_at).toLocaleDateString() : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                          {k.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-8 py-4 text-text-secondary capitalize">{k.environment}</TableCell>
+                      <TableCell className="px-8 py-4 text-caption text-text-muted">
+                        {k.created_at ? new Date(k.created_at).toLocaleDateString() : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             ) : null}
 
             {apps.length > 0 && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Key className="w-6 h-6 text-primary" />
+                    <Icon icon={Key} size={20} className="text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg mb-2">{t('apiKeys.generateNew')}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <Heading level={3} className="mb-2">{t('apiKeys.generateNew')}</Heading>
+                    <Text tone="secondary" className="mb-4">
                       {t('apiKeys.generateNewDesc')}
-                    </p>
-                    <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2">
-                      <Plus className="w-4 h-4" /> {t('apiKeys.generateKeys')}
+                    </Text>
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={() => setIsGenerateModalOpen(true)}
+                      leading={<Icon icon={Plus} size={16} />}
+                    >
+                      {t('apiKeys.generateKeys')}
                     </Button>
                   </div>
                 </div>
@@ -430,10 +437,10 @@ export default function ApiKeysPage() {
       </motion.div>
 
       <Dialog open={isGenerateModalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
+              <Icon icon={Key} size={20} className="text-primary" />
               {generatedKeys ? t('apiKeys.keysGenerated') : t('apiKeys.generateModalTitle')}
             </DialogTitle>
             <DialogDescription>
@@ -444,92 +451,88 @@ export default function ApiKeysPage() {
           </DialogHeader>
           {generatedKeys ? (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {t('apiKeys.secretKeyWarning')}
-              </div>
+              <Alert tone="warning" title={t('apiKeys.secretKeyWarning')} />
               {generatedKeys.publishable_key && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">{t('apiKeys.publishableKey')}</Label>
-                  <div className="flex gap-2">
+                <FormField label={t('apiKeys.publishableKey')}>
+                  <Inline gap={2}>
                     <Input
                       readOnly
                       value={generatedKeys.publishable_key}
-                      className="font-mono text-xs overflow-x-auto min-w-0"
+                      className="font-mono text-code"
+                      wrapperClassName="min-w-0 flex-1"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
+                    <IconButton
+                      icon={Copy}
+                      label={t('apiKeys.copy')}
+                      variant="secondary"
                       onClick={() => {
                         navigator.clipboard.writeText(generatedKeys!.publishable_key!);
                         showNotification(t('apiKeys.publishableCopied'), 'success');
                       }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                    />
+                  </Inline>
+                </FormField>
               )}
               {generatedKeys.secret_key && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">{t('apiKeys.secretKey')}</Label>
-                  <div className="flex gap-2">
+                <FormField label={t('apiKeys.secretKey')}>
+                  <Inline gap={2}>
                     <Input
                       readOnly
                       value={generatedKeys.secret_key}
-                      className="font-mono text-xs overflow-x-auto min-w-0"
+                      className="font-mono text-code"
+                      wrapperClassName="min-w-0 flex-1"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
+                    <IconButton
+                      icon={Copy}
+                      label={t('apiKeys.copy')}
+                      variant="secondary"
                       onClick={() => {
                         navigator.clipboard.writeText(generatedKeys!.secret_key!);
                         showNotification(t('apiKeys.secretCopied'), 'success');
                       }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                    />
+                  </Inline>
+                </FormField>
               )}
               <DialogFooter>
-                <Button onClick={closeModal}>{t('apiKeys.close')}</Button>
-                <Button variant="outline" onClick={() => { setGeneratedKeys(null); setFormData({ name: '', description: '' }); }}>
+                <Button variant="primary" size="lg" onClick={closeModal}>{t('apiKeys.close')}</Button>
+                <Button variant="secondary" size="lg" onClick={() => { setGeneratedKeys(null); setFormData({ name: '', description: '' }); }}>
                   {t('apiKeys.generateAnother')}
                 </Button>
               </DialogFooter>
             </div>
           ) : (
             <form onSubmit={handleGenerate} className="space-y-4">
-              <p className="text-sm text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <Text variant="body-sm" tone="secondary" className="block rounded-lg border border-border bg-muted/20 px-3 py-2">
                 {t('apiKeys.generateUsesSecretApp') ||
                   'Las claves se crearán para la aplicación asociada a tu Secret Key guardada en ajustes.'}
-              </p>
-              <div className="space-y-2">
-                <Label>{t('apiKeys.name')} *</Label>
+              </Text>
+              <FormField label={t('apiKeys.name')} required>
                 <Input
                   required
                   placeholder={t('apiKeys.namePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('apiKeys.description')}</Label>
+              </FormField>
+              <FormField label={t('apiKeys.description')}>
                 <Input
                   placeholder={t('apiKeys.descriptionPlaceholder')}
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 />
-              </div>
+              </FormField>
               <DialogFooter className="gap-4 pt-4">
-                <Button type="button" variant="outline" onClick={closeModal}>
+                <Button type="button" variant="secondary" size="lg" onClick={closeModal}>
                   {t('common.cancel')}
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="gap-2">
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  disabled={isSubmitting}
+                  leading={isSubmitting ? <Spinner size={16} label={null} /> : undefined}
+                >
                   {isSubmitting ? t('apiKeys.generating') : t('apiKeys.generate')}
                 </Button>
               </DialogFooter>
@@ -539,13 +542,13 @@ export default function ApiKeysPage() {
       </Dialog>
 
       <Dialog open={!!selectedApiKey} onOpenChange={(open) => !open && setSelectedApiKey(null)}>
-        <DialogContent className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
+              <Icon icon={Key} size={20} className="text-primary" />
               {t('apiKeys.detailsTitle')}
               {selectedApiKey && (
-                <span className="text-muted-foreground font-normal">({selectedApiKey.name})</span>
+                <span className="text-text-secondary font-normal">({selectedApiKey.name})</span>
               )}
             </DialogTitle>
             <DialogDescription>
@@ -556,84 +559,73 @@ export default function ApiKeysPage() {
           {selectedApiKey && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.id')}</Label>
-                  <p className="text-sm font-mono break-all">{selectedApiKey.id}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.appId')}</Label>
-                  <p className="text-sm font-mono break-all">{selectedApiKey.app_id}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableName')}</Label>
-                  <p className="text-sm font-semibold">{selectedApiKey.name}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableState')}</Label>
-                  <Badge variant={selectedApiKey.is_active ? 'secondary' : 'outline'} className={selectedApiKey.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
+                <KeyValue label={t('oauth.id')} mono className="break-all">
+                  {selectedApiKey.id}
+                </KeyValue>
+                <KeyValue label={t('oauth.appId')} mono className="break-all">
+                  {selectedApiKey.app_id}
+                </KeyValue>
+                <KeyValue label={t('apiKeys.tableName')} className="font-semibold">
+                  {selectedApiKey.name}
+                </KeyValue>
+                <KeyValue label={t('apiKeys.tableState')}>
+                  <Badge
+                    variant={selectedApiKey.is_active ? 'tonal' : 'outline'}
+                    tone={selectedApiKey.is_active ? 'success' : 'neutral'}
+                  >
                     {selectedApiKey.is_active ? 'Activa' : 'Inactiva'}
                   </Badge>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.environment')}</Label>
-                  <p className="text-sm capitalize">{selectedApiKey.environment}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.keyId')}</Label>
-                  <p className="text-sm font-mono">{selectedApiKey.key_id}</p>
-                </div>
+                </KeyValue>
+                <KeyValue label={t('apiKeys.environment')} className="capitalize">
+                  {selectedApiKey.environment}
+                </KeyValue>
+                <KeyValue label={t('apiKeys.keyId')} mono>
+                  {selectedApiKey.key_id}
+                </KeyValue>
               </div>
 
               {selectedApiKey.description && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableDescription')}</Label>
-                  <p className="text-sm">{selectedApiKey.description}</p>
-                </div>
+                <KeyValue label={t('apiKeys.tableDescription')}>{selectedApiKey.description}</KeyValue>
               )}
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('apiKeys.publishableKey')}</Label>
-                <div className="flex gap-2">
-                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedApiKey.publishable_key}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    title={t('apiKeys.copy')}
+                <Text variant="caption" tone="muted" className="block">{t('apiKeys.publishableKey')}</Text>
+                <Inline gap={2} align="start">
+                  <Text variant="code" as="p" className="break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">
+                    {selectedApiKey.publishable_key}
+                  </Text>
+                  <IconButton
+                    icon={Copy}
+                    label={t('apiKeys.copy')}
+                    variant="secondary"
                     onClick={() => {
                       navigator.clipboard.writeText(selectedApiKey.publishable_key);
                       showNotification('Publishable key copiada', 'success');
                     }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
+                  />
+                </Inline>
               </div>
 
-              <p className="text-xs text-muted-foreground/80">
+              <Text variant="caption" tone="muted" className="block">
                 {t('apiKeys.secretNotShown')}
-              </p>
+              </Text>
 
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.created')}</Label>
-                  <p className="text-sm">{selectedApiKey.created_at ? new Date(selectedApiKey.created_at).toLocaleString() : '—'}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.updated')}</Label>
-                  <p className="text-sm">{selectedApiKey.updated_at ? new Date(selectedApiKey.updated_at).toLocaleString() : '—'}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
+                <KeyValue label={t('roles.created')}>
+                  {selectedApiKey.created_at ? new Date(selectedApiKey.created_at).toLocaleString() : '—'}
+                </KeyValue>
+                <KeyValue label={t('roles.updated')}>
+                  {selectedApiKey.updated_at ? new Date(selectedApiKey.updated_at).toLocaleString() : '—'}
+                </KeyValue>
                 {selectedApiKey.last_used_at && (
-                  <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">{t('apiKeys.lastUsed')}</Label>
-                    <p className="text-sm">{new Date(selectedApiKey.last_used_at).toLocaleString()}</p>
-                  </div>
+                  <KeyValue label={t('apiKeys.lastUsed')} className="col-span-2">
+                    {new Date(selectedApiKey.last_used_at).toLocaleString()}
+                  </KeyValue>
                 )}
                 {selectedApiKey.revoked_at && (
-                  <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">{t('apiKeys.revoked')}</Label>
-                    <p className="text-sm text-amber-500">{new Date(selectedApiKey.revoked_at).toLocaleString()}</p>
-                  </div>
+                  <KeyValue label={t('apiKeys.revoked')} className="col-span-2 text-amber-500">
+                    {new Date(selectedApiKey.revoked_at).toLocaleString()}
+                  </KeyValue>
                 )}
               </div>
 
@@ -641,28 +633,27 @@ export default function ApiKeysPage() {
                 <div className="flex gap-2 ml-auto">
                   {selectedApiKey.is_active && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={actionLoading}
+                      variant="secondary"
+                      size="md"
+                      loading={actionLoading}
                       onClick={handleDeactivate}
-                      className="gap-1.5 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      className="text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      leading={<Icon icon={PowerOff} size={14} />}
                     >
-                      {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
                       {t('apiKeys.deactivate')}
                     </Button>
                   )}
                   <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={actionLoading}
+                    variant="destructive-subtle"
+                    size="md"
+                    loading={actionLoading}
                     onClick={handleDelete}
-                    className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                    leading={<Icon icon={Trash2} size={14} />}
                   >
-                    {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     {t('apiKeys.delete')}
                   </Button>
                 </div>
-                <Button variant="outline" onClick={() => setSelectedApiKey(null)}>
+                <Button variant="secondary" size="lg" onClick={() => setSelectedApiKey(null)}>
                   {t('apiKeys.close')}
                 </Button>
               </DialogFooter>
