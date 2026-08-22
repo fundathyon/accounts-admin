@@ -2,22 +2,43 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { LogIn, Plus, Loader2, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
+import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, Search, Filter, MinusCircle, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Input,
+  Select,
+  Spinner,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+  Text,
+  Tooltip,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import { OAuthNativeAudiences } from '@/components/oauth-native-audiences';
 import type { OAuthConfig, OAuthRedirectItem, Role } from '@/lib/admin-types';
@@ -98,35 +119,6 @@ function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { FieldHint } from '@/components/ui/field-hint';
 
 const ALLOWED_PROVIDERS = [
@@ -777,41 +769,42 @@ export default function OAuthProvidersPage() {
             </p>
           </div>
           {!savedSecretKey ? (
-            <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-              <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> {t('oauth.configSecretKey')}
-              </Link>
-            </Button>
+            <Link
+              href={settingsHref}
+              className={cn(
+                buttonVariants({ variant: 'secondary', size: 'sm' }),
+                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+              )}
+            >
+              <Key className="w-4 h-4" /> {t('oauth.configSecretKey')}
+            </Link>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={openCreateModal} className="gap-2">
-                  <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('tooltips.newOAuth')}
-              </TooltipContent>
+            <Tooltip content={t('tooltips.newOAuth')}>
+              <Button variant="primary" onClick={openCreateModal} className="gap-2">
+                <Plus className="w-4 h-4" /> Nuevo Proveedor OAuth
+              </Button>
             </Tooltip>
           )}
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
+          <Card className="border-amber-500/20 gap-6 p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">{t('oauth.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">
+            <Heading level={2} visual="h3" className="text-amber-300 mb-2">
+              {t('oauth.secretKeyRequired')}
+            </Heading>
+            <Text tone="secondary" className="mb-6">
               {t('oauth.configSecretKeyCard')}
-            </CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('oauth.goToSettings')}</Link>
-            </Button>
+            </Text>
+            <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+              {t('oauth.goToSettings')}
+            </Link>
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -839,7 +832,7 @@ export default function OAuthProvidersPage() {
                   onClick={handleRunLegacyMigration}
                   disabled={migrationApplyLoading}
                 >
-                  {migrationApplyLoading ? <Loader2 className="size-4 animate-spin" /> : <AlertTriangle className="size-4" />}
+                  {migrationApplyLoading ? <Spinner size={16} label={null} /> : <AlertTriangle className="size-4" />}
                   {migrationApplyLoading ? t('notifications.migrating') : t('oauth.runMigration')}
                 </Button>
               </div>
@@ -847,130 +840,114 @@ export default function OAuthProvidersPage() {
 
             <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
               <div className="relative flex-1 min-w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  leading={<Search className="w-4 h-4 text-muted-foreground" />}
                   placeholder={t('oauth.searchPlaceholder') || "Search by name, provider or ID..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                  wrapperClassName="h-10 border-none bg-background shadow-none"
                 />
               </div>
 
               <div className="flex items-center gap-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v)}>
-                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                        <div className="flex items-center gap-2">
-                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                          <SelectValue placeholder={t('oauth.provider') || "Provider"} />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
-                        {ALLOWED_PROVIDERS.map(p => (
-                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.oauth')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.oauth')}>
+                  <span className="relative inline-flex items-center">
+                    <Filter className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                    <Select
+                      value={providerFilter}
+                      onValueChange={(v) => setProviderFilter(v ?? 'all')}
+                      placeholder={t('oauth.provider') || "Provider"}
+                      className="w-[140px] h-10 pl-8 border-none bg-background shadow-none"
+                      items={[
+                        { value: 'all', label: t('common.all') || "All" },
+                        ...ALLOWED_PROVIDERS.map((p) => ({ value: p.value, label: p.label })),
+                      ]}
+                    />
+                  </span>
                 </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-                          <SelectValue placeholder={t('users.state') || "State"} />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t('common.all') || "Both"}</SelectItem>
-                        <SelectItem value="enabled">{t('oauth.enabled') || "Enabled"}</SelectItem>
-                        <SelectItem value="disabled">{t('oauth.disabled') || "Disabled"}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.state')}
-                  </TooltipContent>
+                <Tooltip content={t('tooltips.state')}>
+                  <span className="relative inline-flex items-center">
+                    <ShieldCheck className="pointer-events-none absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                    <Select
+                      value={statusFilter}
+                      onValueChange={(v) => setStatusFilter((v ?? 'all') as 'all' | 'enabled' | 'disabled')}
+                      placeholder={t('users.state') || "State"}
+                      className="w-[140px] h-10 pl-8 border-none bg-background shadow-none"
+                      items={[
+                        { value: 'all', label: t('common.all') || "Both" },
+                        { value: 'enabled', label: t('oauth.enabled') || "Enabled" },
+                        { value: 'disabled', label: t('oauth.disabled') || "Disabled" },
+                      ]}
+                    />
+                  </span>
                 </Tooltip>
               </div>
             </div>
 
             {providers.length === 0 ? (
-              <Card className="border-dashed p-16 text-center">
+              <Card className="border-dashed gap-6 p-16 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
                   <LogIn className="w-8 h-8 text-rose-400" />
                 </div>
-                <CardTitle className="mb-2">{t('oauth.noProviders')}</CardTitle>
-                <CardDescription className="mb-6">
+                <Heading level={2} visual="h3" className="mb-2">
+                  {t('oauth.noProviders')}
+                </Heading>
+                <Text tone="secondary" className="mb-6">
                   {t('oauth.noProvidersDesc')}
-                </CardDescription>
-                <Button onClick={openCreateModal} className="gap-2">
+                </Text>
+                <Button variant="primary" onClick={openCreateModal} className="gap-2">
                   <Plus className="w-4 h-4" /> {t('oauth.addProvider')}
                 </Button>
               </Card>
             ) : (
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b">
-                        <TableHead className="px-8 py-4">{t('oauth.tableProvider')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('oauth.tableName')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('oauth.tableClientId')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('oauth.tableState')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('oauth.tableCallbackUri')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProviders.map((p) => (
-                        <TableRow
-                          key={p.id}
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => setSelectedProvider(p)}
-                        >
-                          <TableCell className="px-8 py-4">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <OAuthProviderLogo provider={p.provider} size={28} className="rounded shrink-0" />
-                              {migrationPendingIds.has(p.id) ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span
-                                      className="inline-flex size-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-background"
-                                      aria-label={t('oauth.migrationRowTooltip')}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-xs">
-                                    {t('oauth.migrationRowTooltip')}
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-8 py-4 text-muted-foreground">{p.name || '—'}</TableCell>
-                          <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={p.client_id}>
-                            {p.client_id}
-                          </TableCell>
-                          <TableCell className="px-8 py-4">
-                            <Badge variant={p.enabled ? 'secondary' : 'outline'} className={p.enabled ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
-                              {p.enabled ? t('oauth.enabled') : t('oauth.disabled')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[220px] truncate" title={p.callback_uri}>
-                            {p.callback_uri}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <Table className="overflow-hidden">
+                <TableHeader>
+                  <TableRow className="border-b">
+                    <TableHead className="px-8 py-4">{t('oauth.tableProvider')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('oauth.tableName')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('oauth.tableClientId')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('oauth.tableState')}</TableHead>
+                    <TableHead className="px-8 py-4">{t('oauth.tableCallbackUri')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProviders.map((p) => (
+                    <TableRow
+                      key={p.id}
+                      interactive
+                      className="group transition-colors"
+                      onClick={() => setSelectedProvider(p)}
+                    >
+                      <TableCell className="px-8 py-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <OAuthProviderLogo provider={p.provider} size={28} className="rounded shrink-0" />
+                          {migrationPendingIds.has(p.id) ? (
+                            <Tooltip content={t('oauth.migrationRowTooltip')} side="top" className="max-w-xs whitespace-normal">
+                              <span
+                                className="inline-flex size-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-background"
+                                aria-label={t('oauth.migrationRowTooltip')}
+                              />
+                            </Tooltip>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8 py-4 text-muted-foreground">{p.name || '—'}</TableCell>
+                      <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={p.client_id}>
+                        {p.client_id}
+                      </TableCell>
+                      <TableCell className="px-8 py-4">
+                        <Badge variant={p.enabled ? 'tonal' : 'outline'} tone={p.enabled ? 'success' : 'neutral'}>
+                          {p.enabled ? t('oauth.enabled') : t('oauth.disabled')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[220px] truncate" title={p.callback_uri}>
+                        {p.callback_uri}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         )}
@@ -989,11 +966,14 @@ export default function OAuthProvidersPage() {
           </DialogHeader>
 
           <form onSubmit={editingProvider ? handleUpdate : handleCreate} className="space-y-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                {t('oauth.providerLabel')}
-                <FieldHint text={t('oauth.hints.provider')} />
-              </Label>
+            <FormField
+              label={
+                <>
+                  {t('oauth.providerLabel')}
+                  <FieldHint text={t('oauth.hints.provider')} />
+                </>
+              }
+            >
               <div className="flex flex-wrap gap-3">
                 {ALLOWED_PROVIDERS.map((prov) => (
                   <button
@@ -1011,22 +991,24 @@ export default function OAuthProvidersPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label>{t('oauth.nameOptional')}</Label>
+            <FormField label={t('oauth.nameOptional')}>
               <Input
                 placeholder={t('oauth.namePlaceholder')}
                 value={formData.name}
                 onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                Client ID *
-                <FieldHint text={t('oauth.hints.clientId')} />
-              </Label>
+            <FormField
+              label={
+                <>
+                  Client ID *
+                  <FieldHint text={t('oauth.hints.clientId')} />
+                </>
+              }
+            >
               <Input
                 required
                 placeholder={t('oauth.clientIdPlaceholder')}
@@ -1034,13 +1016,16 @@ export default function OAuthProvidersPage() {
                 onChange={(e) => setFormData((p) => ({ ...p, client_id: e.target.value }))}
                 className="font-mono text-sm"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                Client Secret {editingProvider ? '(optional)' : '*'}
-                <FieldHint text={t('oauth.hints.clientSecret')} />
-              </Label>
+            <FormField
+              label={
+                <>
+                  Client Secret {editingProvider ? '(optional)' : '*'}
+                  <FieldHint text={t('oauth.hints.clientSecret')} />
+                </>
+              }
+            >
               <Input
                 required={!editingProvider}
                 type="password"
@@ -1049,17 +1034,17 @@ export default function OAuthProvidersPage() {
                 onChange={(e) => setFormData((p) => ({ ...p, client_secret: e.target.value }))}
                 className="font-mono text-sm"
               />
-            </div>
+            </FormField>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5">
+                <Text as="span" variant="label" className="flex items-center gap-1.5">
                   {t('oauth.callbackLabel')}
                   <FieldHint text={t('oauth.hints.callback')} />
-                </Label>
+                </Text>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={handleGenerateCallback}
                   className="gap-1.5"
@@ -1073,25 +1058,25 @@ export default function OAuthProvidersPage() {
                 readOnly
                 placeholder={t('oauth.callbackKeyPlaceholder')}
                 value={formData.callback_key}
-                className="font-mono text-sm bg-muted/50 text-muted-foreground cursor-not-allowed"
+                className="font-mono text-sm text-muted-foreground cursor-not-allowed"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Callback URI *</Label>
+            <FormField label="Callback URI *">
               <div className="flex gap-2">
                 <Input
                   required
                   readOnly
                   placeholder={t('oauth.callbackUriPlaceholder')}
                   value={formData.callback_uri}
-                  className="font-mono text-sm flex-1 min-w-0 bg-muted/50 text-muted-foreground cursor-not-allowed"
+                  wrapperClassName="flex-1 min-w-0"
+                  className="font-mono text-sm text-muted-foreground cursor-not-allowed"
                 />
-                <Button
+                <IconButton
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  title={t('oauth.copyUri')}
+                  icon={Copy}
+                  label={t('oauth.copyUri')}
+                  variant="secondary"
                   className={`shrink-0 transition-colors ${copyJustClicked ? 'bg-primary/20' : ''}`}
                   onClick={() => {
                     if (formData.callback_uri) {
@@ -1101,65 +1086,63 @@ export default function OAuthProvidersPage() {
                       setTimeout(() => setCopyJustClicked(false), 300);
                     }
                   }}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
+                />
               </div>
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                {t('oauth.scopesLabel')}
-                <FieldHint text={t('oauth.hints.scopes')} />
-              </Label>
+            <FormField
+              label={
+                <>
+                  {t('oauth.scopesLabel')}
+                  <FieldHint text={t('oauth.hints.scopes')} />
+                </>
+              }
+            >
               <Input
                 placeholder={t('oauth.scopesPlaceholder')}
                 value={formData.scopes}
                 onChange={(e) => setFormData((p) => ({ ...p, scopes: e.target.value }))}
                 className="font-mono text-sm"
               />
-            </div>
+            </FormField>
 
             <div className="space-y-3 rounded-lg border border-border/60 p-4">
               <div>
-                <Label className="flex items-center gap-1.5">
+                <Text as="span" variant="label" className="flex items-center gap-1.5">
                   {t('oauth.redirectWhitelist')}
                   <FieldHint text={t('oauth.hints.redirectWhitelist')} />
-                </Label>
+                </Text>
                 <p className="text-xs text-muted-foreground mt-1">{t('oauth.redirectWhitelistHint')}</p>
               </div>
               <div className="space-y-3">
                 {formData.redirects.map((row, idx) => (
                   <div key={row.id} className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div className="space-y-1.5 sm:w-[130px]">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        {t('oauth.platformLabel')}
-                        {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted-foreground/60" />}
-                      </Label>
+                    <FormField
+                      className="sm:w-[130px]"
+                      label={
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          {t('oauth.platformLabel')}
+                          {idx === 0 && <FieldHint text={t('oauth.hints.platform')} className="text-muted-foreground/60" />}
+                        </span>
+                      }
+                    >
                       <Select
                         value={row.platform}
                         onValueChange={(v) => {
                           setFormData((p) => {
                             const next = [...p.redirects];
-                            next[idx] = { ...next[idx], platform: v as OAuthPlatform };
+                            next[idx] = { ...next[idx], platform: (v ?? 'web') as OAuthPlatform };
                             return { ...p, redirects: next };
                           });
                         }}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {OAUTH_PLATFORMS.map((pl) => (
-                            <SelectItem key={pl.value} value={pl.value}>
-                              {pl.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex-1 space-y-1.5 min-w-0">
-                      <Label className="text-xs text-muted-foreground">{t('oauth.redirectUrlRow')}</Label>
+                        className="h-9"
+                        items={OAUTH_PLATFORMS.map((pl) => ({ value: pl.value, label: pl.label }))}
+                      />
+                    </FormField>
+                    <FormField
+                      className="flex-1 min-w-0"
+                      label={<span className="text-xs text-muted-foreground">{t('oauth.redirectUrlRow')}</span>}
+                    >
                       <Input
                         placeholder={t('oauth.redirectWebPlaceholder')}
                         value={row.url}
@@ -1172,12 +1155,16 @@ export default function OAuthProvidersPage() {
                         }}
                         className="font-mono text-sm"
                       />
-                    </div>
-                    <div className="flex-1 space-y-1.5 min-w-0 sm:max-w-[200px]">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        {t('oauth.rowNameOptional')}
-                        {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted-foreground/60" />}
-                      </Label>
+                    </FormField>
+                    <FormField
+                      className="flex-1 min-w-0 sm:max-w-[200px]"
+                      label={
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          {t('oauth.rowNameOptional')}
+                          {idx === 0 && <FieldHint text={t('oauth.hints.rowName')} className="text-muted-foreground/60" />}
+                        </span>
+                      }
+                    >
                       <Input
                         placeholder="—"
                         value={row.name}
@@ -1189,28 +1176,26 @@ export default function OAuthProvidersPage() {
                           });
                         }}
                       />
-                    </div>
-                    <Button
+                    </FormField>
+                    <IconButton
                       type="button"
+                      icon={MinusCircle}
+                      label={t('common.delete')}
                       variant="ghost"
-                      size="icon"
                       className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive"
-                      title={t('common.delete')}
                       onClick={() => {
                         setFormData((p) => ({
                           ...p,
                           redirects: p.redirects.filter((_, i) => i !== idx),
                         }));
                       }}
-                    >
-                      <MinusCircle className="w-4 h-4" />
-                    </Button>
+                    />
                   </div>
                 ))}
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="gap-2"
                 onClick={() => {
@@ -1225,23 +1210,21 @@ export default function OAuthProvidersPage() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div>
-                <Label>{t('oauth.enabledLabel')}</Label>
-                <p className="text-xs text-muted-foreground">{t('oauth.enabledDesc')}</p>
-              </div>
+            <div className="rounded-lg border p-4">
               <Switch
+                label={t('oauth.enabledLabel')}
+                description={t('oauth.enabledDesc')}
                 checked={formData.enabled}
                 onCheckedChange={(v) => setFormData((p) => ({ ...p, enabled: v }))}
               />
             </div>
 
             <DialogFooter className="gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={closeModal}>
+              <Button type="button" variant="secondary" onClick={closeModal}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="gap-2">
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Button type="submit" variant="primary" disabled={isSubmitting} className="gap-2">
+                {isSubmitting && <Spinner size={16} label={null} />}
                 {isSubmitting
                   ? (editingProvider ? t('oauth.updating') : t('oauth.creating'))
                   : (editingProvider ? t('oauth.updateProvider') : t('oauth.createProvider'))}
@@ -1272,87 +1255,83 @@ export default function OAuthProvidersPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.id')}</Label>
+                  <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.id')}</Text>
                   <p className="text-sm font-mono break-all">{selectedProvider.id}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.appId')}</Label>
+                  <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.appId')}</Text>
                   <p className="text-sm font-mono break-all">{selectedProvider.app_id}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.tableProvider')}</Label>
+                  <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.tableProvider')}</Text>
                   <div className="flex items-center gap-2">
                     <OAuthProviderLogo provider={selectedProvider.provider} size={28} className="rounded" />
                     <span className="text-sm font-semibold capitalize">{selectedProvider.provider}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.tableState')}</Label>
-                  <Badge variant={selectedProvider.enabled ? 'secondary' : 'outline'} className={selectedProvider.enabled ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
+                  <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.tableState')}</Text>
+                  <Badge variant={selectedProvider.enabled ? 'tonal' : 'outline'} tone={selectedProvider.enabled ? 'success' : 'neutral'}>
                     {selectedProvider.enabled ? t('oauth.enabled') : t('oauth.disabled')}
                   </Badge>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('oauth.tableName')}</Label>
+                <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.tableName')}</Text>
                 <p className="text-sm">{selectedProvider.name || '—'}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('oauth.tableClientId')}</Label>
+                <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.tableClientId')}</Text>
                 <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3">{selectedProvider.client_id}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('oauth.callbackKey')}</Label>
+                <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.callbackKey')}</Text>
                 <div className="flex gap-2 items-start">
                   <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_key}</p>
-                  <Button
-                    variant="outline"
-                    size="icon"
+                  <IconButton
+                    icon={Copy}
+                    label={t('common.copy')}
+                    variant="secondary"
                     className="shrink-0 h-9 w-9"
-                    title={t('common.copy')}
                     onClick={() => {
                       navigator.clipboard.writeText(selectedProvider.callback_key);
                       showNotification(t('oauth.callbackKeyCopied'), 'success');
                     }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('oauth.callbackUri')}</Label>
+                <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.callbackUri')}</Text>
                 <div className="flex gap-2 items-start">
                   <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedProvider.callback_uri}</p>
-                  <Button
-                    variant="outline"
-                    size="icon"
+                  <IconButton
+                    icon={Copy}
+                    label={t('common.copy')}
+                    variant="secondary"
                     className="shrink-0 h-9 w-9"
-                    title={t('common.copy')}
                     onClick={() => {
                       navigator.clipboard.writeText(selectedProvider.callback_uri);
                       showNotification(t('oauth.callbackUriCopied'), 'success');
                     }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('oauth.scopes')}</Label>
+                <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.scopes')}</Text>
                 <p className="text-sm font-mono">{selectedProvider.scopes || '—'}</p>
               </div>
 
               <div className="space-y-3 pt-2 border-t">
                 <div className="flex items-center justify-between">
-                  <Label className="text-muted-foreground text-xs flex items-center gap-1.5">
+                  <Text as="div" variant="label" tone="muted" className="text-xs flex items-center gap-1.5">
                     {t('oauth.detailsRedirects')}
                     <FieldHint text={t('oauth.hints.detailsRedirects')} />
-                  </Label>
+                  </Text>
                   {selectedProvider.redirects && selectedProvider.redirects.length > 0 && (
                     <Badge variant="outline" className="text-[10px] font-mono">
                       {selectedProvider.redirects.length}
@@ -1372,7 +1351,7 @@ export default function OAuthProvidersPage() {
                         >
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2 min-w-0">
-                              <Badge variant="secondary" className="capitalize text-xs shrink-0">
+                              <Badge variant="tonal" tone="neutral" className="capitalize text-xs shrink-0">
                                 {row.platform}
                               </Badge>
                               {row.name?.trim() && (
@@ -1394,40 +1373,29 @@ export default function OAuthProvidersPage() {
                             <p className="text-xs font-mono break-all bg-background rounded-md p-2 flex-1 min-w-0">
                               {row.url}
                             </p>
-                            <Button
-                              variant="outline"
-                              size="icon"
+                            <IconButton
+                              icon={Copy}
+                              label={t('common.copy')}
+                              variant="secondary"
                               className="shrink-0 h-8 w-8"
-                              title={t('common.copy')}
                               onClick={() => {
                                 navigator.clipboard.writeText(row.url);
                                 showNotification(t('oauth.redirectUriCopied'), 'success');
                               }}
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </Button>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="shrink-0 h-8 w-8"
-                                  disabled={isLoading || !savedPublishableKey}
-                                  onClick={() => handleCopyLinkForRedirectRow(row)}
-                                >
-                                  {isLoading ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  ) : (
-                                    <Link2 className="w-3.5 h-3.5" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {savedPublishableKey
+                            />
+                            <IconButton
+                              icon={Link2}
+                              label={
+                                savedPublishableKey
                                   ? t('oauth.copyOAuthLink')
-                                  : t('oauth.publishableKeyRequiredForCopy')}
-                              </TooltipContent>
-                            </Tooltip>
+                                  : t('oauth.publishableKeyRequiredForCopy')
+                              }
+                              variant="secondary"
+                              className="shrink-0 h-8 w-8"
+                              loading={isLoading}
+                              disabled={isLoading || !savedPublishableKey}
+                              onClick={() => handleCopyLinkForRedirectRow(row)}
+                            />
                           </div>
                         </div>
                       );
@@ -1467,18 +1435,16 @@ export default function OAuthProvidersPage() {
                               <p className="text-xs font-mono break-all bg-background/60 rounded p-1.5 flex-1 min-w-0">
                                 {r.value}
                               </p>
-                              <Button
+                              <IconButton
+                                icon={Copy}
+                                label={t('common.copy')}
                                 variant="ghost"
-                                size="icon"
                                 className="shrink-0 h-7 w-7"
-                                title={t('common.copy')}
                                 onClick={() => {
                                   navigator.clipboard.writeText(r.value!);
                                   showNotification(t('oauth.redirectUriCopied'), 'success');
                                 }}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
+                              />
                             </div>
                           ))}
                       </div>
@@ -1494,7 +1460,7 @@ export default function OAuthProvidersPage() {
 
               <DialogFooter className="pt-4 gap-2 flex-wrap">
                 <Button
-                  variant="default"
+                  variant="primary"
                   size="sm"
                   className="gap-2"
                   onClick={() => {
@@ -1512,43 +1478,50 @@ export default function OAuthProvidersPage() {
                   {t('oauth.fetchLink')}
                 </Button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <MoreVertical className="w-4 h-4" />
-                      {t('oauth.options')}
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="secondary" size="sm" className="gap-2">
+                        <MoreVertical className="w-4 h-4" />
+                        {t('oauth.options')}
+                      </Button>
+                    }
+                  />
                   <DropdownMenuContent align="end" className="min-w-[160px]">
-                    <DropdownMenuItem onClick={() => selectedProvider && openEditModal(selectedProvider)} className="gap-2">
-                      <Pencil className="w-4 h-4" />
+                    <DropdownMenuItem icon={Pencil} onClick={() => selectedProvider && openEditModal(selectedProvider)}>
                       {t('oauth.editProvider')}
                     </DropdownMenuItem>
                     {selectedProvider?.enabled ? (
                       <DropdownMenuItem
                         onClick={handleDisableProvider}
                         disabled={!!actionLoading}
-                        className="gap-2 text-amber-600 focus:text-amber-600"
+                        className="text-amber-600"
                       >
-                        {actionLoading === 'disable' ? <Loader2 className="w-4 h-4 animate-spin" /> : <PowerOff className="w-4 h-4" />}
-                        {actionLoading === 'disable' ? t('oauth.disabling') : t('oauth.disableProvider')}
+                        <span className="inline-flex items-center gap-2">
+                          {actionLoading === 'disable' ? <Spinner size={16} label={null} /> : <Icon icon={PowerOff} size={16} />}
+                          {actionLoading === 'disable' ? t('oauth.disabling') : t('oauth.disableProvider')}
+                        </span>
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
                         onClick={handleEnableProvider}
                         disabled={!!actionLoading}
-                        className="gap-2 text-emerald-600 focus:text-emerald-600"
+                        className="text-emerald-600"
                       >
-                        {actionLoading === 'enable' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
-                        {actionLoading === 'enable' ? t('oauth.enabling') : t('oauth.enableProvider')}
+                        <span className="inline-flex items-center gap-2">
+                          {actionLoading === 'enable' ? <Spinner size={16} label={null} /> : <Icon icon={Power} size={16} />}
+                          {actionLoading === 'enable' ? t('oauth.enabling') : t('oauth.enableProvider')}
+                        </span>
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
+                      destructive
                       onClick={handleDeleteProvider}
                       disabled={!!actionLoading}
-                      className="gap-2 text-destructive focus:text-destructive"
                     >
-                      {actionLoading === 'delete' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      {actionLoading === 'delete' ? t('oauth.deleting') : t('oauth.deleteProvider')}
+                      <span className="inline-flex items-center gap-2">
+                        {actionLoading === 'delete' ? <Spinner size={16} label={null} /> : <Icon icon={Trash2} size={16} />}
+                        {actionLoading === 'delete' ? t('oauth.deleting') : t('oauth.deleteProvider')}
+                      </span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1588,14 +1561,13 @@ export default function OAuthProvidersPage() {
 
           {linkDialogProvider && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('oauth.platformLabel')}</Label>
+              <FormField label={t('oauth.platformLabel')}>
                 <div className="flex flex-wrap gap-2">
                   {OAUTH_PLATFORMS.map((pl) => (
                     <Button
                       key={pl.value}
                       type="button"
-                      variant={linkPlatform === pl.value ? 'default' : 'outline'}
+                      variant={linkPlatform === pl.value ? 'primary' : 'secondary'}
                       size="sm"
                       onClick={() => setLinkPlatform(pl.value)}
                     >
@@ -1603,31 +1575,26 @@ export default function OAuthProvidersPage() {
                     </Button>
                   ))}
                 </div>
-              </div>
+              </FormField>
+
+              <FormField label={t('oauth.roleLabel')}>
+                <Select
+                  value={linkRole}
+                  onValueChange={(v) => setLinkRole(v ?? 'default')}
+                  className="w-full h-9"
+                  items={
+                    roles.length === 0
+                      ? [{ value: 'default', label: 'default' }]
+                      : roles.map((r) => ({
+                          value: r.name,
+                          label: `${r.name}${r.description ? ` — ${r.description}` : ''}`,
+                        }))
+                  }
+                />
+              </FormField>
 
               <div className="space-y-2">
-                <Label>{t('oauth.roleLabel')}</Label>
-                <Select value={linkRole} onValueChange={setLinkRole}>
-                  <SelectTrigger className="w-full h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.length === 0 ? (
-                      <SelectItem value="default">default</SelectItem>
-                    ) : (
-                      roles.map((r) => (
-                        <SelectItem key={r.id} value={r.name}>
-                          {r.name}
-                          {r.description ? ` — ${r.description}` : ''}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('oauth.linkRedirectPick')}</Label>
+                <Text as="span" variant="label">{t('oauth.linkRedirectPick')}</Text>
                 {linkLegacyDeprecation?.active && (
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 space-y-1">
                     <p className="font-semibold">
@@ -1647,31 +1614,31 @@ export default function OAuthProvidersPage() {
                 ) : (
                   <Select
                     value={linkRedirectUrl || linkRedirectsForPlatform[0]?.url || ''}
-                    onValueChange={setLinkRedirectUrl}
-                  >
-                    <SelectTrigger className="w-full h-9 font-mono text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {linkRedirectsForPlatform.map((r, i) => (
-                        <SelectItem
-                          key={`${r.url}-${r.platform}-${i}`}
-                          value={r.url}
-                          className="font-mono text-xs"
-                        >
+                    onValueChange={(v) => setLinkRedirectUrl(v ?? '')}
+                    className="w-full h-9 font-mono text-sm"
+                    items={linkRedirectsForPlatform.map((r) => ({
+                      value: r.url,
+                      label: (
+                        <span className="font-mono text-xs">
                           {r.name ? `${r.name} — ${r.url}` : r.url}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </span>
+                      ),
+                    }))}
+                  />
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  {t('oauth.linkRtOptional')}
-                  <FieldHint text={t('oauth.hints.linkRtField')} />
-                </Label>
+              <FormField
+                label={
+                  <>
+                    {t('oauth.linkRtOptional')}
+                    <FieldHint text={t('oauth.hints.linkRtField')} />
+                  </>
+                }
+                description={
+                  linkRedirectsForPlatform.length > 0 ? t('oauth.linkRtDisabledWhenRedirect') : undefined
+                }
+              >
                 <Input
                   placeholder={t('oauth.linkRtPlaceholder')}
                   value={linkRt}
@@ -1679,19 +1646,17 @@ export default function OAuthProvidersPage() {
                   disabled={linkRedirectsForPlatform.length > 0}
                   className="font-mono text-sm disabled:opacity-60"
                 />
-                {linkRedirectsForPlatform.length > 0 && (
-                  <p className="text-xs text-muted-foreground">{t('oauth.linkRtDisabledWhenRedirect')}</p>
-                )}
-              </div>
+              </FormField>
 
               {!savedPublishableKey && (
                 <p className="text-sm text-amber-400">{t('oauth.publishableKeyRequired')}</p>
               )}
               <DialogFooter className="gap-4 justify-between">
-                <Button variant="outline" onClick={() => setLinkDialogProvider(null)}>
+                <Button variant="secondary" onClick={() => setLinkDialogProvider(null)}>
                   {t('common.cancel')}
                 </Button>
                 <Button
+                  variant="primary"
                   onClick={handleFetchOAuthLink}
                   disabled={
                     linkLoading ||
@@ -1702,23 +1667,27 @@ export default function OAuthProvidersPage() {
                   }
                   className="gap-2"
                 >
-                  {linkLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {linkLoading && <Spinner size={16} label={null} />}
                   {linkLoading ? t('oauth.fetchingLink') : t('oauth.fetchLink')}
                 </Button>
               </DialogFooter>
 
               {linkResult && (
                 <div className="space-y-2 pt-2 border-t">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.resultLink')}</Label>
+                  <Text as="div" variant="label" tone="muted" className="text-xs">{t('oauth.resultLink')}</Text>
                   <div className="flex gap-2">
                     <Input
                       readOnly
                       value={linkResult}
-                      className="font-mono text-xs flex-1 min-w-0 bg-muted/50"
+                      wrapperClassName="flex-1 min-w-0"
+                      className="font-mono text-xs"
                     />
-                    <Button variant="outline" size="icon" onClick={handleCopyLink} title={t('oauth.copyUri')}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                    <IconButton
+                      icon={Copy}
+                      label={t('oauth.copyUri')}
+                      variant="secondary"
+                      onClick={handleCopyLink}
+                    />
                   </div>
                 </div>
               )}

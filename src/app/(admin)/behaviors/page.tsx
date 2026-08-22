@@ -2,14 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Puzzle, Key, ShieldCheck, Loader2 } from 'lucide-react';
+import { Puzzle, Key, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  Badge,
+  buttonVariants,
+  Card,
+  Heading,
+  Spinner,
+  Text,
+} from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { AppBehavior } from '@/lib/admin-types';
 
@@ -58,28 +63,36 @@ export default function BehaviorsPage() {
             <p className="text-muted-foreground text-sm mt-1">{t('behaviors.desc')}</p>
           </div>
           {!savedSecretKey && (
-            <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-              <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> {t('behaviors.configSecretKey')}
-              </Link>
-            </Button>
+            <Link
+              href={settingsHref}
+              className={cn(
+                buttonVariants({ variant: 'secondary', size: 'sm' }),
+                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+              )}
+            >
+              <Key className="w-4 h-4" /> {t('behaviors.configSecretKey')}
+            </Link>
           )}
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
+          <Card className="border-amber-500/20 gap-6 p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <CardTitle className="text-amber-300 mb-2">{t('behaviors.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">{t('behaviors.secretKeyRequiredDesc')}</CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
-            </Button>
+            <Heading level={2} visual="h3" className="text-amber-300 mb-2">
+              {t('behaviors.secretKeyRequired')}
+            </Heading>
+            <Text tone="secondary" className="mb-6">
+              {t('behaviors.secretKeyRequiredDesc')}
+            </Text>
+            <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+              {t('users.goToSettings')}
+            </Link>
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -88,31 +101,35 @@ export default function BehaviorsPage() {
             </div>
 
             {behaviors.length === 0 ? (
-              <Card className="border-dashed p-16 text-center">
+              <Card className="border-dashed gap-6 p-16 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
                   <Puzzle className="w-8 h-8 text-rose-400" />
                 </div>
-                <CardTitle className="mb-2">{t('behaviors.noBehaviors')}</CardTitle>
-                <CardDescription>{t('behaviors.noBehaviorsDesc')}</CardDescription>
+                <Heading level={2} visual="h3" className="mb-2">
+                  {t('behaviors.noBehaviors')}
+                </Heading>
+                <Text tone="secondary">{t('behaviors.noBehaviorsDesc')}</Text>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {behaviors.map((behavior) => (
                   <Link key={behavior.id} href={behaviorsHref(behavior.id)}>
-                    <Card className="p-6 cursor-pointer hover:border-primary/30 transition-all group">
+                    <Card className="gap-6 p-6 cursor-pointer hover:border-primary/30 transition-all group">
                       <div className="flex justify-between items-start mb-4">
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
                           <Puzzle className="w-5 h-5" />
                         </div>
                         <Badge
-                          variant={behavior.is_active ? 'secondary' : 'outline'}
-                          className={cn(behavior.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : 'bg-muted text-muted-foreground')}
+                          variant="tonal"
+                          tone={behavior.is_active ? 'success' : 'neutral'}
                         >
                           {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
                         </Badge>
                       </div>
 
-                      <CardTitle className="text-lg mb-1">{behavior.behavior_code}</CardTitle>
+                      <Heading level={3} visual="h3" className="mb-1">
+                        {behavior.behavior_code}
+                      </Heading>
                       <p className="text-xs text-muted-foreground font-mono mb-4">{behavior.id}</p>
 
                       <div className="text-xs text-muted-foreground mt-auto pt-4 border-t border-border flex flex-col gap-1">

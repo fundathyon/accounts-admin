@@ -1,15 +1,8 @@
 'use client';
 
-import { Mail, Link2, Link2Off, Lock, ShieldCheck, Loader2, Palette, Database } from 'lucide-react';
+import { Mail, Link2, Link2Off, Lock, ShieldCheck, Palette, Database } from 'lucide-react';
+import { Badge, Button, Tooltip } from '@foundathyon/community-ui';
 import { useI18n } from '@/context/i18n-context';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import type { MetadataSchemaConfig } from '@/lib/admin-types';
 
 export interface EmailAuthConfig {
@@ -86,12 +79,7 @@ function BoolBadge({ value }: { value?: boolean }) {
   const { t } = useI18n();
   if (value == null) return <span className="text-muted-foreground">—</span>;
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        value ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-      )}
-    >
+    <Badge variant="tonal" tone={value ? 'success' : 'danger'}>
       {value ? t('emailAuth.yes') : t('emailAuth.no')}
     </Badge>
   );
@@ -138,7 +126,7 @@ export function EmailAuthConfigView({
       {config.identifier && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">{t('emailAuth.identifier')}</span>
-          <Badge variant="secondary" className="font-mono">
+          <Badge variant="tonal" tone="neutral" className="font-mono">
             {config.identifier}
           </Badge>
         </div>
@@ -230,28 +218,17 @@ export function EmailAuthConfigView({
 
           {onToggleMagicLink && (
             <div className="pt-3 mt-2 border-t border-border/50">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onToggleMagicLink}
-                    disabled={togglingMagicLink}
-                    className="gap-2"
-                  >
-                    {togglingMagicLink ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : magic.enabled ? (
-                      <Link2Off className="w-4 h-4" />
-                    ) : (
-                      <Link2 className="w-4 h-4" />
-                    )}
-                    {magic.enabled ? t('emailAuth.deactivateMagicLink') : t('emailAuth.activateMagicLink')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {magic.enabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated')}
-                </TooltipContent>
+              <Tooltip content={magic.enabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onToggleMagicLink}
+                  loading={togglingMagicLink}
+                  className="gap-2"
+                >
+                  {magic.enabled ? <Link2Off className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+                  {magic.enabled ? t('emailAuth.deactivateMagicLink') : t('emailAuth.activateMagicLink')}
+                </Button>
               </Tooltip>
             </div>
           )}
@@ -296,13 +273,9 @@ export function EmailAuthConfigView({
             label={t('emailAuth.codeStrategy')}
             value={
               <Badge
-                variant="outline"
-                className={cn(
-                  'font-mono text-xs',
-                  (verification.code_strategy ?? 'random') === 'fixed'
-                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                )}
+                variant="tonal"
+                tone={(verification.code_strategy ?? 'random') === 'fixed' ? 'warning' : 'success'}
+                className="font-mono text-xs"
               >
                 {verification.code_strategy ?? 'random'}
               </Badge>
@@ -316,26 +289,17 @@ export function EmailAuthConfigView({
           )}
           {onToggleVerification && (
             <div className="pt-3 mt-2 border-t border-border/50">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onToggleVerification}
-                    disabled={togglingVerification}
-                    className="gap-2"
-                  >
-                    {togglingVerification ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="w-4 h-4" />
-                    )}
-                    {verification.enabled ? t('emailAuth.deactivateVerification') : t('emailAuth.activateVerification')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {verification.enabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated')}
-                </TooltipContent>
+              <Tooltip content={verification.enabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onToggleVerification}
+                  loading={togglingVerification}
+                  className="gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  {verification.enabled ? t('emailAuth.deactivateVerification') : t('emailAuth.activateVerification')}
+                </Button>
               </Tooltip>
             </div>
           )}
@@ -358,7 +322,7 @@ export function EmailAuthConfigView({
                     <span className="font-mono text-xs text-foreground truncate">{field.name}</span>
                     <Badge variant="outline" className="text-[10px] font-mono shrink-0">{field.type}</Badge>
                     {field.required && (
-                      <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 shrink-0">
+                      <Badge variant="tonal" tone="danger" className="text-[10px] shrink-0">
                         {t('emailAuth.metadataRequired')}
                       </Badge>
                     )}
@@ -378,24 +342,17 @@ export function EmailAuthConfigView({
           )}
           {onActivateMetadataSchema && (
             <div className="pt-3 mt-2 border-t border-border/50">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onActivateMetadataSchema}
-                    disabled={activatingMetadataSchema}
-                    className="gap-2"
-                  >
-                    {activatingMetadataSchema ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Database className="w-4 h-4" />
-                    )}
-                    {t('emailAuth.configureMetadataSchema')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('emailAuth.configureMetadataSchemaTooltip')}</TooltipContent>
+              <Tooltip content={t('emailAuth.configureMetadataSchemaTooltip')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onActivateMetadataSchema}
+                  loading={activatingMetadataSchema}
+                  className="gap-2"
+                >
+                  <Database className="w-4 h-4" />
+                  {t('emailAuth.configureMetadataSchema')}
+                </Button>
               </Tooltip>
             </div>
           )}

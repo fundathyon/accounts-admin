@@ -3,26 +3,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Puzzle, Settings, Pencil, Loader2 } from 'lucide-react';
+import { ChevronLeft, Puzzle, Settings, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import {
+  Spinner,
   Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH } from '@/lib/utils';
 import { EmailAuthConfigView, type EmailAuthConfig } from '@/components/behaviors/email-auth-config-view';
 import { EmailAuthConfigForm } from '@/components/behaviors/email-auth-config-form';
 import { cn } from '@/lib/utils';
@@ -169,7 +167,7 @@ export default function BehaviorDetailPage() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+        <Spinner size={20} label={t('common.loading')} className="text-primary" />
       </div>
     );
   }
@@ -177,11 +175,12 @@ export default function BehaviorDetailPage() {
   if (!behavior) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
-          <Link href={behaviorsHref}>
-            <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
-          </Link>
-        </Button>
+        <Link
+          href={behaviorsHref}
+          className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'mb-6 gap-2 -ml-2')}
+        >
+          <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
+        </Link>
         <Card className="p-12 text-center">
           <p className="text-muted-foreground">{t('behaviors.behaviorNotFound')}</p>
         </Card>
@@ -191,17 +190,13 @@ export default function BehaviorDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
-            <Link href={behaviorsHref}>
-              <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
-            </Link>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {t('behaviors.backToBehaviors')}
-        </TooltipContent>
+      <Tooltip content={t('behaviors.backToBehaviors')} side="right">
+        <Link
+          href={behaviorsHref}
+          className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'mb-6 gap-2 -ml-2')}
+        >
+          <ChevronLeft className="w-4 h-4" /> {t('behaviors.backToBehaviors')}
+        </Link>
       </Tooltip>
 
       <div className="space-y-8">
@@ -214,10 +209,8 @@ export default function BehaviorDetailPage() {
               <h1 className="text-2xl font-bold">{behavior.behavior_code}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <Badge
-                  variant={behavior.is_active ? 'secondary' : 'outline'}
-                  className={cn(
-                    behavior.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : 'bg-muted text-muted-foreground'
-                  )}
+                  variant="tonal"
+                  tone={behavior.is_active ? 'success' : 'neutral'}
                 >
                   {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
                 </Badge>
@@ -225,16 +218,11 @@ export default function BehaviorDetailPage() {
               </div>
             </div>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" className="gap-2" onClick={() => setIsEditing(true)}>
-                <Pencil className="w-4 h-4" />
-                {t('common.edit')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('behaviors.editBehavior')}
-            </TooltipContent>
+          <Tooltip content={t('behaviors.editBehavior')}>
+            <Button variant="secondary" className="gap-2" onClick={() => setIsEditing(true)}>
+              <Pencil className="w-4 h-4" />
+              {t('common.edit')}
+            </Button>
           </Tooltip>
         </div>
 
@@ -279,7 +267,10 @@ export default function BehaviorDetailPage() {
       </div>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="w-[min(95vw,1000px)] max-h-[90vh] overflow-hidden flex flex-col p-6">
+        <DialogContent
+          size="lg"
+          className="w-[min(95vw,1000px)] sm:max-w-[min(95vw,1000px)] max-h-[90vh] overflow-hidden flex flex-col p-6"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-primary" />
@@ -306,10 +297,10 @@ export default function BehaviorDetailPage() {
                   </pre>
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button variant="secondary" onClick={() => setIsEditing(false)}>
                     {t('common.cancel')}
                   </Button>
-                  <Button disabled>
+                  <Button variant="primary" disabled>
                     (Sólo email_auth es editable por ahora)
                   </Button>
                 </div>

@@ -5,30 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Smartphone,
   Plus,
-  Loader2,
   Copy,
   Trash2,
   Info,
   Check,
 } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  FormField,
+  IconButton,
+  Input,
+  Select,
+  Spinner,
+  Text,
+  Tooltip,
+} from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { FieldHint } from '@/components/ui/field-hint';
 import type { OAuthNativeAudience, OAuthNativePlatform } from '@/lib/admin-types';
 
@@ -234,11 +228,11 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
   return (
     <div className="space-y-3 pt-2 border-t">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Label className="text-muted-foreground text-xs flex items-center gap-1.5">
+        <Text as="div" variant="label" tone="muted" className="text-xs flex items-center gap-1.5">
           <Smartphone className="w-3.5 h-3.5" />
           {t('oauth.audiences.sectionTitle')}
           <FieldHint text={t('oauth.audiences.sectionHint')} />
-        </Label>
+        </Text>
         <div className="flex items-center gap-2">
           {audiences.length > 0 && (
             <Badge variant="outline" className="text-[10px] font-mono">
@@ -250,23 +244,23 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               const count = groupedCounts[pl.value];
               const active = count > 0;
               return (
-                <Tooltip key={pl.value}>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                        active
-                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                          : 'border-border/60 bg-muted/30 text-muted-foreground'
-                      }`}
-                    >
-                      {pl.label} · {count}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {active
+                <Tooltip
+                  key={pl.value}
+                  content={
+                    active
                       ? t('oauth.audiences.platformReady', { platform: pl.label })
-                      : t('oauth.audiences.platformMissing', { platform: pl.label })}
-                  </TooltipContent>
+                      : t('oauth.audiences.platformMissing', { platform: pl.label })
+                  }
+                >
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                      active
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                        : 'border-border/60 bg-muted/30 text-muted-foreground'
+                    }`}
+                  >
+                    {pl.label} · {count}
+                  </span>
                 </Tooltip>
               );
             })}
@@ -292,7 +286,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
 
       {loading ? (
         <div className="py-6 flex justify-center">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
         </div>
       ) : sortedAudiences.length > 0 ? (
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -309,7 +303,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Badge variant="secondary" className="capitalize text-xs shrink-0">
+                    <Badge variant="tonal" tone="neutral" className="capitalize text-xs shrink-0">
                       {a.platform}
                     </Badge>
                     {a.label?.trim() && (
@@ -328,41 +322,22 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                   <p className="text-xs font-mono break-all bg-background rounded-md p-2 flex-1 min-w-0">
                     {a.audience}
                   </p>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0 h-8 w-8"
-                        onClick={() => handleCopy(a)}
-                      >
-                        {copiedId === a.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('oauth.audiences.copy')}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive hover:border-destructive/40"
-                        disabled={deletingId === a.id}
-                        onClick={() => handleDelete(a)}
-                      >
-                        {deletingId === a.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-3.5 h-3.5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('oauth.audiences.delete')}</TooltipContent>
-                  </Tooltip>
+                  <IconButton
+                    icon={copiedId === a.id ? Check : Copy}
+                    label={t('oauth.audiences.copy')}
+                    variant="secondary"
+                    className={`shrink-0 h-8 w-8 ${copiedId === a.id ? 'text-emerald-400' : ''}`}
+                    onClick={() => handleCopy(a)}
+                  />
+                  <IconButton
+                    icon={Trash2}
+                    label={t('oauth.audiences.delete')}
+                    variant="secondary"
+                    className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                    loading={deletingId === a.id}
+                    disabled={deletingId === a.id}
+                    onClick={() => handleDelete(a)}
+                  />
                 </div>
               </motion.div>
             ))}
@@ -407,55 +382,58 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {t('oauth.audiences.platform')}
-                </Label>
+              <FormField
+                label={
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {t('oauth.audiences.platform')}
+                  </span>
+                }
+              >
                 <Select
                   value={formPlatform}
                   onValueChange={(v) => setFormPlatform(v as OAuthNativePlatform)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLATFORMS.map((pl) => (
-                      <SelectItem key={pl.value} value={pl.value}>
-                        {pl.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 min-w-0">
-                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-                  {t('oauth.audiences.audience')}
-                  <FieldHint text={t('oauth.audiences.audienceHint')} />
-                </Label>
+                  className="h-9"
+                  items={PLATFORMS.map((pl) => ({ value: pl.value, label: pl.label }))}
+                />
+              </FormField>
+              <FormField
+                className="min-w-0"
+                label={
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                    {t('oauth.audiences.audience')}
+                    <FieldHint text={t('oauth.audiences.audienceHint')} />
+                  </span>
+                }
+              >
                 <Input
                   required
                   value={formAudience}
                   onChange={(e) => setFormAudience(e.target.value)}
                   placeholder={placeholder}
-                  className="font-mono text-xs h-9"
+                  wrapperClassName="h-9"
+                  className="font-mono text-xs"
                   autoFocus
                 />
-              </div>
+              </FormField>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {t('oauth.audiences.label')}
-              </Label>
+            <FormField
+              label={
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {t('oauth.audiences.label')}
+                </span>
+              }
+            >
               <Input
                 value={formLabel}
                 onChange={(e) => setFormLabel(e.target.value)}
                 placeholder={defaultLabelFor(provider, formPlatform) || '—'}
-                className="text-xs h-9"
+                wrapperClassName="h-9"
+                className="text-xs"
               />
-            </div>
+            </FormField>
             <div className="flex justify-end">
-              <Button type="submit" size="sm" className="gap-2" disabled={submitting}>
-                {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <Button type="submit" variant="primary" size="sm" className="gap-2" disabled={submitting}>
+                {submitting && <Spinner size={14} label={null} />}
                 {submitting ? t('oauth.audiences.adding') : t('oauth.audiences.add')}
               </Button>
             </div>
@@ -471,7 +449,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
           >
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="gap-2 w-full sm:w-auto"
               onClick={() => setShowAddForm(true)}
