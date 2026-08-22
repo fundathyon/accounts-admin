@@ -37,9 +37,15 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   // useLayoutEffect: hidratar antes del paint para que los hijos (p. ej. migración OAuth)
   // vean ya la Secret Key en el primer useEffect y no salgan con clave vacía.
   useLayoutEffect(() => {
-    const s = localStorage.getItem(STORAGE_KEYS.secret);
+    // Los NEXT_PUBLIC_DEV_* solo están definidos en .envs/.env.mock (`make dev-mock`),
+    // donde el backend es el mock y no valida las keys. En local/dev/prod quedan
+    // undefined, así que el comportamiento es idéntico al de siempre.
+    const s = localStorage.getItem(STORAGE_KEYS.secret) || process.env.NEXT_PUBLIC_DEV_SECRET_KEY;
     if (s) setSavedSecretKeyState(s);
-    const p = localStorage.getItem(STORAGE_KEYS.publishable) || localStorage.getItem('authify_pusheable_key');
+    const p =
+      localStorage.getItem(STORAGE_KEYS.publishable) ||
+      localStorage.getItem('authify_pusheable_key') ||
+      process.env.NEXT_PUBLIC_DEV_PUBLISHABLE_KEY;
     if (p) setSavedPublishableKeyState(p);
   }, []);
 
