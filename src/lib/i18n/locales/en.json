@@ -138,7 +138,27 @@
     "noResultsDesc": "No items match the filters you applied.",
     "clearFilters": "Clear filters",
     "removeFilter": "Remove filter",
-    "countOf": "{shown} of {total} {entity}"
+    "countOf": "{shown} of {total} {entity}",
+    "columns": "Columns",
+    "selectedOne": "1 selected",
+    "selectedMany": "{count} selected",
+    "clearSelection": "Clear selection",
+    "deleteSelection": "Delete selection",
+    "selectAll": "Select all rows",
+    "selectRow": "Select row",
+    "clearSearch": "Clear search",
+    "clearFilter": "Clear",
+    "noOptions": "No options",
+    "actions": "Actions",
+    "expandRow": "Expand row",
+    "collapseRow": "Collapse row",
+    "noDataYet": "No data yet",
+    "somethingWentWrong": "Something went wrong",
+    "deleteSelectedTitle": "Delete {count} {entity}",
+    "deleteSelectedDesc": "{count} {entity} will be deleted. This cannot be undone.",
+    "deleteSelectedVerb": "Delete {count}",
+    "deleteSelectedDone": "{count} {entity} deleted",
+    "deleteSelectedPartial": "{done} of {total} deleted · {failed} failed"
   },
   "commandPalette": {
     "placeholder": "Search or jump to…",
@@ -252,7 +272,8 @@
     "listLoadError": "Could not load list",
     "secretKeyRequired": "Secret API Key required",
     "secretKeyRequiredDesc": "Set your Secret API Key under Settings to manage lists. The key identifies the app (app_id) for the API.",
-    "configSecretKey": "Open settings"
+    "configSecretKey": "Open settings",
+    "entries": "entries"
   },
   "settings": {
     "title": "Settings",
@@ -388,7 +409,8 @@
     "deleteAllDoneSummary": "{ok} deleted, {failed} failed",
     "deleteAllNoUsers": "No users to delete",
     "deleteAllProdBlocked": "Not available in production",
-    "deleteAllPhraseMismatch": "Phrase does not match"
+    "deleteAllPhraseMismatch": "Phrase does not match",
+    "deleteSelectedConfirmPhrase": "DELETE {count} USERS"
   },
   "roles": {
     "title": "Roles",

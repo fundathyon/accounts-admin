@@ -138,7 +138,27 @@
     "noResultsDesc": "Ningún elemento coincide con los filtros aplicados.",
     "clearFilters": "Limpiar filtros",
     "removeFilter": "Quitar filtro",
-    "countOf": "{shown} de {total} {entity}"
+    "countOf": "{shown} de {total} {entity}",
+    "columns": "Columnas",
+    "selectedOne": "1 seleccionado",
+    "selectedMany": "{count} seleccionados",
+    "clearSelection": "Quitar selección",
+    "deleteSelection": "Eliminar selección",
+    "selectAll": "Seleccionar todas las filas",
+    "selectRow": "Seleccionar fila",
+    "clearSearch": "Limpiar búsqueda",
+    "clearFilter": "Limpiar",
+    "noOptions": "Sin opciones",
+    "actions": "Acciones",
+    "expandRow": "Expandir fila",
+    "collapseRow": "Contraer fila",
+    "noDataYet": "Todavía no hay datos",
+    "somethingWentWrong": "Algo salió mal",
+    "deleteSelectedTitle": "Eliminar {count} {entity}",
+    "deleteSelectedDesc": "Se eliminarán {count} {entity}. Esta acción no se puede deshacer.",
+    "deleteSelectedVerb": "Eliminar {count}",
+    "deleteSelectedDone": "{count} {entity} eliminados",
+    "deleteSelectedPartial": "{done} de {total} eliminados · {failed} con error"
   },
   "commandPalette": {
     "placeholder": "Buscar o ir a…",
@@ -252,7 +272,8 @@
     "listLoadError": "Error al cargar la lista",
     "secretKeyRequired": "Secret API Key requerida",
     "secretKeyRequiredDesc": "Configura tu Secret API Key en Configuración para gestionar las listas. La clave identifica la aplicación (app_id) en la API.",
-    "configSecretKey": "Ir a configuración"
+    "configSecretKey": "Ir a configuración",
+    "entries": "entradas"
   },
   "settings": {
     "title": "Configuración",
@@ -388,7 +409,8 @@
     "deleteAllDoneSummary": "{ok} eliminados, {failed} con error",
     "deleteAllNoUsers": "No hay usuarios para eliminar",
     "deleteAllProdBlocked": "No disponible en producción",
-    "deleteAllPhraseMismatch": "La frase no coincide"
+    "deleteAllPhraseMismatch": "La frase no coincide",
+    "deleteSelectedConfirmPhrase": "ELIMINAR {count} USUARIOS"
   },
   "roles": {
     "title": "Roles",
