@@ -240,15 +240,19 @@ export function AdminSidebar() {
                 label={t('sidebar.appImage')}
                 description="Ingresa una URL directa a la imagen del logo (PNG, JPG, SVG)."
               >
-                <div className="flex gap-3 items-start">
+                {/* Icon box and Input are both DS-sized to h-control-md (32px)
+                    so their top and bottom edges align pixel-for-pixel. Using
+                    `size-10` on the box (40px) against the Input's 32px height
+                    was the reported misalignment. */}
+                <div className="flex gap-2 items-center">
                   <div className={cn(
-                    "size-10 shrink-0 rounded-lg flex items-center justify-center overflow-hidden border border-border",
-                    !updateForm.image && "bg-subtle"
+                    "h-control-md w-control-md shrink-0 rounded-md flex items-center justify-center overflow-hidden border border-border",
+                    !updateForm.image && "bg-bg-subtle"
                   )}>
                     {updateForm.image ? (
                       <img src={updateForm.image} alt="Preview" className="size-full object-cover" />
                     ) : (
-                      <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                      <ImageIcon className="w-4 h-4 text-text-muted" />
                     )}
                   </div>
                   <Input
