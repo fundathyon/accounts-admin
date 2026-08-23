@@ -170,8 +170,74 @@
   "dashboard": {
     "title": "Dashboard",
     "badge": "API Accounts · Community",
+    "subtitle": "Overview of your Accounts instance.",
     "recentApps": "Recent Apps",
-    "noApps": "No apps yet"
+    "noApps": "No apps yet",
+    "metrics": {
+      "users": "Users",
+      "usersContext": "{active} active · {oauth} via OAuth",
+      "usersContextEmpty": "No registered users",
+      "usersContextSingle": "{count} registered",
+      "webhooks": "Webhooks",
+      "webhooksContext": "{active} active of {total}",
+      "webhooksContextEmpty": "No endpoints configured",
+      "behaviors": "Behaviors",
+      "behaviorsContext": "{active} active of {total}",
+      "behaviorsContextEmpty": "No active behaviors",
+      "apiKeys": "API Keys",
+      "apiKeysContext": "{active} active · {revoked} revoked",
+      "apiKeysContextEmpty": "No keys issued yet",
+      "roles": "Roles",
+      "rolesContext": "{count} defined",
+      "rolesContextEmpty": "No custom roles",
+      "oauth": "OAuth Providers",
+      "oauthContext": "{enabled} enabled of {total}",
+      "oauthContextEmpty": "No providers configured"
+    },
+    "sections": {
+      "activityTitle": "Recent activity",
+      "activitySubtitle": "Latest changes in users, keys, webhooks and providers.",
+      "activityEmptyTitle": "No activity yet",
+      "activityEmptyDescription": "New users, keys and webhooks will appear here as soon as they are created.",
+      "activityEmptyAction": "Create user",
+      "activityViewAll": "View all",
+      "authTitle": "Authentication",
+      "authSubtitle": "Available sign-in methods.",
+      "quickActionsTitle": "Quick actions",
+      "systemTitle": "Instance",
+      "systemEnvironment": "Environment",
+      "systemSigning": "JWT signing",
+      "systemApp": "App",
+      "systemUnknown": "—"
+    },
+    "activity": {
+      "userCreated": "User created",
+      "userCreatedDetail": "{name}",
+      "apiKeyCreated": "API key issued",
+      "apiKeyCreatedDetail": "{name} · {env}",
+      "webhookCreated": "Webhook configured",
+      "webhookCreatedDetail": "{name}",
+      "oauthCreated": "OAuth provider added",
+      "oauthCreatedDetail": "{provider}"
+    },
+    "auth": {
+      "emailPassword": "Email and password",
+      "magicLink": "Magic link",
+      "oauthProviders": "OAuth",
+      "metadataSchema": "Metadata schema",
+      "emailAccess": "Email access control",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "providersEnabled": "{count} enabled",
+      "noProviders": "None"
+    },
+    "quickActions": {
+      "createUser": "New user",
+      "createApiKey": "New API key",
+      "createWebhook": "New webhook",
+      "createRole": "New role",
+      "configureOauth": "Configure OAuth"
+    }
   },
   "tokens": {
     "title": "Tokens",

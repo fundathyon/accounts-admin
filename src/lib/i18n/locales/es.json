@@ -170,8 +170,74 @@
   "dashboard": {
     "title": "Dashboard",
     "badge": "API Accounts · Community",
+    "subtitle": "Vista general de tu instancia de Accounts.",
     "recentApps": "Aplicaciones Recientes",
-    "noApps": "No hay aplicaciones aún"
+    "noApps": "No hay aplicaciones aún",
+    "metrics": {
+      "users": "Usuarios",
+      "usersContext": "{active} activos · {oauth} vía OAuth",
+      "usersContextEmpty": "Sin usuarios registrados",
+      "usersContextSingle": "{count} registrado",
+      "webhooks": "Webhooks",
+      "webhooksContext": "{active} activos de {total}",
+      "webhooksContextEmpty": "Ningún endpoint configurado",
+      "behaviors": "Behaviors",
+      "behaviorsContext": "{active} activos de {total}",
+      "behaviorsContextEmpty": "Sin behaviors activos",
+      "apiKeys": "API Keys",
+      "apiKeysContext": "{active} activas · {revoked} revocadas",
+      "apiKeysContextEmpty": "Aún no se ha emitido ninguna clave",
+      "roles": "Roles",
+      "rolesContext": "{count} definidos",
+      "rolesContextEmpty": "Sin roles personalizados",
+      "oauth": "Proveedores OAuth",
+      "oauthContext": "{enabled} habilitados de {total}",
+      "oauthContextEmpty": "Sin proveedores configurados"
+    },
+    "sections": {
+      "activityTitle": "Actividad reciente",
+      "activitySubtitle": "Últimos cambios en usuarios, claves, webhooks y proveedores.",
+      "activityEmptyTitle": "Sin actividad todavía",
+      "activityEmptyDescription": "Cada nuevo usuario, clave o webhook aparecerá aquí en cuanto se cree.",
+      "activityEmptyAction": "Crear usuario",
+      "activityViewAll": "Ver todo",
+      "authTitle": "Autenticación",
+      "authSubtitle": "Métodos disponibles para iniciar sesión.",
+      "quickActionsTitle": "Acciones rápidas",
+      "systemTitle": "Instancia",
+      "systemEnvironment": "Entorno",
+      "systemSigning": "Firma JWT",
+      "systemApp": "App",
+      "systemUnknown": "—"
+    },
+    "activity": {
+      "userCreated": "Usuario creado",
+      "userCreatedDetail": "{name}",
+      "apiKeyCreated": "API key emitida",
+      "apiKeyCreatedDetail": "{name} · {env}",
+      "webhookCreated": "Webhook configurado",
+      "webhookCreatedDetail": "{name}",
+      "oauthCreated": "Proveedor OAuth añadido",
+      "oauthCreatedDetail": "{provider}"
+    },
+    "auth": {
+      "emailPassword": "Email y contraseña",
+      "magicLink": "Magic link",
+      "oauthProviders": "OAuth",
+      "metadataSchema": "Metadata schema",
+      "emailAccess": "Control de acceso por email",
+      "enabled": "Activo",
+      "disabled": "Inactivo",
+      "providersEnabled": "{count} activos",
+      "noProviders": "Ninguno"
+    },
+    "quickActions": {
+      "createUser": "Nuevo usuario",
+      "createApiKey": "Nueva API key",
+      "createWebhook": "Nuevo webhook",
+      "createRole": "Nuevo rol",
+      "configureOauth": "Configurar OAuth"
+    }
   },
   "tokens": {
     "title": "Tokens",
