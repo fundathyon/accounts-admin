@@ -55,7 +55,7 @@ import {
   Inline,
   Input,
   RoleBadge,
-  Secret,
+  SecretField,
   Select,
   Stack,
   Text,
@@ -1265,33 +1265,27 @@ export default function UsersPage() {
             <div className="space-y-4">
               {signupResult.access_token && (
                 <FormField label="Access Token (JWT)">
-                  <Secret
+                  <SecretField
                     value={signupResult.access_token}
-                    revealable
-                    copy
                     prefix={24}
                     suffix={8}
-                    label=""
                     revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
                     copyLabel={t('common.copy')}
                     copiedLabel="Copiado"
-                    className="w-full"
                   />
                 </FormField>
               )}
               {signupResult.refresh_token && (
                 <FormField label="Refresh Token">
-                  <Secret
+                  <SecretField
                     value={signupResult.refresh_token}
-                    revealable
-                    copy
                     prefix={24}
                     suffix={8}
-                    label=""
                     revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
                     copyLabel={t('common.copy')}
                     copiedLabel="Copiado"
-                    className="w-full"
                   />
                 </FormField>
               )}
@@ -1476,33 +1470,27 @@ export default function UsersPage() {
             <div className="space-y-4">
               {signinResult.access_token && (
                 <FormField label="Access Token (JWT)">
-                  <Secret
+                  <SecretField
                     value={signinResult.access_token}
-                    revealable
-                    copy
                     prefix={24}
                     suffix={8}
-                    label=""
                     revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
                     copyLabel={t('common.copy')}
                     copiedLabel="Copiado"
-                    className="w-full"
                   />
                 </FormField>
               )}
               {signinResult.refresh_token && (
                 <FormField label="Refresh Token">
-                  <Secret
+                  <SecretField
                     value={signinResult.refresh_token}
-                    revealable
-                    copy
                     prefix={24}
                     suffix={8}
-                    label=""
                     revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
                     copyLabel={t('common.copy')}
                     copiedLabel="Copiado"
-                    className="w-full"
                   />
                 </FormField>
               )}

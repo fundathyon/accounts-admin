@@ -34,6 +34,7 @@ import {
   Inline,
   Input,
   KeyValue,
+  SecretField,
   Spinner,
   StatusBadge,
   Text,
@@ -653,44 +654,24 @@ export default function ApiKeysPage() {
               <Alert tone="warning" title={t('apiKeys.secretKeyWarning')} />
               {generatedKeys.publishable_key && (
                 <FormField label={t('apiKeys.publishableKey')}>
-                  <Inline gap={2}>
-                    <Input
-                      readOnly
-                      value={generatedKeys.publishable_key}
-                      className="font-mono text-code"
-                      wrapperClassName="min-w-0 flex-1"
-                    />
-                    <IconButton
-                      icon={Copy}
-                      label={t('apiKeys.copy')}
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedKeys!.publishable_key!);
-                        showNotification(t('apiKeys.publishableCopied'), 'success');
-                      }}
-                    />
-                  </Inline>
+                  <SecretField
+                    value={generatedKeys.publishable_key}
+                    revealLabel="Mostrar"
+                    hideLabel="Ocultar"
+                    copyLabel={t('apiKeys.copy')}
+                    copiedLabel="Copiado"
+                  />
                 </FormField>
               )}
               {generatedKeys.secret_key && (
                 <FormField label={t('apiKeys.secretKey')}>
-                  <Inline gap={2}>
-                    <Input
-                      readOnly
-                      value={generatedKeys.secret_key}
-                      className="font-mono text-code"
-                      wrapperClassName="min-w-0 flex-1"
-                    />
-                    <IconButton
-                      icon={Copy}
-                      label={t('apiKeys.copy')}
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedKeys!.secret_key!);
-                        showNotification(t('apiKeys.secretCopied'), 'success');
-                      }}
-                    />
-                  </Inline>
+                  <SecretField
+                    value={generatedKeys.secret_key}
+                    revealLabel="Mostrar"
+                    hideLabel="Ocultar"
+                    copyLabel={t('apiKeys.copy')}
+                    copiedLabel="Copiado"
+                  />
                 </FormField>
               )}
               <DialogFooter>
