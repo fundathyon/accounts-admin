@@ -502,7 +502,7 @@ export default function WebhooksPage() {
               </div>
 
               <Inline gap={3}>
-                <Text variant="overline" tone="secondary">{t('users.state')}</Text>
+                <Text variant="overline" tone="secondary">{t('webhooks.state')}</Text>
                 <Tooltip content={t('tooltips.state')}>
                   {/* Select does not forward arbitrary DOM props, so the tooltip
                       trigger has to attach to a wrapper element. */}
@@ -510,8 +510,8 @@ export default function WebhooksPage() {
                     <Select
                       value={statusFilter}
                       onValueChange={(v) => setStatusFilter((v ?? 'all') as 'all' | 'active' | 'inactive')}
-                      placeholder={t('users.state') || "State"}
-                      aria-label={t('users.state') || "State"}
+                      placeholder={t('webhooks.state') || "State"}
+                      aria-label={t('webhooks.state') || "State"}
                       items={[
                         { value: 'all', label: t('common.all') || "All" },
                         { value: 'active', label: t('common.active') || "Active" },
