@@ -587,7 +587,6 @@ function EmailAccessPageContent() {
             {savedSecretKey && (
               <Button
                 variant="secondary"
-                size="lg"
                 onClick={openTestDialog}
                 leading={<Icon icon={PlayCircle} size={16} />}
               >
@@ -598,7 +597,7 @@ function EmailAccessPageContent() {
               <Link
                 href={settingsHref}
                 className={cn(
-                  buttonVariants({ variant: 'secondary', size: 'lg' }),
+                  buttonVariants({ variant: 'secondary' }),
                   'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
                 )}
               >
@@ -615,7 +614,7 @@ function EmailAccessPageContent() {
               title={<span className="text-amber-300">{t('emailAccess.secretKeyRequired')}</span>}
               description={t('emailAccess.secretKeyRequiredDesc')}
               action={
-                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}>
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
                   {t('users.goToSettings')}
                 </Link>
               }
@@ -681,7 +680,6 @@ function EmailAccessPageContent() {
                       <Button
                         type="submit"
                         variant="primary"
-                        size="lg"
                         disabled={settingsSaving}
                         leading={settingsSaving ? <Spinner size={16} label={null} /> : undefined}
                       >
@@ -807,13 +805,12 @@ function EmailAccessPageContent() {
               </FormField>
             </div>
             <DialogFooter>
-              <Button type="button" variant="secondary" size="lg" onClick={() => setAddOpen(false)}>
+              <Button type="button" variant="secondary" onClick={() => setAddOpen(false)}>
                 {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
                 variant="primary"
-                size="lg"
                 disabled={formSubmitting}
                 leading={formSubmitting ? <Spinner size={16} label={null} /> : undefined}
               >
@@ -831,10 +828,10 @@ function EmailAccessPageContent() {
             <DialogDescription>{t('emailAccess.confirmDelete')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="secondary" size="lg" onClick={() => setDeleteOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setDeleteOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="button" variant="destructive" size="lg" onClick={confirmDelete} loading={deleteLoading}>
+            <Button type="button" variant="destructive" onClick={confirmDelete} loading={deleteLoading}>
               {t('emailAccess.deleteEntry')}
             </Button>
           </DialogFooter>
@@ -919,10 +916,10 @@ function EmailAccessPageContent() {
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" size="lg" onClick={() => setTestOpen(false)} disabled={testLoading}>
+            <Button type="button" variant="secondary" onClick={() => setTestOpen(false)} disabled={testLoading}>
               Cerrar
             </Button>
-            <Button type="button" variant="primary" size="lg" onClick={runEmailAccessTest} loading={testLoading}>
+            <Button type="button" variant="primary" onClick={runEmailAccessTest} loading={testLoading}>
               Evaluar
             </Button>
           </DialogFooter>

@@ -273,7 +273,6 @@ export default function BehaviorDetailPage() {
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         <DialogContent
-          size="lg"
           className="w-[min(95vw,1000px)] sm:max-w-[min(95vw,1000px)] max-h-[90vh] overflow-hidden flex flex-col p-6"
         >
           <DialogHeader>

@@ -80,7 +80,7 @@ function LoginForm() {
                 loading={loading}
                 onSubmit={handleSubmit}
                 submitSlot={
-                  <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
+                  <Button type="submit" variant="primary" loading={loading} className="w-full">
                     {loading ? t('login.entering') : t('login.enter')}
                   </Button>
                 }

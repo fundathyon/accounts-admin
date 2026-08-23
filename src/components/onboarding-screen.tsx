@@ -129,7 +129,7 @@ export function OnboardingScreen() {
                       onChange={(e) => setFormData((p) => ({ ...p, root_email: e.target.value }))}
                     />
                   </FormField>
-                  <Button type="submit" variant="primary" size="lg" loading={isSubmitting} className="w-full">
+                  <Button type="submit" variant="primary" loading={isSubmitting} className="w-full">
                     {isSubmitting ? t('onboarding.creating') : t('onboarding.createApp')}
                   </Button>
                 </form>
@@ -169,7 +169,7 @@ export function OnboardingScreen() {
                     </div>
                   )}
 
-                  <Button onClick={handleFinish} variant="primary" size="lg" className="w-full">
+                  <Button onClick={handleFinish} variant="primary" className="w-full">
                     {t('onboarding.goToDashboard')}
                   </Button>
                 </div>

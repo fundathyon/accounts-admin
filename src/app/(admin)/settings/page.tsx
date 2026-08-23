@@ -167,7 +167,6 @@ export default function SettingsPage() {
                 <Tooltip content={t('tooltips.saveSettings')}>
                   <Button
                     variant="primary"
-                    size="lg"
                     onClick={handleSaveKey}
                     className="flex-1"
                     leading={<Icon icon={Key} size={16} />}
@@ -178,7 +177,7 @@ export default function SettingsPage() {
 
                 {savedSecretKey && (
                   <Tooltip content={t('tooltips.clearKey')}>
-                    <Button variant="destructive-subtle" size="lg" onClick={handleClearKey}>
+                    <Button variant="destructive-subtle" onClick={handleClearKey}>
                       {t('common.delete')}
                     </Button>
                   </Tooltip>
@@ -224,7 +223,6 @@ export default function SettingsPage() {
               <Inline gap={3} className="mt-auto pt-4">
                 <Button
                   variant="primary"
-                  size="lg"
                   onClick={handleSavePublishableKey}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
                   leading={<Icon icon={Users} size={16} />}
@@ -232,7 +230,7 @@ export default function SettingsPage() {
                   {t('settings.savePublishableKey')}
                 </Button>
                 {savedPublishableKey && (
-                  <Button variant="destructive-subtle" size="lg" onClick={handleClearPublishableKey}>
+                  <Button variant="destructive-subtle" onClick={handleClearPublishableKey}>
                     {t('common.delete')}
                   </Button>
                 )}
@@ -247,7 +245,6 @@ export default function SettingsPage() {
             actions={
               <Button
                 variant="primary"
-                size="lg"
                 onClick={() => fetchEnvVars()}
                 disabled={envLoading}
                 className="bg-sky-600 hover:bg-sky-500 text-white"

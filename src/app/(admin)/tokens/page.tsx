@@ -767,7 +767,6 @@ export default function TokensPage() {
 
       <Dialog open={getAccessOpen} onOpenChange={setGetAccessOpen}>
         <DialogContent
-          size="lg"
           className="sm:max-w-2xl"
           style={{ minHeight: 'min(560px, 85vh)' }}
         >
@@ -793,7 +792,6 @@ export default function TokensPage() {
                   icon={copiedField === 'dialog-refresh' ? Check : Copy}
                   label={t('common.copy')}
                   variant="secondary"
-                  size="lg"
                   className="shrink-0"
                   onClick={() => copyToClipboard(dialogRefreshInput, 'dialog-refresh')}
                   disabled={!dialogRefreshInput.trim()}
@@ -817,7 +815,6 @@ export default function TokensPage() {
                     icon={copiedField === 'dialog-jwt' ? Check : Copy}
                     label={t('common.copy')}
                     variant="secondary"
-                    size="lg"
                     className="shrink-0"
                     onClick={() => copyToClipboard(dialogResult.jwt, 'dialog-jwt')}
                   />

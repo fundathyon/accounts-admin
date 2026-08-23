@@ -291,7 +291,7 @@ function RolesPageContent() {
             <Link
               href={settingsHref}
               className={cn(
-                buttonVariants({ variant: 'secondary', size: 'lg' }),
+                buttonVariants({ variant: 'secondary' }),
                 'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
               )}
             >
@@ -301,7 +301,6 @@ function RolesPageContent() {
             <Tooltip content={t('tooltips.newRole')}>
               <Button
                 variant="primary"
-                size="lg"
                 onClick={() => setIsRoleModalOpen(true)}
                 leading={<Icon icon={Shield} size={16} />}
               >
@@ -318,7 +317,7 @@ function RolesPageContent() {
               title={<span className="text-amber-300">{t('roles.secretKeyRequiredCard')}</span>}
               description={t('roles.secretKeyRequiredDesc')}
               action={
-                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}>
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
                   {t('users.goToSettings')}
                 </Link>
               }
@@ -364,7 +363,6 @@ function RolesPageContent() {
                 action: (
                   <Button
                     variant="primary"
-                    size="lg"
                     onClick={() => setIsRoleModalOpen(true)}
                     leading={<Icon icon={Shield} size={16} />}
                   >
@@ -379,7 +377,7 @@ function RolesPageContent() {
                 title: t('common.noResults'),
                 description: t('common.noResultsDesc'),
                 action: (
-                  <Button variant="secondary" size="lg" onClick={clearFilters}>
+                  <Button variant="secondary" onClick={clearFilters}>
                     {t('common.clearFilters')}
                   </Button>
                 ),
@@ -413,7 +411,7 @@ function RolesPageContent() {
               <Input placeholder="Rol con permisos de administración" value={roleForm.description} onChange={(e) => setRoleForm((p) => ({ ...p, description: e.target.value }))} />
             </FormField>
             <DialogFooter>
-              <Button type="button" variant="secondary" size="lg" onClick={() => {
+              <Button type="button" variant="secondary" onClick={() => {
                 setIsRoleModalOpen(false);
                 setIsEditing(false);
                 setSelectedRole(null);
@@ -424,7 +422,6 @@ function RolesPageContent() {
               <Button
                 type="submit"
                 variant="primary"
-                size="lg"
                 disabled={isRoleSubmitting}
                 leading={isRoleSubmitting ? <Spinner size={16} label={null} /> : undefined}
               >
@@ -480,7 +477,7 @@ function RolesPageContent() {
               </div>
 
               <DialogFooter className="pt-4 gap-2">
-                <Button variant="secondary" size="lg" leading={<Icon icon={Pencil} size={16} />} onClick={() => {
+                <Button variant="secondary" leading={<Icon icon={Pencil} size={16} />} onClick={() => {
                   if (selectedRole) {
                     setIsEditing(true);
                     setRoleForm({ name: selectedRole.name, description: selectedRole.description || '' });
@@ -489,7 +486,7 @@ function RolesPageContent() {
                 }}>
                   {t('common.edit')}
                 </Button>
-                <Button variant="secondary" size="lg" onClick={() => setSelectedRole(null)}>
+                <Button variant="secondary" onClick={() => setSelectedRole(null)}>
                   {t('common.close')}
                 </Button>
               </DialogFooter>

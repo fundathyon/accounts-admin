@@ -265,7 +265,7 @@ export default function ApiKeysPage() {
     title: t('common.noResults'),
     description: t('common.noResultsDesc'),
     action: (
-      <Button variant="secondary" size="lg" onClick={clearAllFilters}>
+      <Button variant="secondary" onClick={clearAllFilters}>
         {t('common.clearFilters')}
       </Button>
     ),
@@ -279,7 +279,6 @@ export default function ApiKeysPage() {
     action: (
       <Button
         variant="primary"
-        size="lg"
         onClick={() => setIsGenerateModalOpen(true)}
         leading={<Icon icon={Plus} size={16} />}
       >
@@ -471,7 +470,7 @@ export default function ApiKeysPage() {
             <Link
               href={settingsHref}
               className={cn(
-                buttonVariants({ variant: 'secondary', size: 'lg' }),
+                buttonVariants({ variant: 'secondary' }),
                 'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
               )}
             >
@@ -480,7 +479,6 @@ export default function ApiKeysPage() {
           ) : (
             <Button
               variant="primary"
-              size="lg"
               onClick={() => setIsGenerateModalOpen(true)}
               disabled={loading}
               leading={<Icon icon={Plus} size={16} />}
@@ -497,7 +495,7 @@ export default function ApiKeysPage() {
               title={<span className="text-amber-300">{t('apiKeys.secretKeyRequired')}</span>}
               description={t('apiKeys.configSecretKeyCard')}
               action={
-                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}>
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
                   {t('apiKeys.goToSettings')}
                 </Link>
               }
@@ -516,7 +514,7 @@ export default function ApiKeysPage() {
               action={
                 <Link
                   href={BASE_PATH ? `${BASE_PATH}`.replace(/\/+/g, '/') : '/'}
-                  className={cn(buttonVariants({ variant: 'primary', size: 'lg' }))}
+                  className={cn(buttonVariants({ variant: 'primary' }))}
                 >
                   {t('apiKeys.goToDashboard')}
                 </Link>
@@ -595,7 +593,6 @@ export default function ApiKeysPage() {
                     </Text>
                     <Button
                       variant="primary"
-                      size="lg"
                       onClick={() => setIsGenerateModalOpen(true)}
                       leading={<Icon icon={Plus} size={16} />}
                     >
@@ -675,8 +672,8 @@ export default function ApiKeysPage() {
                 </FormField>
               )}
               <DialogFooter>
-                <Button variant="primary" size="lg" onClick={closeModal}>{t('apiKeys.close')}</Button>
-                <Button variant="secondary" size="lg" onClick={() => { setGeneratedKeys(null); setFormData({ name: '', description: '' }); }}>
+                <Button variant="primary" onClick={closeModal}>{t('apiKeys.close')}</Button>
+                <Button variant="secondary" onClick={() => { setGeneratedKeys(null); setFormData({ name: '', description: '' }); }}>
                   {t('apiKeys.generateAnother')}
                 </Button>
               </DialogFooter>
@@ -703,13 +700,12 @@ export default function ApiKeysPage() {
                 />
               </FormField>
               <DialogFooter className="gap-4 pt-4">
-                <Button type="button" variant="secondary" size="lg" onClick={closeModal}>
+                <Button type="button" variant="secondary" onClick={closeModal}>
                   {t('common.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   variant="primary"
-                  size="lg"
                   disabled={isSubmitting}
                   leading={isSubmitting ? <Spinner size={16} label={null} /> : undefined}
                 >
@@ -833,7 +829,7 @@ export default function ApiKeysPage() {
                     {t('apiKeys.delete')}
                   </Button>
                 </div>
-                <Button variant="secondary" size="lg" onClick={() => setSelectedApiKey(null)}>
+                <Button variant="secondary" onClick={() => setSelectedApiKey(null)}>
                   {t('apiKeys.close')}
                 </Button>
               </DialogFooter>
