@@ -757,7 +757,12 @@ export default function WebhooksPage() {
                     />
                   </FormField>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Retries only ever holds a 1–2 digit number, so it gets a
+                      fixed 120px slot; the signing secret takes everything
+                      else since it's a full base64url string that needs the
+                      room. Was `grid-cols-2` — half the row for a 2-digit
+                      value was wasteful and made the secret look cramped. */}
+                  <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-4">
                     <FormField
                       label={
                         <>
