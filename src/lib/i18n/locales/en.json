@@ -122,6 +122,7 @@
   "common": {
     "language": "Language",
     "loading": "Loading…",
+    "generate": "Generate",
     "delete": "Delete",
     "cancel": "Cancel",
     "close": "Close",
@@ -546,6 +547,7 @@
     "urlPlaceholder": "https://yourapp.com/webhooks",
     "secretLabel": "Signing secret *",
     "secretPlaceholder": "my-secure-secret",
+    "generateSecret": "Generate a random secret (32 bytes, base64url)",
     "retriesLabel": "Retries (0–10)",
     "activateImmediately": "Activate immediately",
     "activateImmediatelyDesc": "Will start receiving events when created",

@@ -122,6 +122,7 @@
   "common": {
     "language": "Idioma",
     "loading": "Cargando…",
+    "generate": "Generar",
     "delete": "Eliminar",
     "cancel": "Cancelar",
     "close": "Cerrar",
@@ -546,6 +547,7 @@
     "urlPlaceholder": "https://tuapp.com/webhooks",
     "secretLabel": "Secret de firma *",
     "secretPlaceholder": "mi-secret-seguro",
+    "generateSecret": "Generar un secret aleatorio (32 bytes, base64url)",
     "retriesLabel": "Reintentos (0–10)",
     "activateImmediately": "Activar inmediatamente",
     "activateImmediatelyDesc": "Comenzará a recibir eventos al crearse",

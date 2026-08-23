@@ -25,6 +25,7 @@ import {
   Search,
   ArrowDownAZ,
   ArrowUpAZ,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -59,6 +60,25 @@ import type { WebhookItem, EventsByCategory, WebhookEvent } from '@/lib/admin-ty
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
+}
+
+/**
+ * Cryptographically random webhook signing secret. Uses `crypto.getRandomValues`
+ * (Web Crypto — available in every runtime this admin runs against) and encodes
+ * the 32 bytes as base64url so the resulting string is URL/log/env-safe and
+ * carries the conventional `whsec_` prefix. 43 characters after the prefix,
+ * ~256 bits of entropy — comfortably above what an HMAC-SHA256 signer needs.
+ */
+function generateWebhookSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  // Manual base64url so we don't need Buffer / atob detour in the browser.
+  let base64 = '';
+  for (let i = 0; i < bytes.length; i++) base64 += String.fromCharCode(bytes[i]);
+  return (
+    'whsec_' +
+    btoa(base64).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  );
 }
 
 function useCommonEvents(t: (k: string) => string): WebhookEvent[] {
@@ -751,6 +771,18 @@ export default function WebhooksPage() {
                         value={webhookForm.secret}
                         onChange={(e) => setWebhookForm((p) => ({ ...p, secret: e.target.value }))}
                         className="font-mono"
+                        trailing={
+                          <button
+                            type="button"
+                            onClick={() => setWebhookForm((p) => ({ ...p, secret: generateWebhookSecret() }))}
+                            className="inline-flex items-center gap-1 rounded-sm px-1 text-caption text-text-secondary transition-colors hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                            aria-label={t('webhooks.generateSecret')}
+                            title={t('webhooks.generateSecret')}
+                          >
+                            <Icon icon={Sparkles} size={12} />
+                            {t('common.generate')}
+                          </button>
+                        }
                       />
                     </FormField>
                     <FormField
