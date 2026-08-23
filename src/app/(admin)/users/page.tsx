@@ -1068,6 +1068,7 @@ export default function UsersPage() {
             emptyState={filtersActive ? noResultsStateCopy : { icon: Users, title: t('users.noUsers') }}
             noResultsState={noResultsStateCopy}
             globalFilter={searchQuery}
+            pageSize={20}
             sorting={{ state: sort, onChange: setSort }}
             search={{
               value: searchInput,

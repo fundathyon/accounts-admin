@@ -542,6 +542,7 @@ export default function ApiKeysPage() {
               emptyState={filtersActive ? noResultsStateCopy : { ...noKeysStateCopy, icon: Key }}
               noResultsState={noResultsStateCopy}
               globalFilter={searchQuery}
+              pageSize={20}
               sorting={{ state: sort, onChange: setSort }}
               search={{
                 value: searchInput,

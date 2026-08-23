@@ -55,6 +55,15 @@ export interface AdminDataTableProps<TData>
   onSelectionChange?: (selected: string[]) => void;
   /** Product copy overrides on top of the localized defaults. */
   labels?: DataTableLabels;
+  /**
+   * Rows per page — turns on a self-contained client-side pager: page number
+   * lives in this component, starting at 1 and resetting to 1 whenever `data`
+   * or `globalFilter` changes (a stale page past the new last page would
+   * otherwise show a table that looks empty for no visible reason). Omit this
+   * and pass `pagination` directly instead for server-side paging (see Acceso
+   * por email, whose list is already paginated upstream).
+   */
+  pageSize?: number;
 }
 
 /**
@@ -78,9 +87,27 @@ export function AdminDataTable<TData>({
   data,
   rowId,
   density = 'comfortable',
+  pageSize,
+  globalFilter,
+  pagination: paginationProp,
   ...rest
 }: AdminDataTableProps<TData>) {
   const { t } = useI18n();
+
+  // Pagination: `pageSize` opts into an internally-owned page number. Reset to
+  // 1 whenever the row set or the search text changes, so filtering never
+  // strands the reader on a now-empty page. Adjusted during render (React's
+  // own pattern for "reset state when a prop changes") rather than in an
+  // effect, which would cost an extra committed render on every change.
+  const [page, setPage] = useState(1);
+  const [prevData, setPrevData] = useState(data);
+  const [prevGlobalFilter, setPrevGlobalFilter] = useState(globalFilter);
+  if (data !== prevData || globalFilter !== prevGlobalFilter) {
+    setPrevData(data);
+    setPrevGlobalFilter(globalFilter);
+    setPage(1);
+  }
+  const pagination = paginationProp ?? (pageSize ? { pageSize, page, onPageChange: setPage } : undefined);
 
   // Column visibility: forward a controlled config as-is, otherwise own it so the
   // "Columnas" button and the table always agree.
@@ -165,6 +192,8 @@ export function AdminDataTable<TData>({
       data={data}
       rowId={rowId}
       density={density}
+      globalFilter={globalFilter}
+      pagination={pagination}
       columnVisibility={{ state: visibilityState, onChange: setVisibility }}
       selection={
         selectable

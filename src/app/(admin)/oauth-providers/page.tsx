@@ -1017,6 +1017,7 @@ function OAuthProvidersPageContent() {
               rowId={(p) => p.id}
               columnVisibility={{ defaultState: { id: false } }}
               globalFilter={searchQuery}
+              pageSize={20}
               search={{
                 value: searchInput,
                 onChange: setSearchInput,

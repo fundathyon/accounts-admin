@@ -335,6 +335,7 @@ function RolesPageContent() {
               rowId={(role) => role.id}
               columnVisibility={{ defaultState: { id: false } }}
               globalFilter={searchQuery}
+              pageSize={20}
               search={{
                 value: searchInput,
                 onChange: setSearchInput,
