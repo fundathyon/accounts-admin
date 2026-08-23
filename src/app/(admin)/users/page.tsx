@@ -26,6 +26,7 @@ import {
   Search,
   ShieldOff,
   Database,
+  Mail,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -878,8 +879,8 @@ export default function UsersPage() {
                 className="inline-flex items-center justify-center gap-0.5 shrink-0"
                 title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
               >
-                <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
-                  <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                <span className="inline-flex items-center justify-center w-[22px] h-[22px] rounded-md bg-accent-bg text-accent">
+                  <Mail className="w-3.5 h-3.5" />
                 </span>
                 {lm.is_verify ? (
                   <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />

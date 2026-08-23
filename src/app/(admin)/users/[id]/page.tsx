@@ -363,8 +363,8 @@ export default function UserDetailPage() {
                         {lm.entity_type === 'oauth' && lm.details?.platform ? (
                           <OAuthProviderLogo provider={lm.details.platform} size={24} className="rounded" />
                         ) : lm.entity_type === 'email' ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 shrink-0">
-                            <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                          <span className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-md bg-accent-bg text-accent">
+                            <Mail className="w-4 h-4" />
                           </span>
                         ) : (
                           <Badge variant="outline" tone="warning">
