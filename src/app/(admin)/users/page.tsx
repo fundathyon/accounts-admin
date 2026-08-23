@@ -55,6 +55,7 @@ import {
   Inline,
   Input,
   RoleBadge,
+  Secret,
   Select,
   Stack,
   Text,
@@ -1264,34 +1265,34 @@ export default function UsersPage() {
             <div className="space-y-4">
               {signupResult.access_token && (
                 <FormField label="Access Token (JWT)">
-                  <div className="flex gap-2">
-                    <Input readOnly value={signupResult.access_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <IconButton
-                      icon={Copy}
-                      label={t('common.copy')}
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signupResult!.access_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    />
-                  </div>
+                  <Secret
+                    value={signupResult.access_token}
+                    revealable
+                    copy
+                    prefix={24}
+                    suffix={8}
+                    label=""
+                    revealLabel="Mostrar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                    className="w-full"
+                  />
                 </FormField>
               )}
               {signupResult.refresh_token && (
                 <FormField label="Refresh Token">
-                  <div className="flex gap-2">
-                    <Input readOnly value={signupResult.refresh_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <IconButton
-                      icon={Copy}
-                      label={t('common.copy')}
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signupResult!.refresh_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    />
-                  </div>
+                  <Secret
+                    value={signupResult.refresh_token}
+                    revealable
+                    copy
+                    prefix={24}
+                    suffix={8}
+                    label=""
+                    revealLabel="Mostrar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                    className="w-full"
+                  />
                 </FormField>
               )}
               <DialogFooter>
@@ -1475,34 +1476,34 @@ export default function UsersPage() {
             <div className="space-y-4">
               {signinResult.access_token && (
                 <FormField label="Access Token (JWT)">
-                  <div className="flex gap-2">
-                    <Input readOnly value={signinResult.access_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <IconButton
-                      icon={Copy}
-                      label={t('common.copy')}
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signinResult!.access_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    />
-                  </div>
+                  <Secret
+                    value={signinResult.access_token}
+                    revealable
+                    copy
+                    prefix={24}
+                    suffix={8}
+                    label=""
+                    revealLabel="Mostrar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                    className="w-full"
+                  />
                 </FormField>
               )}
               {signinResult.refresh_token && (
                 <FormField label="Refresh Token">
-                  <div className="flex gap-2">
-                    <Input readOnly value={signinResult.refresh_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <IconButton
-                      icon={Copy}
-                      label={t('common.copy')}
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signinResult!.refresh_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    />
-                  </div>
+                  <Secret
+                    value={signinResult.refresh_token}
+                    revealable
+                    copy
+                    prefix={24}
+                    suffix={8}
+                    label=""
+                    revealLabel="Mostrar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                    className="w-full"
+                  />
                 </FormField>
               )}
               <DialogFooter>
