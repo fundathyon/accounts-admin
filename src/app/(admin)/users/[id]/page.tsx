@@ -15,12 +15,13 @@ import {
   Icon,
   IconButton,
   Inline,
+  JsonEditor,
+  JsonViewer,
   RoleBadge,
   Select,
   Separator,
   Stack,
   Text,
-  Textarea,
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -305,22 +306,27 @@ export default function UserDetailPage() {
             </Inline>
             {editingMetadata ? (
               <Stack gap={2}>
-                <Textarea
+                <JsonEditor
                   value={metadataInput}
-                  onChange={(e) => { setMetadataInput(e.target.value); setMetadataError(''); }}
+                  onChange={(next) => { setMetadataInput(next); setMetadataError(''); }}
                   aria-label={t('userDetail.metadata')}
-                  invalid={!!metadataError}
-                  className="font-mono text-xs min-h-[180px] resize-y"
-                  spellCheck={false}
+                  minRows={10}
+                  maxRows={24}
+                  lineNumbers
+                  copy
                 />
                 {metadataError && (
                   <Text variant="caption" as="p" className="text-danger">{metadataError}</Text>
                 )}
               </Stack>
             ) : user?.metadata && Object.keys(user.metadata).length > 0 ? (
-              <pre className="text-xs font-mono bg-subtle/40 rounded-lg p-3 overflow-x-auto text-sky-300 whitespace-pre-wrap break-all">
-                {JSON.stringify(user.metadata, null, 2)}
-              </pre>
+              <JsonViewer
+                data={user.metadata}
+                defaultExpandDepth={2}
+                expandable
+                copyValue
+                copyPath
+              />
             ) : (
               <Text tone="secondary">{t('userDetail.noMetadata')}</Text>
             )}

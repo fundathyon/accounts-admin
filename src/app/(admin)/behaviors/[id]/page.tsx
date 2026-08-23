@@ -15,6 +15,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  JsonViewer,
   Spinner,
   Tooltip,
 } from '@foundathyon/community-ui';
@@ -240,9 +241,13 @@ export default function BehaviorDetailPage() {
               togglingMagicLink={togglingMagicLink}
             />
           ) : (
-            <div className="bg-subtle/50 rounded-2xl p-4 border font-mono text-sm overflow-x-auto">
-              <pre className="text-sky-300">{JSON.stringify(behavior.config, null, 2)}</pre>
-            </div>
+            <JsonViewer
+              data={behavior.config}
+              defaultExpandDepth={2}
+              expandable
+              copyValue
+              copyPath
+            />
           )}
         </div>
 
@@ -291,10 +296,14 @@ export default function BehaviorDetailPage() {
               />
             ) : (
               <div className="space-y-4 h-full flex flex-col">
-                <div className="flex-1 bg-subtle/50 rounded-xl border p-4 font-mono text-sm overflow-auto">
-                  <pre className="text-sky-300">
-                    {JSON.stringify(behavior.config, null, 2)}
-                  </pre>
+                <div className="flex-1 overflow-auto">
+                  <JsonViewer
+                    data={behavior.config}
+                    defaultExpandDepth={2}
+                    expandable
+                    copyValue
+                    copyPath
+                  />
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button variant="secondary" onClick={() => setIsEditing(false)}>

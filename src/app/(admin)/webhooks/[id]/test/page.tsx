@@ -14,6 +14,7 @@ import {
   Heading,
   Icon,
   Inline,
+  JsonEditor,
   Stack,
   Text,
   Spinner,
@@ -22,7 +23,6 @@ import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { JsonEditor } from '@/components/json-editor';
 import {
   Collapsible,
   CollapsibleContent,
@@ -268,8 +268,11 @@ export default function WebhookTestPage() {
             <JsonEditor
               value={testEventPayload}
               onChange={setTestEventPayload}
-              minHeight="200px"
-              maxHeight="70vh"
+              minRows={12}
+              maxRows={30}
+              lineNumbers
+              copy
+              aria-label={t('webhooks.testPage.payloadJson')}
             />
           </FormField>
 

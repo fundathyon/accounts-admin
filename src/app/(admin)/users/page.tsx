@@ -35,6 +35,7 @@ import {
   buttonVariants,
   Card,
   CardBody,
+  CodeBlock,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -59,7 +60,6 @@ import {
   Select,
   Stack,
   Text,
-  Textarea,
   Tooltip,
   Spinner,
 } from '@foundathyon/community-ui';
@@ -1592,24 +1592,15 @@ export default function UsersPage() {
             </div>
           ) : publicKeyValue ? (
             <FormField label={t('users.publicKey')}>
-              <div className="flex gap-2">
-                <Textarea
-                  readOnly
-                  value={publicKeyValue}
-                  rows={10}
-                  className="flex-1 font-mono text-xs p-3 min-w-0 resize-none"
-                />
-                <IconButton
-                  icon={Copy}
-                  label={t('common.copy')}
-                  variant="secondary"
-                  className="shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(publicKeyValue);
-                    showNotification(t('common.copied'), 'success');
-                  }}
-                />
-              </div>
+              <CodeBlock
+                code={publicKeyValue}
+                language="text"
+                copy
+                copyLabel={t('common.copy')}
+                copiedLabel={t('common.copied')}
+                lineNumbers
+                maxLines={12}
+              />
             </FormField>
           ) : null}
         </DialogContent>

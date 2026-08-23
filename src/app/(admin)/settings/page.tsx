@@ -272,7 +272,7 @@ export default function SettingsPage() {
             <Alert tone="danger" title={t('common.error')} className="mx-6 mt-4">
               {envError}
               {envError.includes('disabled') && (
-                <span className="block mt-1 text-muted-foreground">
+                <span className="block mt-1 text-text-muted">
                   {t('settings.exposeEnvHint')}
                 </span>
               )}
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                             variant="code"
                             className={cn(
                               'font-semibold',
-                              envVar.sensitive ? 'text-amber-400' : 'text-sky-400'
+                              envVar.sensitive ? 'text-warning' : 'text-info'
                             )}
                           >
                             {envVar.key}
@@ -336,11 +336,11 @@ export default function SettingsPage() {
                               className={cn(
                                 'truncate block',
                                 envVar.value === 'false'
-                                  ? 'text-muted-foreground'
+                                  ? 'text-text-muted'
                                   : envVar.value === 'true'
-                                    ? 'text-emerald-400'
+                                    ? 'text-success'
                                     : envVar.value === ''
-                                      ? 'text-muted-foreground italic'
+                                      ? 'text-text-muted italic'
                                       : 'text-text'
                               )}
                             >
@@ -358,7 +358,7 @@ export default function SettingsPage() {
 
         <Card className="p-6">
           <Heading level={2} visual="h4" className="mb-3">{t('settings.securityNotes')}</Heading>
-          <ul className="space-y-1.5 text-sm text-muted-foreground list-disc list-inside">
+          <ul className="space-y-1.5 text-sm text-text-muted list-disc list-inside">
             <li>{t('settings.securityNote1')}</li>
             <li>{t('settings.securityNote2')}</li>
             <li>{t('settings.securityNote3')}</li>

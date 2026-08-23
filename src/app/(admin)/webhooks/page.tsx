@@ -42,11 +42,11 @@ import {
   Icon,
   Inline,
   Input,
+  JsonEditor,
   Select,
   StatusBadge,
   Switch,
   Text,
-  Textarea,
   Tooltip,
   Spinner,
 } from '@foundathyon/community-ui';
@@ -693,12 +693,15 @@ export default function WebhooksPage() {
                   }
                   description={t('webhooks.jsonPlaceholder')}
                 >
-                  <Textarea
+                  <JsonEditor
                     value={webhookJsonRaw}
-                    onChange={(e) => setWebhookJsonRaw(e.target.value)}
-                    className="min-h-[320px] rounded-xl px-4 py-3 font-mono"
+                    onChange={setWebhookJsonRaw}
+                    minRows={16}
+                    maxRows={26}
+                    lineNumbers
+                    copy
                     placeholder='{"name":"...","url":"...","events":[...]}'
-                    spellCheck={false}
+                    aria-label={t('webhooks.jsonLabel')}
                   />
                 </FormField>
               ) : (
