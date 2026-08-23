@@ -1,4 +1,4 @@
-.PHONY: help install dev up mock dev-mock build start lint clean reset docker-build docker-up docker-down
+.PHONY: help install dev up mock dev-mock build start lint lint-fix typecheck validate clean reset docker-build docker-up docker-down
 
 help:
 	@echo "Available targets:"
@@ -10,6 +10,9 @@ help:
 	@echo "  make build        Build the production bundle"
 	@echo "  make start        Run the production server (after build)"
 	@echo "  make lint         Run eslint"
+	@echo "  make lint-fix     Run eslint with --fix"
+	@echo "  make typecheck    Run tsc --noEmit"
+	@echo "  make validate     Run lint + typecheck + build (use before opening a PR)"
 	@echo "  make clean        Remove build artifacts (.next, tsconfig.tsbuildinfo)"
 	@echo "  make reset        Clean + remove node_modules and reinstall"
 	@echo "  make docker-build Build the Docker image"
@@ -41,6 +44,15 @@ start:
 
 lint:
 	bun run lint
+
+lint-fix:
+	bun run lint:fix
+
+typecheck:
+	bun run typecheck
+
+validate:
+	bun run validate
 
 clean:
 	rm -rf .next tsconfig.tsbuildinfo
