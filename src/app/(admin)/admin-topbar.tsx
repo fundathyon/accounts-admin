@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Moon, Search, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Icon, Kbd, SidebarTrigger, Tooltip, Topbar } from '@foundathyon/community-ui';
 import { AdminUserMenu } from '@/components/admin-user-menu';
 import { useAdminCommandPalette } from '@/components/admin-command-palette';
@@ -11,6 +12,33 @@ import { BASE_PATH } from '@/lib/utils';
 
 function buildHref(path: string) {
   return path === '/' ? `${BASE_PATH || '/'}` : `${BASE_PATH}${path}`.replace(/\/+/g, '/') || '/';
+}
+
+/**
+ * One-click theme toggle. Reads `resolvedTheme` (never `theme` — the latter
+ * can be 'system' before hydration, and we'd flash the wrong icon) and flips
+ * to the other value. The icon is the DESTINATION (Sun when we're in dark
+ * about to switch to light, Moon when we're in light about to switch to
+ * dark) so the affordance matches the user's next click, not the current
+ * state — the same convention used by GitHub, Vercel and Linear.
+ */
+function ThemeToggle({ label }: { label: (dark: boolean) => string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme !== 'light';
+  const nextLabel = label(isDark);
+  return (
+    <Tooltip content={nextLabel}>
+      <button
+        type="button"
+        aria-label={nextLabel}
+        aria-pressed={isDark}
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        className="relative flex size-8 items-center justify-center rounded-md text-text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      >
+        <Icon icon={isDark ? Sun : Moon} size={16} />
+      </button>
+    </Tooltip>
+  );
 }
 
 /**
@@ -38,6 +66,9 @@ export function AdminTopbar() {
       }
       trailing={
         <>
+          <ThemeToggle
+            label={(dark) => (dark ? t('sidebar.themeLight') : t('sidebar.themeDark'))}
+          />
           <Tooltip content={t('sidebar.notifications')}>
             <Link
               href={buildHref('/notifications')}

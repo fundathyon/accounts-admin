@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { Bell, BookOpen, Languages, Loader2, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { Bell, BookOpen, Languages, Loader2, LogOut, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +32,6 @@ export function AdminUserMenu() {
   const router = useRouter();
   const { apiUrl, pendingOAuthLegacyMigration } = useAdmin();
   const { t, locale, setLocale } = useI18n();
-  const { theme, setTheme } = useTheme();
   const [adminUser, setAdminUser] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
@@ -118,27 +116,6 @@ export function AdminUserMenu() {
                 {label}
               </DropdownMenuItem>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenuSubmenu>
-        <DropdownMenuSubmenu>
-          <DropdownMenuSubmenuTrigger icon={(theme ?? 'dark') === 'dark' ? Moon : Sun}>
-            {t('sidebar.theme')}
-          </DropdownMenuSubmenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              icon={Sun}
-              onClick={() => setTheme('light')}
-              className={(theme ?? 'dark') === 'light' ? 'bg-accent-bg' : ''}
-            >
-              {t('sidebar.themeLight')}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              icon={Moon}
-              onClick={() => setTheme('dark')}
-              className={(theme ?? 'dark') === 'dark' ? 'bg-accent-bg' : ''}
-            >
-              {t('sidebar.themeDark')}
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenuSubmenu>
         <DropdownMenuItem
