@@ -47,12 +47,12 @@
      id="layer1"
      transform="translate(-9.9999068,-10.062952)"><path
        id="path384"
-       style="opacity:1;fill:#30becb;fill-opacity:1;stroke-width:0.248;stroke-dasharray:none"
+       style="opacity:1;fill:#f97316;fill-opacity:1;stroke-width:0.248;stroke-dasharray:none"
        d="M 59.999955,10.062952 A 50,50 0 0 0 9.9999064,60.063 50,50 0 0 0 59.999955,110.06305 50,50 0 0 0 90.668368,99.551029 L 69.017493,77.900155 A 20,20 0 0 1 59.999955,80.062813 20,20 0 0 1 40.000142,60.063 20,20 0 0 1 59.999955,40.063188 20,20 0 0 1 79.999768,60.063 20,20 0 0 1 78.899577,66.569063 l 1.663464,1.663465 v -0.06666 h 8.000029 v 8.000029 h -0.06666 l 2.75177,2.75177 v -0.06408 h 8.000029 v 8.000028 h -0.06408 l 1.820041,1.820044 A 50,50 0 0 0 110,60.063 50,50 0 0 0 59.999955,10.062952 Z"
        inkscape:export-filename="favicon.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96" /><circle
-       style="fill:#30becb;fill-opacity:1;stroke-width:0.118941"
+       style="fill:#f97316;fill-opacity:1;stroke-width:0.118941"
        id="path484"
        cx="60"
        cy="60"
@@ -60,7 +60,7 @@
        id="g673"
        transform="translate(0,9.9452734)"><text
          xml:space="preserve"
-         style="font-weight:600;font-size:70.5556px;font-family:'Inter 18pt';-inkscape-font-specification:'Inter 18pt Semi-Bold';fill:#30becb;stroke-width:0.264583"
+         style="font-weight:600;font-size:70.5556px;font-family:'Inter 18pt';-inkscape-font-specification:'Inter 18pt Semi-Bold';fill:#f97316;stroke-width:0.264583"
          x="136.60213"
          y="62.502121"
          id="text255"><tspan
@@ -70,7 +70,7 @@
            x="136.60213"
            y="62.502121" /></text><text
          xml:space="preserve"
-         style="font-weight:600;font-size:35.2778px;font-family:'Inter 18pt';-inkscape-font-specification:'Inter 18pt Semi-Bold';fill:#30becb;stroke-width:0.264583"
+         style="font-weight:600;font-size:35.2778px;font-family:'Inter 18pt';-inkscape-font-specification:'Inter 18pt Semi-Bold';fill:#f97316;stroke-width:0.264583"
          x="138.68869"
          y="98.194008"
          id="text439"><tspan
@@ -82,4 +82,4 @@
          xml:space="preserve"
          transform="matrix(0.26458333,0,0,0.26458333,9.9999068,0.1176786)"
          id="text345"
-         style="font-weight:600;font-size:133.333px;font-family:'Inter 18pt';-inkscape-font-specification:'Inter 18pt Semi-Bold';white-space:pre;shape-inside:url(#rect347);fill:#30becb" /></g></g></svg>
+         style="font-weight:600;font-size:133.333px;font-family:'Inter 18pt';-inkscape-font-specification:'Inter 18pt Semi-Bold';white-space:pre;shape-inside:url(#rect347);fill:#f97316" /></g></g></svg>
