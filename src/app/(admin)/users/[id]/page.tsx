@@ -3,22 +3,29 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle, Loader2, Copy } from 'lucide-react';
+import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle, Loader2, Copy, Database, Pencil, Save, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
+  Heading,
+  Icon,
+  IconButton,
+  Inline,
+  JsonEditor,
+  JsonViewer,
+  RoleBadge,
+  Select,
+  Separator,
+  Stack,
+  Text,
+} from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import type { User, Role } from '@/lib/admin-types';
@@ -31,6 +38,10 @@ export default function UserDetailPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [editingMetadata, setEditingMetadata] = useState(false);
+  const [metadataInput, setMetadataInput] = useState('');
+  const [metadataError, setMetadataError] = useState('');
+  const [savingMetadata, setSavingMetadata] = useState(false);
 
   const id = params.id as string;
 
@@ -42,16 +53,22 @@ export default function UserDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [usersRes, rolesRes] = await Promise.all([
-          fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } }),
+        const [userRes, rolesRes] = await Promise.all([
+          fetch(apiUrl(`/api/users/${id}`), { headers: { 'X-Secret-API-Key': savedSecretKey } }),
           fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } }),
         ]);
-        const usersData = await usersRes.json();
+        const userData = await userRes.json();
         const rolesData = await rolesRes.json();
-        if (usersData.data && (usersData.status === 200 || usersData.success)) {
-          const users: User[] = usersData.data || [];
-          const found = users.find((u) => u.id === id);
-          setUser(found || null);
+        if (userData.success && userData.data) {
+          setUser(userData.data);
+        } else {
+          // fallback: scan list
+          const listRes = await fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
+          const listData = await listRes.json();
+          if (listData.data && (listData.status === 200 || listData.success)) {
+            const users: User[] = listData.data || [];
+            setUser(users.find((u) => u.id === id) || null);
+          }
         }
         if (rolesData.success && rolesData.data) {
           const list = Array.isArray(rolesData.data) ? rolesData.data : (rolesData.data?.data || []);
@@ -67,6 +84,43 @@ export default function UserDetailPage() {
   }, [id, savedSecretKey, apiUrl]);
 
   const usersHref = `${BASE_PATH}/users`.replace(/\/+/g, '/') || '/users';
+
+  const startEditMetadata = () => {
+    setMetadataInput(JSON.stringify(user?.metadata ?? {}, null, 2));
+    setMetadataError('');
+    setEditingMetadata(true);
+  };
+
+  const handleSaveMetadata = async () => {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(metadataInput);
+      if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('object');
+    } catch {
+      setMetadataError(t('userDetail.metadataInvalidJson'));
+      return;
+    }
+    setSavingMetadata(true);
+    try {
+      const res = await fetch(apiUrl(`/api/users/${id}/metadata`), {
+        method: 'PATCH',
+        headers: { 'X-Secret-API-Key': savedSecretKey!, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: parsed }),
+      });
+      const data = await res.json();
+      if (res.ok && (data.success !== false)) {
+        setUser((prev) => prev ? { ...prev, metadata: parsed } : null);
+        setEditingMetadata(false);
+        showNotification(t('userDetail.metadataSaved'), 'success');
+      } else {
+        showNotification(data.error?.message || t('userDetail.metadataError'), 'error');
+      }
+    } catch {
+      showNotification(t('userDetail.metadataError'), 'error');
+    } finally {
+      setSavingMetadata(false);
+    }
+  };
 
   const handleRoleChange = async (newRoleName: string) => {
     if (!user || newRoleName === (user.role_details?.name ?? '')) return;
@@ -107,7 +161,7 @@ export default function UserDetailPage() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-accent-border border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -115,13 +169,16 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
-          <Link href={usersHref}>
-            <ChevronLeft className="w-4 h-4" /> {t('userDetail.backToUsers')}
-          </Link>
-        </Button>
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">{t('userDetail.userNotFound')}</p>
+        <Link
+          href={usersHref}
+          className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'mb-6 -ml-2')}
+        >
+          <Icon icon={ChevronLeft} size={14} /> {t('userDetail.backToUsers')}
+        </Link>
+        <Card>
+          <CardBody className="p-12 text-center">
+            <Text tone="secondary">{t('userDetail.userNotFound')}</Text>
+          </CardBody>
         </Card>
       </div>
     );
@@ -129,34 +186,36 @@ export default function UserDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Button variant="ghost" asChild className="mb-6 gap-2 -ml-2">
-        <Link href={usersHref}>
-          <ChevronLeft className="w-4 h-4" /> {t('userDetail.backToUsers')}
-        </Link>
-      </Button>
+      <Link
+        href={usersHref}
+        className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'mb-6 -ml-2')}
+      >
+        <Icon icon={ChevronLeft} size={14} /> {t('userDetail.backToUsers')}
+      </Link>
       <div className="space-y-6">
         <Card className="overflow-hidden">
-          <div className="p-6 flex items-start gap-6">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
-              {(user.name || user.user_name || 'U').charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold">{user.name || user.user_name || t('userDetail.noName')}</h1>
-              <p className="text-muted-foreground font-mono text-sm mt-1">{user.id}</p>
-              {user.role_details && (
-                <Badge variant="secondary" className="mt-2">
-                  {user.role_details.name}
-                </Badge>
-              )}
-            </div>
-          </div>
+          <CardBody className="p-6">
+            <Inline gap={6} align="start">
+              <div className="w-16 h-16 rounded-full bg-accent-bg flex items-center justify-center text-accent font-bold text-2xl shrink-0">
+                {(user.name || user.user_name || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <Heading level={1} visual="h2">{user.name || user.user_name || t('userDetail.noName')}</Heading>
+                <Text variant="body-sm" tone="secondary" as="p" className="font-mono mt-1">{user.id}</Text>
+                {user.role_details && (
+                  <RoleBadge role={user.role_details.name} className="mt-2" />
+                )}
+              </div>
+            </Inline>
+          </CardBody>
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-6">
-            <CardTitle className="text-base mb-4 flex items-center gap-2">
-              <Shield className="w-4 h-4" /> {t('userDetail.generalInfo')}
-            </CardTitle>
+          <Card>
+            <CardBody className="p-6">
+            <Heading level={2} visual="h4" className="mb-4 flex items-center gap-2">
+              <Icon icon={Shield} size={14} /> {t('userDetail.generalInfo')}
+            </Heading>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">User ID</dt>
@@ -189,21 +248,14 @@ export default function UserDetailPage() {
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   ) : roles.length > 0 ? (
                     <Select
-                      value={user.role_details?.name ?? ''}
-                      onValueChange={handleRoleChange}
+                      value={user.role_details?.name || null}
+                      onValueChange={(v) => handleRoleChange(v ?? '')}
                       disabled={updatingRole}
-                    >
-                      <SelectTrigger className="w-[140px] h-8">
-                        <SelectValue placeholder={t('userDetail.selectRole') || 'Seleccionar rol'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.name}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder={t('userDetail.selectRole') || 'Seleccionar rol'}
+                      aria-label={t('userDetail.role') || 'Rol'}
+                      items={roles.map((role) => ({ value: role.name, label: role.name }))}
+                      className="w-[140px]"
+                    />
                   ) : (
                     <span>{user.role_details?.name || '—'}</span>
                   )}
@@ -220,12 +272,72 @@ export default function UserDetailPage() {
                 <dd>{new Date(user.updated_at).toLocaleString('es')}</dd>
               </div>
             </dl>
+            </CardBody>
           </Card>
 
-          <Card className="p-6">
-            <CardTitle className="text-base mb-4 flex items-center gap-2">
-              <Mail className="w-4 h-4" /> {t('userDetail.loginMethods')}
-            </CardTitle>
+          <Card>
+            <CardBody className="p-6">
+            <Inline justify="between" className="mb-4">
+              <Heading level={2} visual="h4" className="flex items-center gap-2">
+                <Icon icon={Database} size={14} /> {t('userDetail.metadata')}
+              </Heading>
+              {!editingMetadata ? (
+                <Button variant="ghost" onClick={startEditMetadata} leading={<Icon icon={Pencil} size={14} />}>
+                  {t('common.edit')}
+                </Button>
+              ) : (
+                <Inline gap={2}>
+                  <IconButton
+                    icon={X}
+                    label={t('common.cancel')}
+                    variant="ghost"
+                    onClick={() => setEditingMetadata(false)}
+                  />
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveMetadata}
+                    loading={savingMetadata}
+                    leading={<Icon icon={Save} size={14} />}
+                  >
+                    {t('common.save')}
+                  </Button>
+                </Inline>
+              )}
+            </Inline>
+            {editingMetadata ? (
+              <Stack gap={2}>
+                <JsonEditor
+                  value={metadataInput}
+                  onChange={(next) => { setMetadataInput(next); setMetadataError(''); }}
+                  aria-label={t('userDetail.metadata')}
+                  minRows={10}
+                  maxRows={24}
+                  lineNumbers
+                  copy
+                />
+                {metadataError && (
+                  <Text variant="caption" as="p" className="text-danger">{metadataError}</Text>
+                )}
+              </Stack>
+            ) : user?.metadata && Object.keys(user.metadata).length > 0 ? (
+              <JsonViewer
+                data={user.metadata}
+                defaultExpandDepth={2}
+                expandable
+                copyValue
+                copyPath
+              />
+            ) : (
+              <Text tone="secondary">{t('userDetail.noMetadata')}</Text>
+            )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardBody className="p-6">
+            <Heading level={2} visual="h4" className="mb-4 flex items-center gap-2">
+              <Icon icon={Mail} size={14} /> {t('userDetail.loginMethods')}
+            </Heading>
             {user.login_methods && user.login_methods.length > 0 ? (
               <div className="space-y-4">
                 {user.login_methods.map((lm) => {
@@ -248,7 +360,7 @@ export default function UserDetailPage() {
                       type="button"
                       onClick={handleCopy}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg border border-border bg-muted/30 transition-colors hover:bg-muted/50',
+                        'w-full text-left p-3 rounded-lg border border-border bg-subtle/30 transition-colors hover:bg-subtle/50',
                         emailToCopy && 'cursor-pointer'
                       )}
                       title={emailToCopy ? (t('userDetail.clickToCopyEmail') || 'Click para copiar email') : (t('userDetail.clickToCopy') || 'Click para copiar')}
@@ -257,14 +369,11 @@ export default function UserDetailPage() {
                         {lm.entity_type === 'oauth' && lm.details?.platform ? (
                           <OAuthProviderLogo provider={lm.details.platform} size={24} className="rounded" />
                         ) : lm.entity_type === 'email' ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 shrink-0">
-                            <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
+                          <span className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-md bg-accent-bg text-accent">
+                            <Mail className="w-4 h-4" />
                           </span>
                         ) : (
-                          <Badge
-                            variant="outline"
-                            className="border-orange-500/40 text-orange-400"
-                          >
+                          <Badge variant="outline" tone="warning">
                             {lm.entity_type}
                           </Badge>
                         )}
@@ -298,8 +407,9 @@ export default function UserDetailPage() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">{t('userDetail.noLoginMethods')}</p>
+              <Text tone="secondary">{t('userDetail.noLoginMethods')}</Text>
             )}
+            </CardBody>
           </Card>
         </div>
       </div>

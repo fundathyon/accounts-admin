@@ -1,28 +1,33 @@
-import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { errorResponse, proxyToAccounts, requireSecretKey } from '@/lib/accounts-api';
 
 /**
  * Proxies API key generation to accounts API.
- * POST body: { app_id, name, description? }
- * No auth required - the accounts API generate endpoint is unauthenticated.
+ * POST body: { name, description? } — app_id comes from the secret key.
+ * Requires X-Secret-API-Key (forwarded as X-API-KEY to accounts).
  */
 export async function POST(request: Request) {
+  const auth = requireSecretKey(request, 'Secret API Key es requerida (X-Secret-API-Key).');
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
-    const res = await fetch(`${INTERNAL_API_URL}/api/v1/api-keys/generate`, {
+    const { name, description } = body as { name?: string; description?: string };
+    const payload: Record<string, string> = { name: name ?? '' };
+    if (description != null && String(description).trim() !== '') {
+      payload.description = String(description).trim();
+    }
+
+    return proxyToAccounts('/api/v1/api-keys/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        'X-API-KEY': auth.key,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
+      errorMessage: 'Error al conectar con la API',
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
   } catch {
-    return NextResponse.json(
-      { success: false, error: { message: 'Error al conectar con la API' } },
-      { status: 500 }
-    );
+    return errorResponse('Error al conectar con la API', 500);
   }
 }

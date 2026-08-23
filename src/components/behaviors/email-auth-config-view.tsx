@@ -1,15 +1,9 @@
 'use client';
 
-import { Mail, Link2, Link2Off, Lock, ShieldCheck, Loader2, Palette } from 'lucide-react';
+import { Mail, Link2, Link2Off, Lock, ShieldCheck, Palette, Database } from 'lucide-react';
+import { Badge, Button, Tooltip } from '@foundathyon/community-ui';
 import { useI18n } from '@/context/i18n-context';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import type { MetadataSchemaConfig } from '@/lib/admin-types';
 
 export interface EmailAuthConfig {
   identifier?: string;
@@ -58,6 +52,7 @@ export interface EmailAuthConfig {
     code_strategy?: 'random' | 'fixed';
     fixed_code?: string;
   };
+  metadata_schema?: MetadataSchemaConfig;
 }
 
 export const FIXED_CODE_ALLOWED_ENVS = ['local', 'development', 'staging', 'qa', 'test'] as const;
@@ -70,8 +65,8 @@ interface ConfigSectionProps {
 
 function ConfigSection({ icon, title, children }: ConfigSectionProps) {
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-      <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-foreground">
+    <div className="rounded-xl border border-border/60 bg-subtle/30 p-4">
+      <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-text">
         {icon}
         {title}
       </div>
@@ -84,12 +79,7 @@ function BoolBadge({ value }: { value?: boolean }) {
   const { t } = useI18n();
   if (value == null) return <span className="text-muted-foreground">—</span>;
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        value ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-      )}
-    >
+    <Badge variant="tonal" tone={value ? 'success' : 'danger'}>
       {value ? t('emailAuth.yes') : t('emailAuth.no')}
     </Badge>
   );
@@ -99,7 +89,7 @@ function ConfigRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-foreground font-medium">{value}</span>
+      <span className="text-text font-medium">{value}</span>
     </div>
   );
 }
@@ -110,6 +100,8 @@ interface EmailAuthConfigViewProps {
   togglingVerification?: boolean;
   onToggleMagicLink?: () => void;
   togglingMagicLink?: boolean;
+  onActivateMetadataSchema?: () => void;
+  activatingMetadataSchema?: boolean;
 }
 
 export function EmailAuthConfigView({
@@ -118,6 +110,8 @@ export function EmailAuthConfigView({
   togglingVerification,
   onToggleMagicLink,
   togglingMagicLink,
+  onActivateMetadataSchema,
+  activatingMetadataSchema,
 }: EmailAuthConfigViewProps) {
   const { t } = useI18n();
   const email = config.email ?? {};
@@ -125,13 +119,14 @@ export function EmailAuthConfigView({
   const password = config.password ?? {};
   const policy = password.policy ?? {};
   const verification = config.verification ?? {};
+  const metadataSchema = config.metadata_schema;
 
   return (
     <div className="space-y-6">
       {config.identifier && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">{t('emailAuth.identifier')}</span>
-          <Badge variant="secondary" className="font-mono">
+          <Badge variant="tonal" tone="neutral" className="font-mono">
             {config.identifier}
           </Badge>
         </div>
@@ -223,28 +218,17 @@ export function EmailAuthConfigView({
 
           {onToggleMagicLink && (
             <div className="pt-3 mt-2 border-t border-border/50">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onToggleMagicLink}
-                    disabled={togglingMagicLink}
-                    className="gap-2"
-                  >
-                    {togglingMagicLink ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : magic.enabled ? (
-                      <Link2Off className="w-4 h-4" />
-                    ) : (
-                      <Link2 className="w-4 h-4" />
-                    )}
-                    {magic.enabled ? t('emailAuth.deactivateMagicLink') : t('emailAuth.activateMagicLink')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {magic.enabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated')}
-                </TooltipContent>
+              <Tooltip content={magic.enabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onToggleMagicLink}
+                  loading={togglingMagicLink}
+                  className="gap-2"
+                >
+                  {magic.enabled ? <Link2Off className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+                  {magic.enabled ? t('emailAuth.deactivateMagicLink') : t('emailAuth.activateMagicLink')}
+                </Button>
               </Tooltip>
             </div>
           )}
@@ -289,13 +273,9 @@ export function EmailAuthConfigView({
             label={t('emailAuth.codeStrategy')}
             value={
               <Badge
-                variant="outline"
-                className={cn(
-                  'font-mono text-xs',
-                  (verification.code_strategy ?? 'random') === 'fixed'
-                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                )}
+                variant="tonal"
+                tone={(verification.code_strategy ?? 'random') === 'fixed' ? 'warning' : 'success'}
+                className="font-mono text-xs"
               >
                 {verification.code_strategy ?? 'random'}
               </Badge>
@@ -309,31 +289,75 @@ export function EmailAuthConfigView({
           )}
           {onToggleVerification && (
             <div className="pt-3 mt-2 border-t border-border/50">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onToggleVerification}
-                    disabled={togglingVerification}
-                    className="gap-2"
-                  >
-                    {togglingVerification ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="w-4 h-4" />
-                    )}
-                    {verification.enabled ? t('emailAuth.deactivateVerification') : t('emailAuth.activateVerification')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {verification.enabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated')}
-                </TooltipContent>
+              <Tooltip content={verification.enabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onToggleVerification}
+                  loading={togglingVerification}
+                  className="gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  {verification.enabled ? t('emailAuth.deactivateVerification') : t('emailAuth.activateVerification')}
+                </Button>
               </Tooltip>
             </div>
           )}
         </ConfigSection>
       </div>
+
+      {metadataSchema && (
+        <ConfigSection icon={<Database className="w-4 h-4 text-indigo-400" />} title={t('emailAuth.metadataSchema')}>
+          <ConfigRow label={t('emailAuth.active')} value={<BoolBadge value={metadataSchema.enabled} />} />
+          <ConfigRow
+            label={t('emailAuth.metadataAdditionalProps')}
+            value={<BoolBadge value={metadataSchema.additional_properties} />}
+          />
+          {metadataSchema.scheme && metadataSchema.scheme.length > 0 && (
+            <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
+              <div className="text-xs text-muted-foreground mb-2">{t('emailAuth.metadataFields')}</div>
+              {metadataSchema.scheme.map((field) => (
+                <div key={field.name} className="flex items-center justify-between gap-2 py-1 pl-2 border-l-2 border-indigo-500/30">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs text-text truncate">{field.name}</span>
+                    <Badge variant="outline" className="text-[10px] font-mono shrink-0">{field.type}</Badge>
+                    {field.required && (
+                      <Badge variant="tonal" tone="danger" className="text-[10px] shrink-0">
+                        {t('emailAuth.metadataRequired')}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 text-[10px] text-muted-foreground">
+                    {field.enum && field.enum.length > 0 && (
+                      <span className="font-mono">[{field.enum.join(', ')}]</span>
+                    )}
+                    {field.min_length != null && <span>min:{field.min_length}</span>}
+                    {field.max_length != null && <span>max:{field.max_length}</span>}
+                    {field.minimum != null && <span>≥{field.minimum}</span>}
+                    {field.maximum != null && <span>≤{field.maximum}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {onActivateMetadataSchema && (
+            <div className="pt-3 mt-2 border-t border-border/50">
+              <Tooltip content={t('emailAuth.configureMetadataSchemaTooltip')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onActivateMetadataSchema}
+                  loading={activatingMetadataSchema}
+                  className="gap-2"
+                >
+                  <Database className="w-4 h-4" />
+                  {t('emailAuth.configureMetadataSchema')}
+                </Button>
+              </Tooltip>
+            </div>
+          )}
+        </ConfigSection>
+      )}
     </div>
   );
 }

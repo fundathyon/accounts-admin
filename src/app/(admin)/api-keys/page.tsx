@@ -1,64 +1,93 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Key,
   Plus,
-  Loader2,
   Copy,
-  AlertCircle,
   Layers,
   ShieldCheck,
   Trash2,
   PowerOff,
   Search,
-  Filter,
-  ArrowDownAZ,
-  ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  EmptyState,
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Inline,
+  Input,
+  KeyValue,
+  SecretField,
+  Spinner,
+  StatusBadge,
+  Text,
+} from '@foundathyon/community-ui';
+import type { DataTableColumn, DataTableSort, StatusKey } from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, cn } from '@/lib/utils';
 import type { App, APIKeyListItem } from '@/lib/admin-types';
+import { AdminDataTable, DeleteSelectionButton, DeleteSelectionDialog } from '@/components/admin-data-table';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
+}
+
+/** Values the `env` URL param accepts; `all` is the default and is never written. */
+const ENV_FILTERS = ['all', 'production', 'staging', 'development'] as const;
+type EnvFilter = (typeof ENV_FILTERS)[number];
+
+/**
+ * Environment names are proper nouns of the platform, not product copy — the
+ * Select rendered these exact literals before they were hoisted here so the
+ * filter chip can reuse them.
+ */
+const ENV_LABELS: Record<Exclude<EnvFilter, 'all'>, string> = {
+  production: 'Production',
+  staging: 'Staging',
+  development: 'Development',
+};
+
+function parseEnvFilter(value: string | null): EnvFilter {
+  return ENV_FILTERS.includes(value as EnvFilter) ? (value as EnvFilter) : 'all';
+}
+
+/** §16 search debounce: 250 ms before the query reaches the table and the URL. */
+const SEARCH_DEBOUNCE_MS = 250;
+
+/**
+ * Epoch value for the `date` cell. A number rather than the raw ISO string
+ * keeps human-readable dates out of the global filter, and an unparseable or
+ * missing date renders `—` instead of throwing inside `formatDate`.
+ */
+function timestampOf(value?: string | null) {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** §19 state for a key: revoked and disabled are both terminal (0.6 opacity). */
+function apiKeyStatus(key: APIKeyListItem): StatusKey {
+  if (key.is_active) return 'active';
+  return key.revoked_at ? 'revoked' : 'disabled';
 }
 
 export default function ApiKeysPage() {
@@ -69,7 +98,19 @@ export default function ApiKeysPage() {
   const [loading, setLoading] = useState(true);
   const [keysLoading, setKeysLoading] = useState(true);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ app_id: '', name: '', description: '' });
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Deep link from the command palette's "Acciones" group. Depending on the
+  // VALUE (not on the searchParams object) keeps `router.replace` from
+  // re-opening the dialog every time a filter is written back to the URL.
+  const newParam = searchParams.get('new');
+  useEffect(() => {
+    if (newParam === '1') setIsGenerateModalOpen(true);
+  }, [newParam]);
+  const [formData, setFormData] = useState({ name: '', description: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKeyListItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -79,9 +120,67 @@ export default function ApiKeysPage() {
     app_id?: string;
     created_at?: string;
   } | null>(null);
+  // `searchInput` is what the field shows (always controlled, never remounted so
+  // it keeps the caret and the focus when rows arrive); `searchQuery` is the
+  // debounced value the table filters by and the URL carries.
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [envFilter, setEnvFilter] = useState<'all' | 'production' | 'staging' | 'development'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [envFilter, setEnvFilter] = useState<EnvFilter>('all');
+  const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
+  const [keysError, setKeysError] = useState<string | null>(null);
+  // Rows behind «Eliminar selección»; `null` keeps the confirmation closed.
+  const [bulkTargets, setBulkTargets] = useState<APIKeyListItem[] | null>(null);
+
+  // §16 — the URL IS the state: `?q=` + `?env=` make a filtered view shareable.
+  // The query string seeds the filters once, and every change is written back
+  // with `replace` (never `push`: filtering must not fill the history).
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setSearchInput(q);
+    setSearchQuery(q);
+    setEnvFilter(parseEnvFilter(searchParams.get('env')));
+    // Mount-only on purpose: from here on the page writes the URL, not the
+    // reverse. Seeding in an effect (rather than during render) also keeps the
+    // controls out of any prerendered markup, so nothing can mismatch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reads the live query string so unrelated params (the palette's `new=1`)
+  // survive, and never depends on the `searchParams` object — that would
+  // re-fire on every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  // Defaults are omitted from the URL so an unfiltered view keeps a clean one.
+  const applyEnvFilter = (value: EnvFilter) => {
+    setEnvFilter(value);
+    writeUrl((params) => {
+      if (value !== 'all') params.set('env', value);
+      else params.delete('env');
+    });
+  };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -105,14 +204,20 @@ export default function ApiKeysPage() {
       return;
     }
     setKeysLoading(true);
+    setKeysError(null);
     try {
       const res = await fetch(apiUrl('/api/api-keys'), {
         headers: { 'X-Secret-API-Key': savedSecretKey },
       });
       const data = await res.json();
       if (data.success) setApiKeys(data.data || []);
-      else showNotification(data.error?.message || t('apiKeys.errorLoadKeys'), 'error');
+      else {
+        const message = data.error?.message || t('apiKeys.errorLoadKeys');
+        setKeysError(message);
+        showNotification(message, 'error');
+      }
     } catch {
+      setKeysError(t('apiKeys.errorConnectionApi'));
       showNotification(t('apiKeys.errorConnectionApi'), 'error');
     } finally {
       setKeysLoading(false);
@@ -127,28 +232,131 @@ export default function ApiKeysPage() {
     fetchAPIKeys();
   }, [savedSecretKey]);
 
-  const filteredApiKeys = apiKeys.filter(key => {
-    const query = searchQuery.toLowerCase();
-    const searchMatch = key.name.toLowerCase().includes(query) ||
-      (key.description && key.description.toLowerCase().includes(query)) ||
-      key.publishable_key.toLowerCase().includes(query) ||
-      key.id.toLowerCase().includes(query);
+  // The environment picker is a faceted filter and `DataTable` only exposes a
+  // single `globalFilter`, so it stays here and pre-filters the rows the table
+  // receives. Search became `globalFilter`; the date order became the sortable
+  // "Creado" column header.
+  const envFilteredKeys = envFilter === 'all'
+    ? apiKeys
+    : apiKeys.filter((key) => key.environment === envFilter);
 
-    if (!searchMatch) return false;
 
-    if (envFilter !== 'all' && key.environment !== envFilter) return false;
+  // §16 — the one exit out of «Sin resultados»: it drops every applied filter,
+  // the search term included.
+  const clearAllFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setEnvFilter('all');
+    writeUrl((params) => {
+      params.delete('q');
+      params.delete('env');
+    });
+  };
 
-    return true;
-  }).sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
-    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
-  });
+  // §16 — an applied filter is never hidden: the search keeps its value and the
+  // facet button carries a counter. This only decides which empty copy the
+  // table shows when the page-level environment facet leaves nothing.
+  const filtersActive = searchQuery.trim() !== '' || envFilter !== 'all';
+
+  // §16 — «Sin resultados» is not an empty state: it says nothing matched and
+  // offers the way out, which clears every filter including the search term.
+  const noResultsStateCopy = {
+    icon: Search,
+    title: t('common.noResults'),
+    description: t('common.noResultsDesc'),
+    action: (
+      <Button variant="secondary" onClick={clearAllFilters}>
+        {t('common.clearFilters')}
+      </Button>
+    ),
+  };
+
+  // Shared copy for the two "no rows" states — the only existing page copy that
+  // states there is nothing to show and offers the §11 exit.
+  const noKeysStateCopy = {
+    title: t('apiKeys.generateNew'),
+    description: t('apiKeys.generateNewDesc'),
+    action: (
+      <Button
+        variant="primary"
+        onClick={() => setIsGenerateModalOpen(true)}
+        leading={<Icon icon={Plus} size={16} />}
+      >
+        {t('apiKeys.generateKeys')}
+      </Button>
+    ),
+  };
+
+  const keyColumns = useMemo<DataTableColumn<APIKeyListItem>[]>(() => [
+    {
+      id: 'name',
+      header: t('apiKeys.tableName'),
+      primary: true,
+      // Doubles as the search corpus: the page's search also matched the id.
+      accessor: (key) => `${key.name} ${key.id}`,
+      cell: (key) => (
+        <span className="block truncate font-medium" title={key.name}>{key.name}</span>
+      ),
+      sortable: true,
+    },
+    {
+      id: 'description',
+      header: t('apiKeys.tableDescription'),
+      type: 'text',
+      accessor: (key) => key.description,
+    },
+    {
+      id: 'publishableKey',
+      header: t('apiKeys.publishableKey'),
+      type: 'digest',
+      accessor: (key) => key.publishable_key,
+    },
+    {
+      id: 'state',
+      header: t('apiKeys.tableState'),
+      // The `status` cell type renders the canonical English label and takes no
+      // product copy, so the §19 badge is rendered here with the page's keys.
+      cell: (key) => (
+        <StatusBadge status={apiKeyStatus(key)}>
+          {key.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: 'environment',
+      header: t('apiKeys.tableEnv'),
+      cell: (key) => <span className="capitalize">{key.environment}</span>,
+    },
+    {
+      id: 'created',
+      header: t('apiKeys.tableCreated'),
+      type: 'date',
+      accessor: (key) => timestampOf(key.created_at),
+      sortable: true,
+    },
+  ], [t]);
+
+  // Mirrors DataTable's own `globalFilter` (it matches the query against every
+  // column accessor) so the header count and the table always agree on what
+  // "shown" means.
+  const searchLower = searchQuery.trim().toLowerCase();
+  const shownKeysCount = !searchLower
+    ? envFilteredKeys.length
+    : envFilteredKeys.filter((key) =>
+      keyColumns.some((col) => {
+        const value = col.accessor?.(key);
+        return value !== null && value !== undefined && String(value).toLowerCase().includes(searchLower);
+      })
+    ).length;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.app_id || !formData.name.trim()) {
-      showNotification(t('apiKeys.selectAppAndName'), 'error');
+    if (!savedSecretKey) {
+      showNotification(t('apiKeys.secretKeyRequired'), 'error');
+      return;
+    }
+    if (!formData.name.trim()) {
+      showNotification(t('apiKeys.nameRequired') || 'Name is required', 'error');
       return;
     }
     setIsSubmitting(true);
@@ -156,9 +364,11 @@ export default function ApiKeysPage() {
     try {
       const res = await fetch(apiUrl('/api/api-keys/generate'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Secret-API-Key': savedSecretKey,
+        },
         body: JSON.stringify({
-          app_id: formData.app_id,
           name: formData.name.trim(),
           ...(formData.description.trim() && { description: formData.description.trim() }),
         }),
@@ -236,7 +446,7 @@ export default function ApiKeysPage() {
 
   const closeModal = () => {
     setIsGenerateModalOpen(false);
-    setFormData({ app_id: '', name: '', description: '' });
+    setFormData({ name: '', description: '' });
     setGeneratedKeys(null);
   };
 
@@ -245,175 +455,148 @@ export default function ApiKeysPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">{t('apiKeys.title')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <Heading level={1}>{t('apiKeys.title')}</Heading>
+            <Text tone="secondary" className="mt-1">
               {t('apiKeys.subtitle')}
-            </p>
+            </Text>
+            {/* §30 — the header states the count that matters. */}
+            {savedSecretKey && !keysLoading && apiKeys.length > 0 && (
+              <Text variant="caption" tone="muted" as="span" className="mt-1 block">
+                {t('common.countOf', { shown: shownKeysCount, total: apiKeys.length, entity: t('apiKeys.title') })}
+              </Text>
+            )}
           </div>
           {!savedSecretKey ? (
-            <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-              <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> {t('apiKeys.configSecretKey')}
-              </Link>
-            </Button>
+            <Link
+              href={settingsHref}
+              className={cn(
+                buttonVariants({ variant: 'secondary' }),
+                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+              )}
+            >
+              <Icon icon={Key} size={16} /> {t('apiKeys.configSecretKey')}
+            </Link>
           ) : (
-            <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2" disabled={loading || apps.length === 0}>
-              <Plus className="w-4 h-4" /> Generar API Keys
+            <Button
+              variant="primary"
+              onClick={() => setIsGenerateModalOpen(true)}
+              disabled={loading}
+              leading={<Icon icon={Plus} size={16} />}
+            >
+              Generar API Keys
             </Button>
           )}
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('apiKeys.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">
-              {t('apiKeys.configSecretKeyCard')}
-            </CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('apiKeys.goToSettings')}</Link>
-            </Button>
+          <Card className="border-amber-500/20">
+            <EmptyState
+              icon={Key}
+              title={<span className="text-amber-300">{t('apiKeys.secretKeyRequired')}</span>}
+              description={t('apiKeys.configSecretKeyCard')}
+              action={
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
+                  {t('apiKeys.goToSettings')}
+                </Link>
+              }
+            />
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
           </div>
         ) : apps.length === 0 && apiKeys.length === 0 ? (
-          <Card className="border-dashed p-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Layers className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="mb-2">{t('apiKeys.noApps')}</CardTitle>
-            <CardDescription className="mb-6">
-              {t('apiKeys.noAppsDesc')}
-            </CardDescription>
-            <Button asChild>
-              <Link href={BASE_PATH ? `${BASE_PATH}`.replace(/\/+/g, '/') : '/'}>{t('apiKeys.goToDashboard')}</Link>
-            </Button>
+          <Card className="border-dashed">
+            <EmptyState
+              icon={Layers}
+              title={t('apiKeys.noApps')}
+              description={t('apiKeys.noAppsDesc')}
+              action={
+                <Link
+                  href={BASE_PATH ? `${BASE_PATH}`.replace(/\/+/g, '/') : '/'}
+                  className={cn(buttonVariants({ variant: 'primary' }))}
+                >
+                  {t('apiKeys.goToDashboard')}
+                </Link>
+              }
+            />
           </Card>
         ) : (
           <div className="space-y-4">
-            {savedSecretKey && (
-              <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-                <ShieldCheck className="w-4 h-4" /> {t('apiKeys.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-              </div>
-            )}
+            {/* §14 — one frame: toolbar (search · Entorno · Columnas, and the
+                selection summary with «Eliminar selección» on the right), the
+                table, and the footer with the count and the key in use. */}
+            <AdminDataTable<APIKeyListItem>
+              entity={t('apiKeys.title')}
+              columns={keyColumns}
+              data={envFilteredKeys}
+              rowId={(key) => key.id}
+              loading={keysLoading}
+              loadingRowCount={5}
+              error={keysError ? { title: t('apiKeys.errorLoadKeys'), description: keysError, retry: { label: t('common.retry'), onClick: () => { void fetchAPIKeys(); } } } : undefined}
+              // The table derives "no results" from `globalFilter` alone, so the
+              // page-level environment facet decides the copy here: when it is
+              // applied and nothing survives, the rows were filtered away — and
+              // the exit is clearing the filters.
+              emptyState={filtersActive ? noResultsStateCopy : { ...noKeysStateCopy, icon: Key }}
+              noResultsState={noResultsStateCopy}
+              globalFilter={searchQuery}
+              pageSize={20}
+              sorting={{ state: sort, onChange: setSort }}
+              search={{
+                value: searchInput,
+                onChange: setSearchInput,
+                placeholder: t('apiKeys.searchPlaceholder') || 'Search by name, key or ID...',
+              }}
+              filters={[
+                {
+                  id: 'env',
+                  label: t('apiKeys.environment'),
+                  multiple: false,
+                  value: envFilter === 'all' ? [] : [envFilter],
+                  onChange: (next) => applyEnvFilter(parseEnvFilter(next[0] ?? null)),
+                  options: (Object.keys(ENV_LABELS) as Exclude<EnvFilter, 'all'>[]).map((env) => ({
+                    value: env,
+                    label: ENV_LABELS[env],
+                    count: apiKeys.filter((key) => key.environment === env).length,
+                  })),
+                },
+              ]}
+              columnsButton
+              selectable
+              bulkActions={(rows) => <DeleteSelectionButton onClick={() => setBulkTargets(rows)} />}
+              onRowClick={(key) => setSelectedApiKey(key)}
+              // Revoked / deactivated keys are terminal rows (§14, §19).
+              getRowProps={(key) => (key.is_active && !key.revoked_at ? undefined : { terminal: true })}
+              footer={
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon icon={ShieldCheck} size={12} />
+                  {t('apiKeys.consultingWith')}
+                  <code className="font-mono">{truncateKey(savedSecretKey ?? '')}</code>
+                </span>
+              }
+            />
 
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
-              <div className="relative flex-1 min-w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('apiKeys.searchPlaceholder') || "Search by name, key or ID..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Select value={envFilter} onValueChange={(v: any) => setEnvFilter(v)}>
-                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                        <div className="flex items-center gap-2">
-                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                          <SelectValue placeholder={t('apiKeys.environment') || "Env"} />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t('common.all') || "All Envs"}</SelectItem>
-                        <SelectItem value="production">Production</SelectItem>
-                        <SelectItem value="staging">Staging</SelectItem>
-                        <SelectItem value="development">Development</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.state')}
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                      className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
-                    >
-                      {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                      {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.sortBy')}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-
-            {keysLoading ? (
-              <div className="py-12 flex justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : apiKeys.length > 0 ? (
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b">
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableName')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableDescription')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.publishableKey')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableState')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableEnv')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('apiKeys.tableCreated')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredApiKeys.map((k) => (
-                        <TableRow
-                          key={k.id}
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => setSelectedApiKey(k)}
-                        >
-                          <TableCell className="px-8 py-4 font-medium">{k.name}</TableCell>
-                          <TableCell className="px-8 py-4 text-muted-foreground">{k.description || '—'}</TableCell>
-                          <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={k.publishable_key}>
-                            {k.publishable_key}
-                          </TableCell>
-                          <TableCell className="px-8 py-4">
-                            <Badge variant={k.is_active ? 'secondary' : 'outline'} className={k.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
-                              {k.is_active ? t('apiKeys.active') : t('apiKeys.inactive')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-8 py-4 text-muted-foreground capitalize">{k.environment}</TableCell>
-                          <TableCell className="px-8 py-4 text-xs text-muted-foreground">
-                            {k.created_at ? new Date(k.created_at).toLocaleDateString() : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {apps.length > 0 && (
+            {/* The table's empty / no-results state carries this exact headline
+                and CTA, so the persistent card steps aside while the list is
+                filtered — otherwise both render at once. */}
+            {apps.length > 0 && envFilteredKeys.length > 0 && !filtersActive && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Key className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center shrink-0">
+                    <Icon icon={Key} size={20} className="text-accent" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg mb-2">{t('apiKeys.generateNew')}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <Heading level={3} className="mb-2">{t('apiKeys.generateNew')}</Heading>
+                    <Text tone="secondary" className="mb-4">
                       {t('apiKeys.generateNewDesc')}
-                    </p>
-                    <Button onClick={() => setIsGenerateModalOpen(true)} className="gap-2">
-                      <Plus className="w-4 h-4" /> {t('apiKeys.generateKeys')}
+                    </Text>
+                    <Button
+                      variant="primary"
+                      onClick={() => setIsGenerateModalOpen(true)}
+                      leading={<Icon icon={Plus} size={16} />}
+                    >
+                      {t('apiKeys.generateKeys')}
                     </Button>
                   </div>
                 </div>
@@ -423,11 +606,38 @@ export default function ApiKeysPage() {
         )}
       </motion.div>
 
+      {/* §17 — the confirmation behind «Eliminar selección»: names the count,
+          the button says the verb, and every deletion resolves before it closes. */}
+      <DeleteSelectionDialog<APIKeyListItem>
+        targets={bulkTargets}
+        onClose={() => setBulkTargets(null)}
+        entity={t('apiKeys.title')}
+        deleteOne={async (key) => {
+          const res = await fetch(apiUrl(`/api/api-keys/${key.id}`), {
+            method: 'DELETE',
+            headers: { 'X-Secret-API-Key': savedSecretKey ?? '' },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!(data.success || res.ok)) throw new Error(data.error?.message || `HTTP ${res.status}`);
+        }}
+        onFinished={async ({ done, failed }) => {
+          if (failed.length === 0) {
+            showNotification(t('common.deleteSelectedDone', { count: done, entity: t('apiKeys.title') }), 'success');
+          } else {
+            showNotification(
+              t('common.deleteSelectedPartial', { done, total: done + failed.length, failed: failed.length }),
+              'error'
+            );
+          }
+          await fetchAPIKeys();
+        }}
+      />
+
       <Dialog open={isGenerateModalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
+              <Icon icon={Key} size={20} className="text-accent" />
               {generatedKeys ? t('apiKeys.keysGenerated') : t('apiKeys.generateModalTitle')}
             </DialogTitle>
             <DialogDescription>
@@ -438,104 +648,67 @@ export default function ApiKeysPage() {
           </DialogHeader>
           {generatedKeys ? (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {t('apiKeys.secretKeyWarning')}
-              </div>
+              <Alert tone="warning" title={t('apiKeys.secretKeyWarning')} />
               {generatedKeys.publishable_key && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">{t('apiKeys.publishableKey')}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={generatedKeys.publishable_key}
-                      className="font-mono text-xs overflow-x-auto min-w-0"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedKeys!.publishable_key!);
-                        showNotification(t('apiKeys.publishableCopied'), 'success');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <FormField label={t('apiKeys.publishableKey')}>
+                  <SecretField
+                    value={generatedKeys.publishable_key}
+                    revealLabel="Mostrar"
+                    hideLabel="Ocultar"
+                    copyLabel={t('apiKeys.copy')}
+                    copiedLabel="Copiado"
+                  />
+                </FormField>
               )}
               {generatedKeys.secret_key && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">{t('apiKeys.secretKey')}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={generatedKeys.secret_key}
-                      className="font-mono text-xs overflow-x-auto min-w-0"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedKeys!.secret_key!);
-                        showNotification(t('apiKeys.secretCopied'), 'success');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <FormField label={t('apiKeys.secretKey')}>
+                  <SecretField
+                    value={generatedKeys.secret_key}
+                    revealLabel="Mostrar"
+                    hideLabel="Ocultar"
+                    copyLabel={t('apiKeys.copy')}
+                    copiedLabel="Copiado"
+                  />
+                </FormField>
               )}
               <DialogFooter>
-                <Button onClick={closeModal}>{t('apiKeys.close')}</Button>
-                <Button variant="outline" onClick={() => { setGeneratedKeys(null); setFormData({ app_id: '', name: '', description: '' }); }}>
+                <Button variant="primary" onClick={closeModal}>{t('apiKeys.close')}</Button>
+                <Button variant="secondary" onClick={() => { setGeneratedKeys(null); setFormData({ name: '', description: '' }); }}>
                   {t('apiKeys.generateAnother')}
                 </Button>
               </DialogFooter>
             </div>
           ) : (
             <form onSubmit={handleGenerate} className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('apiKeys.application')}</Label>
-                <select
-                  required
-                  value={formData.app_id}
-                  onChange={(e) => setFormData((p) => ({ ...p, app_id: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
-                >
-                  <option value="">{t('apiKeys.selectApp')}</option>
-                  {apps.map((app) => (
-                    <option key={app.id} value={app.id}>
-                      {app.name} ({truncateKey(app.id)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('apiKeys.name')} *</Label>
+              <Text variant="body-sm" tone="secondary" className="block rounded-lg border border-border bg-subtle/20 px-3 py-2">
+                {t('apiKeys.generateUsesSecretApp') ||
+                  'Las claves se crearán para la aplicación asociada a tu Secret Key guardada en ajustes.'}
+              </Text>
+              <FormField label={t('apiKeys.name')} required>
                 <Input
                   required
                   placeholder={t('apiKeys.namePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('apiKeys.description')}</Label>
+              </FormField>
+              <FormField label={t('apiKeys.description')}>
                 <Input
                   placeholder={t('apiKeys.descriptionPlaceholder')}
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 />
-              </div>
+              </FormField>
               <DialogFooter className="gap-4 pt-4">
-                <Button type="button" variant="outline" onClick={closeModal}>
+                <Button type="button" variant="secondary" onClick={closeModal}>
                   {t('common.cancel')}
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="gap-2">
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={isSubmitting}
+                  leading={isSubmitting ? <Spinner size={16} label={null} /> : undefined}
+                >
                   {isSubmitting ? t('apiKeys.generating') : t('apiKeys.generate')}
                 </Button>
               </DialogFooter>
@@ -545,13 +718,13 @@ export default function ApiKeysPage() {
       </Dialog>
 
       <Dialog open={!!selectedApiKey} onOpenChange={(open) => !open && setSelectedApiKey(null)}>
-        <DialogContent className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
+              <Icon icon={Key} size={20} className="text-accent" />
               {t('apiKeys.detailsTitle')}
               {selectedApiKey && (
-                <span className="text-muted-foreground font-normal">({selectedApiKey.name})</span>
+                <span className="text-secondary font-normal">({selectedApiKey.name})</span>
               )}
             </DialogTitle>
             <DialogDescription>
@@ -562,84 +735,73 @@ export default function ApiKeysPage() {
           {selectedApiKey && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.id')}</Label>
-                  <p className="text-sm font-mono break-all">{selectedApiKey.id}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('oauth.appId')}</Label>
-                  <p className="text-sm font-mono break-all">{selectedApiKey.app_id}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableName')}</Label>
-                  <p className="text-sm font-semibold">{selectedApiKey.name}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableState')}</Label>
-                  <Badge variant={selectedApiKey.is_active ? 'secondary' : 'outline'} className={selectedApiKey.is_active ? 'bg-emerald-500/10 text-emerald-400 border-0' : ''}>
+                <KeyValue label={t('oauth.id')} mono className="break-all">
+                  {selectedApiKey.id}
+                </KeyValue>
+                <KeyValue label={t('oauth.appId')} mono className="break-all">
+                  {selectedApiKey.app_id}
+                </KeyValue>
+                <KeyValue label={t('apiKeys.tableName')} className="font-semibold">
+                  {selectedApiKey.name}
+                </KeyValue>
+                <KeyValue label={t('apiKeys.tableState')}>
+                  <Badge
+                    variant={selectedApiKey.is_active ? 'tonal' : 'outline'}
+                    tone={selectedApiKey.is_active ? 'success' : 'neutral'}
+                  >
                     {selectedApiKey.is_active ? 'Activa' : 'Inactiva'}
                   </Badge>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.environment')}</Label>
-                  <p className="text-sm capitalize">{selectedApiKey.environment}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.keyId')}</Label>
-                  <p className="text-sm font-mono">{selectedApiKey.key_id}</p>
-                </div>
+                </KeyValue>
+                <KeyValue label={t('apiKeys.environment')} className="capitalize">
+                  {selectedApiKey.environment}
+                </KeyValue>
+                <KeyValue label={t('apiKeys.keyId')} mono>
+                  {selectedApiKey.key_id}
+                </KeyValue>
               </div>
 
               {selectedApiKey.description && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('apiKeys.tableDescription')}</Label>
-                  <p className="text-sm">{selectedApiKey.description}</p>
-                </div>
+                <KeyValue label={t('apiKeys.tableDescription')}>{selectedApiKey.description}</KeyValue>
               )}
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">{t('apiKeys.publishableKey')}</Label>
-                <div className="flex gap-2">
-                  <p className="text-sm font-mono break-all bg-muted/50 rounded-lg p-3 flex-1 min-w-0">{selectedApiKey.publishable_key}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    title={t('apiKeys.copy')}
+                <Text variant="caption" tone="muted" className="block">{t('apiKeys.publishableKey')}</Text>
+                <Inline gap={2} align="start">
+                  <Text variant="code" as="p" className="break-all bg-subtle/50 rounded-lg p-3 flex-1 min-w-0">
+                    {selectedApiKey.publishable_key}
+                  </Text>
+                  <IconButton
+                    icon={Copy}
+                    label={t('apiKeys.copy')}
+                    variant="secondary"
                     onClick={() => {
                       navigator.clipboard.writeText(selectedApiKey.publishable_key);
                       showNotification('Publishable key copiada', 'success');
                     }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
+                  />
+                </Inline>
               </div>
 
-              <p className="text-xs text-muted-foreground/80">
+              <Text variant="caption" tone="muted" className="block">
                 {t('apiKeys.secretNotShown')}
-              </p>
+              </Text>
 
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.created')}</Label>
-                  <p className="text-sm">{selectedApiKey.created_at ? new Date(selectedApiKey.created_at).toLocaleString() : '—'}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.updated')}</Label>
-                  <p className="text-sm">{selectedApiKey.updated_at ? new Date(selectedApiKey.updated_at).toLocaleString() : '—'}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
+                <KeyValue label={t('roles.created')}>
+                  {selectedApiKey.created_at ? new Date(selectedApiKey.created_at).toLocaleString() : '—'}
+                </KeyValue>
+                <KeyValue label={t('roles.updated')}>
+                  {selectedApiKey.updated_at ? new Date(selectedApiKey.updated_at).toLocaleString() : '—'}
+                </KeyValue>
                 {selectedApiKey.last_used_at && (
-                  <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">{t('apiKeys.lastUsed')}</Label>
-                    <p className="text-sm">{new Date(selectedApiKey.last_used_at).toLocaleString()}</p>
-                  </div>
+                  <KeyValue label={t('apiKeys.lastUsed')} className="col-span-2">
+                    {new Date(selectedApiKey.last_used_at).toLocaleString()}
+                  </KeyValue>
                 )}
                 {selectedApiKey.revoked_at && (
-                  <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">{t('apiKeys.revoked')}</Label>
-                    <p className="text-sm text-amber-500">{new Date(selectedApiKey.revoked_at).toLocaleString()}</p>
-                  </div>
+                  <KeyValue label={t('apiKeys.revoked')} className="col-span-2 text-amber-500">
+                    {new Date(selectedApiKey.revoked_at).toLocaleString()}
+                  </KeyValue>
                 )}
               </div>
 
@@ -647,28 +809,27 @@ export default function ApiKeysPage() {
                 <div className="flex gap-2 ml-auto">
                   {selectedApiKey.is_active && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={actionLoading}
+                      variant="secondary"
+                      size="md"
+                      loading={actionLoading}
                       onClick={handleDeactivate}
-                      className="gap-1.5 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      className="text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      leading={<Icon icon={PowerOff} size={14} />}
                     >
-                      {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
                       {t('apiKeys.deactivate')}
                     </Button>
                   )}
                   <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={actionLoading}
+                    variant="destructive-subtle"
+                    size="md"
+                    loading={actionLoading}
                     onClick={handleDelete}
-                    className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                    leading={<Icon icon={Trash2} size={14} />}
                   >
-                    {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     {t('apiKeys.delete')}
                   </Button>
                 </div>
-                <Button variant="outline" onClick={() => setSelectedApiKey(null)}>
+                <Button variant="secondary" onClick={() => setSelectedApiKey(null)}>
                   {t('apiKeys.close')}
                 </Button>
               </DialogFooter>

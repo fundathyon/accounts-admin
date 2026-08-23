@@ -1,4 +1,20 @@
 @import "tailwindcss";
+
+/* Single Tailwind build. The library ships a PREBUILT stylesheet too, but
+   loading it alongside this one put two independent builds on the page emitting
+   the same utility class names — at equal specificity the later sheet wins
+   regardless of breakpoint, so `grid-cols-1` beat `lg:grid-cols-12` and
+   `sm:grid-cols-2` beat `md:grid-cols-3`. Importing only the tokens and letting
+   `@source` scan the package makes this build generate the library's classes
+   too, so there is exactly one sheet and nothing can collide.
+
+   NOTE: the package's own theme.css is deliberately NOT used — it does
+   `--color-*: initial`, which would also wipe Tailwind's default palette that
+   this app still uses in ~240 places. The colour mappings it provides are
+   copied into the @theme block at the bottom of this file instead. */
+@import "@foundathyon/community-ui/tokens.css";
+@import "../../node_modules/@foundathyon/community-ui/dist/styles/base.css";
+@source "../../node_modules/@foundathyon/community-ui/dist";
 @import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "shadcn/tailwind.css";
 
@@ -54,6 +70,9 @@ body {
 }
 
 @theme inline {
+  /* `primary` is intentionally unmapped, like `accent`: the design system owns
+     the brand colour now. Leaving it mapped would keep generating cyan
+     `.text-primary`/`.bg-primary` utilities from this theme. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -67,14 +86,15 @@ body {
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+  /* `--color-accent` is deliberately NOT mapped. Tailwind scans community-ui's
+     dist and would generate `.text-accent`/`.bg-accent` from THIS theme, whose
+     `--accent` is a near-neutral grey — shadowing community-ui's own accent
+     utilities (globals.css loads last). That rendered the active sidebar item
+     as near-black text on an orange wash. The design system owns `accent`. */
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -86,10 +106,7 @@ body {
   --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
@@ -135,4 +152,132 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+/* Design-system colours registered in the APP's Tailwind theme.
+   The library ships a PREBUILT stylesheet, so it only contains the classes the
+   library itself uses — an app-side `border-border/50` or `text-text-muted`
+   exists in neither sheet unless this build knows the token. Copied from the
+   package's theme.css WITHOUT its `--color-*: initial`, which would also wipe
+   Tailwind's default palette (still used in ~240 places). The `--fdn-*` values
+   themselves come from the library stylesheet at runtime. */
+@theme inline {
+  --color-bg: var(--fdn-bg);
+  --color-bg-subtle: var(--fdn-bg-subtle);
+  --color-surface: var(--fdn-surface);
+  --color-surface-raised: var(--fdn-surface-raised);
+  --color-surface-hover: var(--fdn-surface-hover);
+  --color-border: var(--fdn-border);
+  --color-border-strong: var(--fdn-border-strong);
+  --color-text: var(--fdn-text);
+  --color-text-secondary: var(--fdn-text-secondary);
+  --color-text-muted: var(--fdn-text-muted);
+  --color-text-disabled: var(--fdn-text-disabled);
+  --color-accent: var(--fdn-accent-text);
+  --color-accent-solid: var(--fdn-accent-solid);
+  --color-accent-solid-hover: var(--fdn-accent-solid-hover);
+  --color-accent-solid-active: var(--fdn-accent-solid-active);
+  --color-accent-bg: var(--fdn-accent-bg);
+  --color-accent-border: var(--fdn-accent-border);
+  --color-accent-on-solid: var(--fdn-accent-on-solid);
+  --color-focus: var(--fdn-focus);
+  --color-success: var(--fdn-success-text);
+  --color-success-bg: var(--fdn-success-bg);
+  --color-success-border: var(--fdn-success-border);
+  --color-success-solid: var(--fdn-success-solid);
+  --color-warning: var(--fdn-warning-text);
+  --color-warning-bg: var(--fdn-warning-bg);
+  --color-warning-border: var(--fdn-warning-border);
+  --color-warning-solid: var(--fdn-warning-solid);
+  --color-danger: var(--fdn-danger-text);
+  --color-danger-bg: var(--fdn-danger-bg);
+  --color-danger-border: var(--fdn-danger-border);
+  --color-danger-solid: var(--fdn-danger-solid);
+  --color-info: var(--fdn-info-text);
+  --color-info-bg: var(--fdn-info-bg);
+  --color-info-border: var(--fdn-info-border);
+  --color-info-solid: var(--fdn-info-solid);
+  --color-on-solid: var(--fdn-on-solid);
+
+  /* Non-colour theme extensions from the package's theme.css, copied the same
+     way as the colours above: this build only picked up --color-*, so every
+     custom utility below (text-body, h-control-lg, w-modal-md, ease-standard…)
+     has been silently generating NO CSS this whole time — Tailwind has no
+     built-in fallback for names it doesn't recognise, unlike shadow-* or
+     rounded-*, which merely fell back to Tailwind's own defaults instead of
+     breaking outright. This is why every Button/Input/IconButton across the
+     app has been rendering at its unstyled content height regardless of its
+     size prop. */
+  --font-sans: var(--fdn-font-sans);
+  --font-mono: var(--fdn-font-mono);
+
+  --text-display: 2.375rem;
+  --text-display--line-height: 2.75rem;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-h1: 1.875rem;
+  --text-h1--line-height: 2.25rem;
+  --text-h1--font-weight: 700;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.75rem;
+  --text-h2--font-weight: 700;
+  --text-h2--letter-spacing: -0.015em;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.5rem;
+  --text-h3--font-weight: 600;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h4: 0.9375rem;
+  --text-h4--line-height: 1.25rem;
+  --text-h4--font-weight: 600;
+  --text-h5: 0.8125rem;
+  --text-h5--line-height: 1.125rem;
+  --text-h5--font-weight: 600;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.25rem;
+  --text-body-sm: 0.75rem;
+  --text-body-sm--line-height: 1.125rem;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1rem;
+  --text-label--font-weight: 500;
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: 0.9375rem;
+  --text-overline: 0.65625rem;
+  --text-overline--line-height: 0.875rem;
+  --text-overline--font-weight: 600;
+  --text-overline--letter-spacing: 0.05em;
+  --text-code: 0.71875rem;
+  --text-code--line-height: 1.125rem;
+
+  /* Elevation — Tailwind's default shadow-* would otherwise silently stand in
+     for these, so this only changes the exact shadow values, never breaks. */
+  --shadow-xs: var(--fdn-shadow-xs);
+  --shadow-sm: var(--fdn-shadow-sm);
+  --shadow-md: var(--fdn-shadow-md);
+  --shadow-lg: var(--fdn-shadow-lg);
+  --shadow-xl: var(--fdn-shadow-xl);
+
+  --ease-standard: var(--fdn-ease-standard);
+  --ease-enter: var(--fdn-ease-enter);
+  --ease-exit: var(--fdn-ease-exit);
+
+  /* Control heights (§04) — h-control-* / w-control-* (Button, Input, Select,
+     IconButton…) and h-control follows density. This is the block whose
+     absence collapsed every control to its unstyled content height. */
+  --spacing-control-xs: var(--fdn-control-xs);
+  --spacing-control-sm: var(--fdn-control-sm);
+  --spacing-control-md: var(--fdn-control-md);
+  --spacing-control-lg: var(--fdn-control-lg);
+  --spacing-control: var(--fdn-control-height);
+
+  --spacing-sidebar: var(--fdn-sidebar-width);
+  --spacing-sidebar-collapsed: var(--fdn-sidebar-collapsed);
+  --spacing-header: var(--fdn-header-height);
+  --spacing-container-max: var(--fdn-container-max);
+  --spacing-prose-max: var(--fdn-prose-max);
+  --spacing-modal-sm: var(--fdn-modal-sm);
+  --spacing-modal-md: var(--fdn-modal-md);
+  --spacing-modal-lg: var(--fdn-modal-lg);
+  --spacing-drawer-sm: var(--fdn-drawer-sm);
+  --spacing-drawer-md: var(--fdn-drawer-md);
+  --spacing-drawer-lg: var(--fdn-drawer-lg);
 }

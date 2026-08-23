@@ -10,6 +10,7 @@
  *    - "development" -> .envs/.env.dev
  *    - "production" -> .envs/.env.prod
  *    - "staging" -> .envs/.env.staging
+ *    - "mock" -> .envs/.env.mock (points INTERNAL_API_URL at mock-server/, see `make dev-mock`)
  */
 
 import { config } from 'dotenv';
@@ -24,6 +25,7 @@ const envFiles: Record<string, string> = {
   development: path.join(cwd, EnvDir, '.env.dev'),
   production: path.join(cwd, EnvDir, '.env.prod'),
   staging: path.join(cwd, EnvDir, '.env.staging'),
+  mock: path.join(cwd, EnvDir, '.env.mock'),
 };
 
 export function loadDotEnv(): void {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Webhook,
@@ -14,7 +15,6 @@ import {
   ChevronDown,
   ChevronRight,
   CheckCircle2,
-  Loader2,
   FileJson,
   FormInput,
   Send,
@@ -25,31 +25,60 @@ import {
   Search,
   ArrowDownAZ,
   ArrowUpAZ,
-  Filter,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
+  FormField,
+  Heading,
+  Icon,
+  Inline,
+  Input,
+  JsonEditor,
+  Select,
+  StatusBadge,
+  Switch,
+  Text,
+  Tooltip,
+  Spinner,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { WebhookItem, EventsByCategory, WebhookEvent } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
+}
+
+/**
+ * Cryptographically random webhook signing secret. Uses `crypto.getRandomValues`
+ * (Web Crypto — available in every runtime this admin runs against) and encodes
+ * the 32 bytes as base64url so the resulting string is URL/log/env-safe and
+ * carries the conventional `whsec_` prefix. 43 characters after the prefix,
+ * ~256 bits of entropy — comfortably above what an HMAC-SHA256 signer needs.
+ */
+function generateWebhookSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  // Manual base64url so we don't need Buffer / atob detour in the browser.
+  let base64 = '';
+  for (let i = 0; i < bytes.length; i++) base64 += String.fromCharCode(bytes[i]);
+  return (
+    'whsec_' +
+    btoa(base64).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  );
 }
 
 function useCommonEvents(t: (k: string) => string): WebhookEvent[] {
@@ -71,21 +100,8 @@ const categoryColor: Record<string, string> = {
   Security: 'text-rose-400 bg-rose-500/10',
 };
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
 function getCategoryColor(cat: string) {
-  return categoryColor[cat] || 'text-muted-foreground bg-muted';
+  return categoryColor[cat] || 'text-muted-foreground bg-subtle';
 }
 
 export default function WebhooksPage() {
@@ -96,6 +112,12 @@ export default function WebhooksPage() {
   const [eventsByCategory, setEventsByCategory] = useState<EventsByCategory>({});
   const [loading, setLoading] = useState(true);
   const [isWebhookModalOpen, setIsWebhookModalOpen] = useState(false);
+
+  // Deep link from the command palette's "Acciones" group.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setIsWebhookModalOpen(true);
+  }, [searchParams]);
   const initialWebhookForm = {
     name: '',
     description: '',
@@ -411,121 +433,26 @@ export default function WebhooksPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-8">
+        <Inline justify="between" className="mb-8">
           <div>
-            <h1 className="text-3xl font-bold">{t('webhooks.title')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{t('webhooks.subtitle')}</p>
+            <Heading level={1}>{t('webhooks.title')}</Heading>
+            <Text variant="body-sm" tone="secondary" as="p" className="mt-1">{t('webhooks.subtitle')}</Text>
           </div>
-          <div className="flex gap-2">
+          <Inline gap={2}>
             {!savedSecretKey ? (
-              <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-                <Link href={settingsHref}>
-                  <Key className="w-4 h-4" /> {t('webhooks.configSecretKey')}
-                </Link>
-              </Button>
+              <Link
+                href={settingsHref}
+                className={cn(
+                  buttonVariants({ variant: 'secondary', size: 'sm' }),
+                  'border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                )}
+              >
+                <Icon icon={Key} size={14} /> {t('webhooks.configSecretKey')}
+              </Link>
             ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      setEditingWebhook(null);
-                      setWebhookForm(initialWebhookForm);
-                      setSelectedEvents(new Set());
-                      setWebhookEditMode('form');
-                      setWebhookJsonRaw('');
-                      setIsWebhookModalOpen(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> {t('webhooks.newWebhook')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('tooltips.addWebhook')}
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-
-        {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('webhooks.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">{t('webhooks.configSecretKeyCard')}</CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('webhooks.goToSettings')}</Link>
-            </Button>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> {t('webhooks.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-2xl border border-border/50">
-              <div className="relative flex-1 min-w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('webhooks.searchPlaceholder') || "Search by name, URL or ID..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.state')}</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                      <SelectTrigger className="w-[140px] h-10 border-none bg-background shadow-none focus:ring-1 focus:ring-primary/30">
-                        <div className="flex items-center gap-2">
-                          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                          <SelectValue placeholder={t('users.state') || "State"} />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t('common.all') || "All"}</SelectItem>
-                        <SelectItem value="active">{t('common.active') || "Active"}</SelectItem>
-                        <SelectItem value="inactive">{t('behaviors.inactive') || "Inactive"}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.state')}
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                      className="h-10 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
-                    >
-                      {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                      {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.sortBy')}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-
-            {webhooks.length === 0 ? (
-              <Card className="border-dashed p-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Webhook className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle className="mb-2">{t('webhooks.noWebhooks')}</CardTitle>
-                <CardDescription className="mb-6">{t('webhooks.createFirst')}</CardDescription>
+              <Tooltip content={t('tooltips.addWebhook')}>
                 <Button
+                  variant="primary"
                   onClick={() => {
                     setEditingWebhook(null);
                     setWebhookForm(initialWebhookForm);
@@ -534,10 +461,103 @@ export default function WebhooksPage() {
                     setWebhookJsonRaw('');
                     setIsWebhookModalOpen(true);
                   }}
-                  className="gap-2"
+                  leading={<Icon icon={Plus} size={14} />}
                 >
-                  <Plus className="w-4 h-4" /> {t('webhooks.addWebhook')}
+                  {t('webhooks.newWebhook')}
                 </Button>
+              </Tooltip>
+            )}
+          </Inline>
+        </Inline>
+
+        {!savedSecretKey ? (
+          <Card className="border-amber-500/20">
+            <CardBody className="p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-amber-400" />
+              </div>
+              <Heading level={2} visual="h4" className="text-amber-300 mb-2">{t('webhooks.secretKeyRequired')}</Heading>
+              <Text tone="secondary" as="p" className="mb-6">{t('webhooks.configSecretKeyCard')}</Text>
+              <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+                {t('webhooks.goToSettings')}
+              </Link>
+            </CardBody>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
+              <ShieldCheck className="w-4 h-4" /> {t('webhooks.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
+              <div className="flex-1 min-w-[300px]">
+                <Input
+                  leading={<Icon icon={Search} size={14} />}
+                  aria-label={t('webhooks.searchPlaceholder') || "Search by name, URL or ID..."}
+                  placeholder={t('webhooks.searchPlaceholder') || "Search by name, URL or ID..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  wrapperClassName="h-10 border-none bg-bg shadow-none"
+                />
+              </div>
+
+              <Inline gap={3}>
+                <Text variant="overline" tone="secondary">{t('webhooks.state')}</Text>
+                <Tooltip content={t('tooltips.state')}>
+                  {/* Select does not forward arbitrary DOM props, so the tooltip
+                      trigger has to attach to a wrapper element. */}
+                  <span className="inline-flex">
+                    <Select
+                      value={statusFilter}
+                      onValueChange={(v) => setStatusFilter((v ?? 'all') as 'all' | 'active' | 'inactive')}
+                      placeholder={t('webhooks.state') || "State"}
+                      aria-label={t('webhooks.state') || "State"}
+                      items={[
+                        { value: 'all', label: t('common.all') || "All" },
+                        { value: 'active', label: t('common.active') || "Active" },
+                        { value: 'inactive', label: t('behaviors.inactive') || "Inactive" },
+                      ]}
+                      className="w-[140px] h-10 border-none bg-bg shadow-none"
+                    />
+                  </span>
+                </Tooltip>
+
+                <Tooltip content={t('tooltips.sortBy')}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                    leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={14} />}
+                    className="h-10 px-3 bg-bg hover:bg-bg/80"
+                  >
+                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest" : t('users.sortByOldest') || "Oldest"}
+                  </Button>
+                </Tooltip>
+              </Inline>
+            </div>
+
+            {webhooks.length === 0 ? (
+              <Card className="border-dashed">
+                <CardBody className="p-16 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-accent-bg flex items-center justify-center mx-auto mb-4">
+                    <Webhook className="w-8 h-8 text-accent" />
+                  </div>
+                  <Heading level={2} visual="h4" className="mb-2">{t('webhooks.noWebhooks')}</Heading>
+                  <Text tone="secondary" as="p" className="mb-6">{t('webhooks.createFirst')}</Text>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingWebhook(null);
+                      setWebhookForm(initialWebhookForm);
+                      setSelectedEvents(new Set());
+                      setWebhookEditMode('form');
+                      setWebhookJsonRaw('');
+                      setIsWebhookModalOpen(true);
+                    }}
+                    leading={<Icon icon={Plus} size={14} />}
+                  >
+                    {t('webhooks.addWebhook')}
+                  </Button>
+                </CardBody>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -545,7 +565,7 @@ export default function WebhooksPage() {
                   <Card key={wh.id} className="overflow-hidden">
                     <Button
                       variant="ghost"
-                      className="w-full justify-start px-6 py-5 h-auto flex items-center gap-4 hover:bg-muted/50 transition-colors"
+                      className="w-full justify-start px-6 py-5 h-auto hover:bg-subtle/50 [&>span]:w-full [&>span]:gap-4"
                       onClick={() => setExpandedWebhook(expandedWebhook === wh.id ? null : wh.id)}
                     >
                       <div className={cn('w-3 h-3 rounded-full shrink-0', wh.active ? 'bg-emerald-400' : 'bg-slate-600')} />
@@ -553,13 +573,9 @@ export default function WebhooksPage() {
                         <div className="flex items-center gap-3">
                           <span className="font-semibold">{wh.name}</span>
                           {wh.active ? (
-                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-400 border-0">
-                              {t('common.active')}
-                            </Badge>
+                            <StatusBadge status="active">{t('common.active')}</StatusBadge>
                           ) : (
-                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                              {t('behaviors.inactive')}
-                            </Badge>
+                            <StatusBadge status="disabled">{t('behaviors.inactive')}</StatusBadge>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
@@ -595,7 +611,7 @@ export default function WebhooksPage() {
                               <div>
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">{t('webhooks.details')}</h4>
                                 <div className="space-y-2 text-sm">
-                                  {wh.description && <p className="text-foreground">{wh.description}</p>}
+                                  {wh.description && <p className="text-text">{wh.description}</p>}
                                   <div className="flex items-center gap-2 text-muted-foreground">
                                     <Lock className="w-3.5 h-3.5" />
                                     <span className="font-mono text-xs">{wh.secret.slice(0, 6)}{'•'.repeat(8)}</span>
@@ -612,7 +628,7 @@ export default function WebhooksPage() {
                                   {wh.events.map((ev) => {
                                     const cat = ev.split('.')[1] || '';
                                     const colorKey = Object.keys(categoryColor).find((k) => k.toLowerCase().includes(cat.toLowerCase())) || '';
-                                    const color = categoryColor[colorKey] || 'text-muted-foreground bg-muted';
+                                    const color = categoryColor[colorKey] || 'text-muted-foreground bg-subtle';
                                     return (
                                       <span key={ev} className={cn('px-2 py-0.5 rounded-md text-xs font-mono font-medium', color)}>
                                         {ev}
@@ -622,51 +638,37 @@ export default function WebhooksPage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="pt-3 border-t border-border flex flex-wrap items-center gap-2">
+                            <Inline gap={2} wrap className="pt-3 border-t border-border">
                               <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
+                                variant="secondary"
                                 onClick={() => openEditModal(wh)}
+                                leading={<Icon icon={Pencil} size={14} />}
                               >
-                                <Pencil className="w-4 h-4" /> {t('webhooks.editWebhook')}
+                                {t('webhooks.editWebhook')}
                               </Button>
                               <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                                disabled={deletingWebhookId === wh.id}
+                                variant="secondary"
+                                loading={deletingWebhookId === wh.id}
                                 onClick={() => handleDeleteWebhook(wh)}
+                                leading={<Icon icon={Trash2} size={14} />}
                               >
-                                {deletingWebhookId === wh.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-4 h-4" />
-                                )}
                                 {deletingWebhookId === wh.id ? t('webhooks.deleting') : t('webhooks.deleteWebhook')}
                               </Button>
                               <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                                disabled={togglingWebhookId === wh.id}
+                                variant="secondary"
+                                loading={togglingWebhookId === wh.id}
                                 onClick={() => handleToggleActive(wh)}
+                                leading={<Icon icon={wh.active ? PowerOff : Power} size={14} />}
                               >
-                                {togglingWebhookId === wh.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : wh.active ? (
-                                  <PowerOff className="w-4 h-4" />
-                                ) : (
-                                  <Power className="w-4 h-4" />
-                                )}
                                 {wh.active ? t('webhooks.deactivate') : t('webhooks.activate')}
                               </Button>
-                              <Button variant="outline" size="sm" className="gap-2" asChild>
-                                <Link href={`${BASE_PATH}/webhooks/${wh.id}/test`.replace(/\/+/g, '/')}>
-                                  <Send className="w-4 h-4" /> {t('webhooks.sendTestEvent')}
-                                </Link>
-                              </Button>
-                            </div>
+                              <Link
+                                href={`${BASE_PATH}/webhooks/${wh.id}/test`.replace(/\/+/g, '/')}
+                                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                              >
+                                <Icon icon={Send} size={14} /> {t('webhooks.sendTestEvent')}
+                              </Link>
+                            </Inline>
                           </div>
                         </motion.div>
                       )}
@@ -680,31 +682,22 @@ export default function WebhooksPage() {
       </motion.div>
 
       <Dialog open={isWebhookModalOpen} onOpenChange={(open) => { if (!open) closeWebhookModal(); setIsWebhookModalOpen(open); }}>
-        <DialogContent className="sm:max-w-4xl max-w-full max-h-[90vh] flex flex-col">
+        <DialogContent size="lg" className="sm:max-w-4xl max-w-full max-h-[90vh] flex flex-col">
           <DialogHeader>
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="w-10 h-10 rounded-2xl bg-accent-bg flex items-center justify-center text-accent">
                   <Webhook className="w-5 h-5" />
                 </div>
                 <DialogTitle>{editingWebhook ? t('webhooks.editWebhookTitle') : t('webhooks.newWebhook')}</DialogTitle>
               </div>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
+                variant="secondary"
                 onClick={() => (webhookEditMode === 'form' ? switchToJsonMode() : switchToFormMode())}
+                leading={<Icon icon={webhookEditMode === 'form' ? FileJson : FormInput} size={14} />}
               >
-                {webhookEditMode === 'form' ? (
-                  <>
-                    <FileJson className="w-4 h-4" /> {t('webhooks.editJson')}
-                  </>
-                ) : (
-                  <>
-                    <FormInput className="w-4 h-4" /> {t('webhooks.backToForm')}
-                  </>
-                )}
+                {webhookEditMode === 'form' ? t('webhooks.editJson') : t('webhooks.backToForm')}
               </Button>
             </div>
           </DialogHeader>
@@ -712,43 +705,48 @@ export default function WebhooksPage() {
           <form onSubmit={editingWebhook ? handleUpdateWebhook : handleCreateWebhook} className="flex flex-col overflow-hidden flex-1 min-h-0">
             <div className="overflow-y-auto space-y-6">
               {webhookEditMode === 'json' ? (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileJson className="w-4 h-4" /> {t('webhooks.jsonLabel')}
-                  </Label>
-                  <textarea
+                <FormField
+                  label={
+                    <>
+                      <Icon icon={FileJson} size={14} /> {t('webhooks.jsonLabel')}
+                    </>
+                  }
+                  description={t('webhooks.jsonPlaceholder')}
+                >
+                  <JsonEditor
                     value={webhookJsonRaw}
-                    onChange={(e) => setWebhookJsonRaw(e.target.value)}
-                    className="w-full min-h-[320px] rounded-xl border border-input bg-background px-4 py-3 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                    onChange={setWebhookJsonRaw}
+                    minRows={16}
+                    maxRows={26}
+                    lineNumbers
+                    copy
                     placeholder='{"name":"...","url":"...","events":[...]}'
-                    spellCheck={false}
+                    aria-label={t('webhooks.jsonLabel')}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t('webhooks.jsonPlaceholder')}
-                  </p>
-                </div>
+                </FormField>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t('webhooks.nameRequired')}</Label>
+                    <FormField label={t('webhooks.nameRequired')}>
                       <Input
                         required
                         placeholder={t('webhooks.name')}
                         value={webhookForm.name}
                         onChange={(e) => setWebhookForm((p) => ({ ...p, name: e.target.value }))}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t('webhooks.description')}</Label>
+                    </FormField>
+                    <FormField label={t('webhooks.description')}>
                       <Input placeholder={t('webhooks.optional')} value={webhookForm.description} onChange={(e) => setWebhookForm((p) => ({ ...p, description: e.target.value }))} />
-                    </div>
+                    </FormField>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" /> {t('webhooks.urlLabel')}
-                    </Label>
+                  <FormField
+                    label={
+                      <>
+                        <Icon icon={Globe} size={14} /> {t('webhooks.urlLabel')}
+                      </>
+                    }
+                  >
                     <Input
                       required
                       type="url"
@@ -757,44 +755,68 @@ export default function WebhooksPage() {
                       onChange={(e) => setWebhookForm((p) => ({ ...p, url: e.target.value }))}
                       className="font-mono"
                     />
-                  </div>
+                  </FormField>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Lock className="w-4 h-4" /> {t('webhooks.secretLabel')} {editingWebhook ? `(${t('webhooks.optional')})` : ''}
-                      </Label>
+                  {/* Retries only ever holds a 1–2 digit number, so it gets a
+                      fixed 120px slot; the signing secret takes everything
+                      else since it's a full base64url string that needs the
+                      room. Was `grid-cols-2` — half the row for a 2-digit
+                      value was wasteful and made the secret look cramped. */}
+                  <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-4">
+                    <FormField
+                      label={
+                        <>
+                          <Icon icon={Lock} size={14} /> {t('webhooks.secretLabel')} {editingWebhook ? `(${t('webhooks.optional')})` : ''}
+                        </>
+                      }
+                    >
                       <Input
                         required={!editingWebhook}
                         placeholder={editingWebhook ? t('webhooks.secretLeaveEmpty') : 'mi-secret-seguro'}
                         value={webhookForm.secret}
                         onChange={(e) => setWebhookForm((p) => ({ ...p, secret: e.target.value }))}
                         className="font-mono"
+                        trailing={
+                          <button
+                            type="button"
+                            onClick={() => setWebhookForm((p) => ({ ...p, secret: generateWebhookSecret() }))}
+                            className="inline-flex items-center gap-1 rounded-sm px-1 text-caption text-text-secondary transition-colors hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                            aria-label={t('webhooks.generateSecret')}
+                            title={t('webhooks.generateSecret')}
+                          >
+                            <Icon icon={Sparkles} size={12} />
+                            {t('common.generate')}
+                          </button>
+                        }
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <RotateCcw className="w-4 h-4" /> {t('webhooks.retriesLabel')}
-                      </Label>
+                    </FormField>
+                    <FormField
+                      label={
+                        <>
+                          <Icon icon={RotateCcw} size={14} /> {t('webhooks.retriesLabel')}
+                        </>
+                      }
+                    >
                       <Input type="number" min={0} max={10} value={webhookForm.retries} onChange={(e) => setWebhookForm((p) => ({ ...p, retries: +e.target.value }))} />
-                    </div>
+                    </FormField>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border">
-                    <div>
-                      <div className="text-sm font-medium">{t('webhooks.activateImmediately')}</div>
-                      <CardDescription>{t('webhooks.activateImmediatelyDesc')}</CardDescription>
-                    </div>
-                    <Switch checked={webhookForm.active} onCheckedChange={(active) => setWebhookForm((p) => ({ ...p, active }))} />
+                  <div className="p-4 bg-subtle/50 rounded-2xl border">
+                    <Switch
+                      label={t('webhooks.activateImmediately')}
+                      description={t('webhooks.activateImmediatelyDesc')}
+                      checked={webhookForm.active}
+                      onCheckedChange={(active) => setWebhookForm((p) => ({ ...p, active }))}
+                    />
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <Label className="flex items-center gap-2">
-                        <Zap className="w-4 h-4" /> {t('webhooks.eventsToSubscribe')}
-                      </Label>
-                      <span className="text-xs text-primary font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
-                    </div>
+                    <Inline justify="between" className="mb-3">
+                      <Text variant="label" className="flex items-center gap-2">
+                        <Icon icon={Zap} size={14} /> {t('webhooks.eventsToSubscribe')}
+                      </Text>
+                      <span className="text-xs text-accent font-semibold">{selectedEvents.size} {t('webhooks.selectedCount')}</span>
+                    </Inline>
 
                     {/* Eventos más comunes - siempre visible arriba */}
                     <div className="mb-4 space-y-2">
@@ -805,15 +827,15 @@ export default function WebhooksPage() {
                         {COMMON_EVENTS.map((ev) => (
                           <label
                             key={ev.code}
-                            className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
+                            className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-subtle/50 cursor-pointer transition-colors group"
                           >
                             <div
                               className={cn(
                                 'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                                selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                                selectedEvents.has(ev.code) ? 'bg-accent-solid border-accent-border' : 'border-border group-hover:border-accent-border'
                               )}
                             >
-                              {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                              {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-accent-on-solid" />}
                             </div>
                             <input
                               type="checkbox"
@@ -830,7 +852,7 @@ export default function WebhooksPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 bg-muted/30 rounded-2xl border p-3 max-h-56 overflow-y-auto">
+                    <div className="space-y-2 bg-subtle/30 rounded-2xl border p-3 max-h-56 overflow-y-auto">
                       {Object.entries(eventsByCategory).map(([category, catEvents]) => {
                         const commonCodes = new Set(COMMON_EVENTS.map((e) => e.code));
                         const filteredEvents = catEvents.filter((e) => !commonCodes.has(e.code));
@@ -840,7 +862,7 @@ export default function WebhooksPage() {
                             <Button
                               type="button"
                               variant="ghost"
-                              className="w-full justify-between px-3 py-2 h-auto"
+                              className="w-full justify-between px-3 py-2 h-auto [&>span]:w-full [&>span]:justify-between"
                               onClick={() => toggleCategory(category)}
                             >
                               <div className="flex items-center gap-2">
@@ -854,8 +876,8 @@ export default function WebhooksPage() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  size="sm"
-                                  className="text-xs text-muted-foreground hover:text-primary h-auto py-0 px-2"
+                                  size="xs"
+                                  className="text-xs text-muted-foreground hover:text-accent h-auto py-0 px-2"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     selectAllInCategory(category, filteredEvents);
@@ -883,15 +905,15 @@ export default function WebhooksPage() {
                                     {filteredEvents.map((ev) => (
                                       <label
                                         key={ev.code}
-                                        className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors group"
+                                        className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-subtle/50 cursor-pointer transition-colors group"
                                       >
                                         <div
                                           className={cn(
                                             'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                                            selectedEvents.has(ev.code) ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
+                                            selectedEvents.has(ev.code) ? 'bg-accent-solid border-accent-border' : 'border-border group-hover:border-accent-border'
                                           )}
                                         >
-                                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                                          {selectedEvents.has(ev.code) && <CheckCircle2 className="w-3 h-3 text-accent-on-solid" />}
                                         </div>
                                         <input
                                           type="checkbox"
@@ -919,11 +941,10 @@ export default function WebhooksPage() {
             </div>
 
             <DialogFooter className="gap-4 pt-6">
-              <Button type="button" variant="outline" onClick={closeWebhookModal} className="flex-1">
+              <Button type="button" variant="secondary" onClick={closeWebhookModal} className="flex-1">
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" disabled={isWebhookSubmitting} className="flex-1 gap-2">
-                {isWebhookSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Button type="submit" variant="primary" disabled={isWebhookSubmitting} leading={isWebhookSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
                 {isWebhookSubmitting
                   ? (editingWebhook ? t('webhooks.updating') : t('webhooks.creating'))
                   : (editingWebhook ? t('webhooks.updateWebhook') : t('webhooks.createWebhook'))}

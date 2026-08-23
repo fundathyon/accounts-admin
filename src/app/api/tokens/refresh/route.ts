@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_API_URL } from '@/lib/utils';
+import { proxyToAccounts } from '@/lib/accounts-api';
 
 /**
  * POST body: { refresh_token: string }
@@ -15,8 +15,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const url = `${INTERNAL_API_URL}/api/v1/refresh-jwt`;
-    const res = await fetch(url, {
+    return await proxyToAccounts('/api/v1/refresh-jwt', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${refreshToken}`,
@@ -24,8 +23,6 @@ export async function POST(request: Request) {
       },
       cache: 'no-store',
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json(
       { success: false, error: { message: 'Error al conectar con el servidor.' } },

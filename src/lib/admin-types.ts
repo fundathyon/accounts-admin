@@ -38,6 +38,25 @@ export interface User {
   updated_at: string;
   role_details?: RoleDetails;
   login_methods?: LoginMethod[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface MetadataFieldSchema {
+  name: string;
+  type: 'string' | 'number' | 'boolean';
+  required: boolean;
+  format?: string;
+  enum?: string[];
+  minimum?: number;
+  maximum?: number;
+  min_length?: number;
+  max_length?: number;
+}
+
+export interface MetadataSchemaConfig {
+  enabled: boolean;
+  scheme: MetadataFieldSchema[];
+  additional_properties: boolean;
 }
 
 export interface WebhookItem {
@@ -129,6 +148,29 @@ export interface OAuthRedirectItem {
   name?: string;
   rt?: string;
   legacy?: boolean;
+}
+
+/** Email access policy (GET/PUT /email-access/settings). */
+export interface EmailAccessSettingsView {
+  app_id: string;
+  signup_access_mode: string;
+  evaluate_blocklist_on_login: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** One allowlist or blocklist row. */
+export interface EmailAccessEntryView {
+  id: string;
+  app_id: string;
+  list_kind: string;
+  /** all | email | oauth provider id (google, apple, …) */
+  access_segment: string;
+  entry_type: string;
+  value_normalized: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OAuthConfig {

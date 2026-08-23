@@ -1,35 +1,64 @@
-# Foundathyon Admin (Next.js Edition)
+# Foundathyon Accounts Admin
 
-Este es un panel de administración moderno construido con **Next.js 15**, **Tailwind CSS** y **Framer Motion**.
+Admin panel para el servicio **Accounts** de Foundathyon. **Next.js 16** (App Router) · React 19 · TypeScript · Tailwind v4 · **Bun**.
 
-## Características
-- **Route Handlers**: Peticiones protegidas hacia la API real de Foundathyon.
-- **Framer Motion**: Animaciones fluidas y modales interactivos.
-- **Tailwind CSS**: Diseño premium y modo oscuro nativo.
-- **TypeScript**: Tipado estricto para mayor seguridad.
+## Cómo empezar
 
-## Cómo ejecutar
+```bash
+make install
+cp .envs/.env.example .envs/.env.mock
+make dev-mock          # Next.js (:3000) + backend mock (:8099) en paralelo
+```
 
-1. Instala las dependencias (si no lo has hecho):
-   ```bash
-   npm install
-   ```
+Abre <http://localhost:3000>. Credenciales por defecto: `admin` / `changeme`.
 
-2. Inicia el servidor de desarrollo:
-   ```bash
-   npm run dev
-   ```
+Para correr contra el backend Go real:
 
-3. El panel estará disponible en [http://localhost:3000](http://localhost:3000).
+```bash
+cp .envs/.env.example .envs/.env.local  # ajusta INTERNAL_API_URL
+make dev
+```
 
-## Configuración de API
-El panel utiliza un proxy interno (`/src/app/api/apps/route.ts`) para comunicarse con la API de Go.
-Las variables se cargan desde la carpeta `.envs/` (igual que en el proyecto Go):
+## Antes de un PR
 
-1. `.envs/.env.base` — define `ENVIRONMENT` (local, development, production, staging).
-2. Archivo según entorno: `.env.local`, `.env.dev`, `.env.prod` o `.env.staging`.
+```bash
+make validate          # lint + typecheck + build
+```
 
-Variables usadas:
-- `INTERNAL_API_URL`: URL base de la API de Foundathyon (Default: `http://localhost:8000/accounts`).
-- `ADMIN_API_KEY`: Tu Admin API Key (Default: `secret`).
-- `BASE_PATH` / `NEXT_PUBLIC_BASE_PATH`: Ruta base de la aplicación (Default: vacío).
+Sin tests automatizados. Verifica cambios de UI manualmente contra `make dev-mock`.
+
+## Documentación
+
+| Archivo | Para qué |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Manual operativo para agentes de IA y nuevos contribuidores. **Empieza aquí.** |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Flujo de request, capas, límites de seguridad. |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Setup local, envs, modos de desarrollo, gotchas. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Estilo de commits, checklist de PR. |
+| [docs/](docs/README.md) | Guías de usuario y referencias del backend. |
+
+## Comandos frecuentes
+
+| Acción | Make | bun |
+|---|---|---|
+| Instalar | `make install` | `bun install` |
+| Dev (backend real) | `make dev` | `bun run dev` |
+| Dev + mock | `make dev-mock` | — |
+| Solo mock | `make mock` | `bun run mock` |
+| Lint | `make lint` | `bun run lint` |
+| Typecheck | `make typecheck` | `bun run typecheck` |
+| Build | `make build` | `bun run build` |
+| **Validar antes del PR** | `make validate` | `bun run validate` |
+| Docker | `make docker-{build,up,down}` | — |
+
+## Variables de entorno
+
+Todas documentadas en [`.envs/.env.example`](.envs/.env.example). `load-envs.ts` selecciona el archivo por `ENVIRONMENT`:
+
+| `ENVIRONMENT` | Archivo |
+|---|---|
+| `local` (default) | `.envs/.env.local` |
+| `mock` | `.envs/.env.mock` |
+| `development` / `production` / `staging` | `.envs/.env.dev` / `.env.prod` / `.env.staging` |
+
+Solo `.envs/.env.example` está versionado; el resto está en `.gitignore`.

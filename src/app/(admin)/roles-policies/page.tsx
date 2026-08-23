@@ -1,66 +1,130 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Key,
   Shield,
   ShieldCheck,
-  Plus,
-  Loader2,
   Pencil,
-  Search,
+  SearchX,
   ArrowDownAZ,
   ArrowUpAZ,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
+  Button,
+  buttonVariants,
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
+  EmptyState,
+  FormField,
+  Heading,
+  Icon,
+  Input,
+  KeyValue,
+  Spinner,
+  Text,
   Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  type DataTableColumn,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, cn } from '@/lib/utils';
 import type { Role } from '@/lib/admin-types';
+import { AdminDataTable } from '@/components/admin-data-table';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
 
-export default function RolesPage() {
+/** Debounce for the search box — §16 fixes it at 250 ms. */
+const SEARCH_DEBOUNCE_MS = 250;
+
+function RolesPageContent() {
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
   const { t } = useI18n();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Deep link from the command palette's "Acciones" group. Depending on the
+  // VALUE (not on the searchParams object) keeps `router.replace` from
+  // re-opening the dialog every time a filter is written back to the URL.
+  const newParam = searchParams.get('new');
+  useEffect(() => {
+    if (newParam === '1') setIsRoleModalOpen(true);
+  }, [newParam]);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '' });
   const [isRoleSubmitting, setIsRoleSubmitting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+
+  // §16 — the URL IS the state: a filtered view is shareable. The query string
+  // seeds the filters once, and every change is written back with `replace`
+  // (never `push`: filtering must not fill the history).
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>(() =>
+    searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest'
+  );
+
+  // Reads the live query string so unrelated params (e.g. `new=1`) survive,
+  // and never depends on the `searchParams` object — that would re-fire on
+  // every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  const toggleSort = () => {
+    const next = sortBy === 'newest' ? 'oldest' : 'newest';
+    setSortBy(next);
+    writeUrl((params) => {
+      if (next === 'oldest') params.set('sort', 'oldest');
+      else params.delete('sort');
+    });
+  };
+
+  // The search term is the only filter on this list — the newest/oldest toggle
+  // orders, it does not filter — so "clear filters" clears exactly it.
+  const clearFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    writeUrl((params) => params.delete('q'));
+  };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
 
@@ -69,9 +133,15 @@ export default function RolesPage() {
     try {
       const res = await fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
-      if (data.data && (data.status === 200 || data.success)) setRoles(data.data || []);
-      else showNotification(data.error?.message || t('roles.errorLoadRoles'), 'error');
+      if (data.data && (data.status === 200 || data.success)) {
+        setRoles(data.data || []);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
+        showNotification(data.error?.message || t('roles.errorLoadRoles'), 'error');
+      }
     } catch {
+      setLoadError(true);
       showNotification(t('common.errorConnection'), 'error');
     }
   };
@@ -109,174 +179,239 @@ export default function RolesPage() {
       return;
     }
     setLoading(true);
+    setLoadError(false);
     fetch(apiUrl('/api/roles'), { headers: { 'X-Secret-API-Key': savedSecretKey } })
       .then((r) => r.json())
       .then((rData) => {
         if (rData.data && (rData.status === 200 || rData.success)) setRoles(rData.data || []);
+        else setLoadError(true);
       })
-      .catch(() => { })
+      .catch(() => { setLoadError(true); })
       .finally(() => setLoading(false));
   }, [savedSecretKey]);
 
-  const filteredRoles = roles.filter(role => {
-    const query = searchQuery.toLowerCase();
-    return (
-      role.name.toLowerCase().includes(query) ||
-      (role.description && role.description.toLowerCase().includes(query)) ||
-      role.id.toLowerCase().includes(query)
-    );
-  }).sort((a, b) => {
+  // Search is delegated to the DataTable global filter; only the toolbar
+  // "newest / oldest" toggle stays here — it is not a column-header sort.
+  const sortedRoles = [...roles].sort((a, b) => {
     const dateA = new Date(a.created_at || 0).getTime();
     const dateB = new Date(b.created_at || 0).getTime();
     return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
   });
+
+  const roleColumns = useMemo<DataTableColumn<Role>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('roles.name'),
+        accessor: (role) => role.name,
+        type: 'text',
+        primary: true,
+      },
+      {
+        id: 'description',
+        header: t('roles.description'),
+        accessor: (role) => role.description,
+        type: 'text',
+      },
+      {
+        // Comparable figure -> `number` cell, which brings `tabular-nums` (§14).
+        id: 'users',
+        header: t('roles.usersCount'),
+        accessor: (role) => role.users_count ?? 0,
+        type: 'number',
+      },
+      {
+        // Custom cell: the `text` type would drop the mono treatment.
+        id: 'appId',
+        header: t('roles.appId'),
+        cell: (role) => (
+          <span
+            className="block max-w-[200px] truncate font-mono text-code text-text-muted-foreground"
+            title={role.app_id}
+          >
+            {role.app_id}
+          </span>
+        ),
+      },
+      {
+        // No accessor on purpose: it keeps the raw ISO date out of the global
+        // filter. `type: 'date'` is not used because it hard-codes the `es`
+        // date-fns locale and this admin is bilingual.
+        id: 'created',
+        header: t('roles.created'),
+        align: 'right',
+        cell: (role) => (
+          <span className="tabular-nums text-caption text-text-muted-foreground">
+            {role.created_at ? new Date(role.created_at).toLocaleDateString() : '\u2014'}
+          </span>
+        ),
+      },
+      {
+        // Never rendered (hidden by default) but still fed to the global
+        // filter, so "search by ID" keeps working as the placeholder promises.
+        id: 'id',
+        header: 'ID',
+        accessor: (role) => role.id,
+      },
+    ],
+    [t]
+  );
+
+  // Mirrors DataTable's own global-filter rule (any column accessor contains
+  // the query, case-insensitive) so the header count matches the rows shown.
+  const shownCount = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return roles.length;
+    return roles.filter((role) =>
+      roleColumns.some((col) => {
+        const value = col.accessor?.(role);
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(query);
+      })
+    ).length;
+  }, [roles, roleColumns, searchQuery]);
 
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">{t('sidebar.roles')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{t('roles.manageDesc')}</p>
+            <Heading level={1}>{t('sidebar.roles')}</Heading>
+            {/* §30 — subtitle carries the count that matters. */}
+            {savedSecretKey && !loading && !loadError && (
+              <Text tone="secondary" className="mt-1" tabular>
+                {shownCount === roles.length
+                  ? `${roles.length} ${t('sidebar.roles')}`
+                  : t('common.countOf', { shown: shownCount, total: roles.length, entity: t('sidebar.roles') })}
+              </Text>
+            )}
+            <Text variant="caption" tone="muted" className="mt-1 block">{t('roles.manageDesc')}</Text>
           </div>
           {!savedSecretKey ? (
-            <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-              <Link href={settingsHref}>
-                <Key className="w-4 h-4" /> {t('roles.configSecretKey')}
-              </Link>
-            </Button>
+            <Link
+              href={settingsHref}
+              className={cn(
+                buttonVariants({ variant: 'secondary' }),
+                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+              )}
+            >
+              <Icon icon={Key} size={16} /> {t('roles.configSecretKey')}
+            </Link>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2">
-                  <Shield className="w-4 h-4" /> {t('roles.newRole')}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('tooltips.newRole')}
-              </TooltipContent>
+            <Tooltip content={t('tooltips.newRole')}>
+              <Button
+                variant="primary"
+                onClick={() => setIsRoleModalOpen(true)}
+                leading={<Icon icon={Shield} size={16} />}
+              >
+                {t('roles.newRole')}
+              </Button>
             </Tooltip>
           )}
         </div>
 
-        {savedSecretKey && (
-          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
-            <div className="relative flex-1 min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={t('roles.searchPlaceholder') || "Search by name, description or ID..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 ml-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground px-3 bg-background hover:bg-background/80"
-                  >
-                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('tooltips.sortBy')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        )}
-
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('roles.secretKeyRequiredCard')}</CardTitle>
-            <CardDescription className="mb-6">{t('roles.secretKeyRequiredDesc')}</CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
-            </Button>
+          <Card className="border-amber-500/20">
+            <EmptyState
+              icon={Key}
+              title={<span className="text-amber-300">{t('roles.secretKeyRequiredCard')}</span>}
+              description={t('roles.secretKeyRequiredDesc')}
+              action={
+                <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
+                  {t('users.goToSettings')}
+                </Link>
+              }
+            />
           </Card>
         ) : (
           <div className="space-y-4">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> {t('roles.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-            </div>
-
-            {loading ? (
-              <div className="py-12 flex justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : roles.length === 0 ? (
-              <Card className="p-12 text-center">
-                <div className="py-12 text-center text-muted-foreground text-sm">{t('roles.noRolesHint')}</div>
-              </Card>
-            ) : (
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b">
-                        <TableHead className="px-8 py-4">{t('roles.name')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('roles.description')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('roles.usersCount')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('roles.appId')}</TableHead>
-                        <TableHead className="px-8 py-4">{t('roles.created')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredRoles.map((role) => (
-                        <TableRow
-                          key={role.id}
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => setSelectedRole(role)}
-                        >
-                          <TableCell className="px-8 py-4 font-medium">{role.name}</TableCell>
-                          <TableCell className="px-8 py-4 text-muted-foreground">{role.description || '—'}</TableCell>
-                          <TableCell className="px-8 py-4">{role.users_count ?? 0}</TableCell>
-                          <TableCell className="px-8 py-4 text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={role.app_id}>
-                            {role.app_id}
-                          </TableCell>
-                          <TableCell className="px-8 py-4 text-xs text-muted-foreground">
-                            {role.created_at ? new Date(role.created_at).toLocaleDateString() : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
+            {/* §14 — one frame: toolbar (search · Columnas · order toggle), the
+                table, and the footer with the count and the key in use. */}
+            <AdminDataTable<Role>
+              entity={t('sidebar.roles')}
+              columns={roleColumns}
+              data={sortedRoles}
+              rowId={(role) => role.id}
+              columnVisibility={{ defaultState: { id: false } }}
+              globalFilter={searchQuery}
+              pageSize={20}
+              search={{
+                value: searchInput,
+                onChange: setSearchInput,
+                placeholder: t('roles.searchPlaceholder') || 'Search by name, description or ID...',
+              }}
+              columnsButton
+              toolbarEnd={
+                <Tooltip content={t('tooltips.sortBy')}>
+                  <Button
+                    variant="ghost"
+                    onClick={toggleSort}
+                    leading={<Icon icon={sortBy === 'newest' ? ArrowDownAZ : ArrowUpAZ} size={14} />}
+                  >
+                    {sortBy === 'newest' ? t('users.sortByNewest') || 'Newest first' : t('users.sortByOldest') || 'Oldest first'}
+                  </Button>
+                </Tooltip>
+              }
+              onRowClick={(role) => setSelectedRole(role)}
+              loading={loading}
+              loadingRowCount={5}
+              error={loadError ? { title: t('roles.errorLoadRoles'), retry: { label: t('common.retry'), onClick: () => { void fetchRoles(); } } } : undefined}
+              emptyState={{
+                icon: Shield,
+                title: t('roles.noRoles'),
+                description: t('roles.noRolesHint'),
+                action: (
+                  <Button
+                    variant="primary"
+                    onClick={() => setIsRoleModalOpen(true)}
+                    leading={<Icon icon={Shield} size={16} />}
+                  >
+                    {t('roles.newRole')}
+                  </Button>
+                ),
+              }}
+              noResultsState={{
+                // §16 — «Sin resultados» is not an empty state: it offers to
+                // clear the filters, and clears every one of them.
+                icon: SearchX,
+                title: t('common.noResults'),
+                description: t('common.noResultsDesc'),
+                action: (
+                  <Button variant="secondary" onClick={clearFilters}>
+                    {t('common.clearFilters')}
+                  </Button>
+                ),
+              }}
+              footer={
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon icon={ShieldCheck} size={12} />
+                  {t('roles.consultingWith')}
+                  <code className="font-mono">{truncateKey(savedSecretKey ?? '')}</code>
+                </span>
+              }
+            />
           </div>
         )}
       </motion.div>
 
       <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent size="md" className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
+              <Icon icon={Shield} size={20} className="text-accent" />
               {isEditing ? t('roles.editRole') : t('roles.newRole')}
             </DialogTitle>
             <DialogDescription>{isEditing ? t('roles.editRoleDescription') : t('roles.roleDescription')}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmitRole} className="space-y-5">
-            <div className="space-y-2">
-              <Label>{t('roles.name')} *</Label>
+            <FormField label={t('roles.name')} required>
               <Input required placeholder="admin" value={roleForm.name} onChange={(e) => setRoleForm((p) => ({ ...p, name: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('roles.description')}</Label>
+            </FormField>
+            <FormField label={t('roles.description')}>
               <Input placeholder="Rol con permisos de administración" value={roleForm.description} onChange={(e) => setRoleForm((p) => ({ ...p, description: e.target.value }))} />
-            </div>
+            </FormField>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => {
+              <Button type="button" variant="secondary" onClick={() => {
                 setIsRoleModalOpen(false);
                 setIsEditing(false);
                 setSelectedRole(null);
@@ -284,8 +419,12 @@ export default function RolesPage() {
               }}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" disabled={isRoleSubmitting} className="gap-2">
-                {isRoleSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isRoleSubmitting}
+                leading={isRoleSubmitting ? <Spinner size={16} label={null} /> : undefined}
+              >
                 {isRoleSubmitting ? (isEditing ? t('roles.updating') : t('roles.creating')) : (isEditing ? t('roles.updateRole') : t('roles.createRole'))}
               </Button>
             </DialogFooter>
@@ -294,13 +433,13 @@ export default function RolesPage() {
       </Dialog>
 
       <Dialog open={!!selectedRole} onOpenChange={(open) => !open && setSelectedRole(null)}>
-        <DialogContent className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
+              <Icon icon={Shield} size={20} className="text-accent" />
               {t('roles.roleDetails')}
               {selectedRole && (
-                <span className="text-muted-foreground font-normal">({selectedRole.name})</span>
+                <span className="text-secondary font-normal">({selectedRole.name})</span>
               )}
             </DialogTitle>
             <DialogDescription>
@@ -311,53 +450,43 @@ export default function RolesPage() {
           {selectedRole && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label className="text-muted-foreground text-xs">ID</Label>
-                  <p className="text-sm font-mono break-all">{selectedRole.id}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.name')}</Label>
-                  <p className="text-sm font-semibold">{selectedRole.name}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.usersCount')}</Label>
-                  <p className="text-sm">{selectedRole.users_count ?? 0}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.appId')}</Label>
-                  <p className="text-sm font-mono break-all">{selectedRole.app_id}</p>
-                </div>
+                <KeyValue label="ID" mono className="col-span-2 break-all">
+                  {selectedRole.id}
+                </KeyValue>
+                <KeyValue label={t('roles.name')} className="font-semibold">
+                  {selectedRole.name}
+                </KeyValue>
+                <KeyValue label={t('roles.usersCount')}>{selectedRole.users_count ?? 0}</KeyValue>
+                <KeyValue label={t('roles.appId')} mono className="break-all">
+                  {selectedRole.app_id}
+                </KeyValue>
                 {selectedRole.description && (
-                  <div className="space-y-2 col-span-2">
-                    <Label className="text-muted-foreground text-xs">{t('roles.description')}</Label>
-                    <p className="text-sm">{selectedRole.description}</p>
-                  </div>
+                  <KeyValue label={t('roles.description')} className="col-span-2">
+                    {selectedRole.description}
+                  </KeyValue>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.created')}</Label>
-                  <p className="text-sm">{selectedRole.created_at ? new Date(selectedRole.created_at).toLocaleString() : '—'}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs">{t('roles.updated')}</Label>
-                  <p className="text-sm">{selectedRole.updated_at ? new Date(selectedRole.updated_at).toLocaleString() : '—'}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
+                <KeyValue label={t('roles.created')}>
+                  {selectedRole.created_at ? new Date(selectedRole.created_at).toLocaleString() : '—'}
+                </KeyValue>
+                <KeyValue label={t('roles.updated')}>
+                  {selectedRole.updated_at ? new Date(selectedRole.updated_at).toLocaleString() : '—'}
+                </KeyValue>
               </div>
 
               <DialogFooter className="pt-4 gap-2">
-                <Button variant="outline" className="gap-2" onClick={() => {
+                <Button variant="secondary" leading={<Icon icon={Pencil} size={16} />} onClick={() => {
                   if (selectedRole) {
                     setIsEditing(true);
                     setRoleForm({ name: selectedRole.name, description: selectedRole.description || '' });
                     setIsRoleModalOpen(true);
                   }
                 }}>
-                  <Pencil className="w-4 h-4" />
                   {t('common.edit')}
                 </Button>
-                <Button variant="outline" onClick={() => setSelectedRole(null)}>
+                <Button variant="secondary" onClick={() => setSelectedRole(null)}>
                   {t('common.close')}
                 </Button>
               </DialogFooter>
@@ -366,5 +495,20 @@ export default function RolesPage() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function RolesPageFallback() {
+  const { t } = useI18n();
+  return <Text tone="muted">{t('common.loading')}</Text>;
+}
+
+/** `useSearchParams` needs a Suspense boundary in a statically prerendered
+ *  page — this route is one (§16 puts the filters in the URL). */
+export default function RolesPage() {
+  return (
+    <Suspense fallback={<RolesPageFallback />}>
+      <RolesPageContent />
+    </Suspense>
   );
 }

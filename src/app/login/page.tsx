@@ -2,11 +2,25 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Lock } from 'lucide-react';
+import {
+  AuthForm,
+  Button,
+  Card,
+  CardBody,
+  FormField,
+  Heading,
+  Input,
+  PasswordInput,
+  Text,
+} from '@foundathyon/community-ui';
+import { BrandMark, BrandPanel } from '@/components/auth-brand-panel';
 import { useI18n } from '@/context/i18n-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { apiUrl, BASE_PATH } from '@/lib/utils';
+import styles from '@/styles/auth-shell.module.css';
+
+// Same orange as Dokgistry's --vault-accent (#f97316), expressed as the
+// oklch triple @foundathyon/community-ui's accent engine needs — see
+// accounts-admin-community-ui-migration memory for the exact conversion.
 
 function LoginForm() {
   const router = useRouter();
@@ -18,8 +32,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError('');
     setLoading(true);
     try {
@@ -46,58 +59,63 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-            <Lock className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-xl font-bold">{t('login.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('login.subtitle')}</p>
-          </div>
+    <div className={styles.shell}>
+      <BrandPanel headline={t('login.brandHeadline')} tagline={t('login.brandTagline')} />
+
+      <section className={styles.formPane}>
+        <div className={styles.formCard}>
+          <BrandMark />
+
+          <Card>
+            <CardBody className="flex flex-col gap-5">
+              <div>
+                <Heading level={1} visual="h2">
+                  {t('login.title')}
+                </Heading>
+                <Text tone="secondary">{t('login.subtitle')}</Text>
+              </div>
+
+              <AuthForm
+                error={error || undefined}
+                loading={loading}
+                onSubmit={handleSubmit}
+                submitSlot={
+                  <Button type="submit" variant="primary" loading={loading} className="w-full">
+                    {loading ? t('login.entering') : t('login.enter')}
+                  </Button>
+                }
+              >
+                <FormField label={t('login.user')}>
+                  <Input
+                    name="user"
+                    type="text"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    value={user}
+                    onChange={(e) => setUser(e.target.value)}
+                    placeholder="admin"
+                    required
+                    autoFocus
+                  />
+                </FormField>
+                <FormField label={t('login.password')}>
+                  <PasswordInput
+                    name="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    showPasswordLabel={t('login.showPassword')}
+                    hidePasswordLabel={t('login.hidePassword')}
+                  />
+                </FormField>
+              </AuthForm>
+            </CardBody>
+          </Card>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="user" className="block text-sm font-medium mb-2">
-              {t('login.user')}
-            </label>
-            <Input
-              id="user"
-              type="text"
-              autoComplete="username"
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              placeholder="admin"
-              required
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2">
-              {t('login.password')}
-            </label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full"
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? t('login.entering') : t('login.enter')}
-          </Button>
-        </form>
-      </div>
+      </section>
     </div>
   );
 }
@@ -105,8 +123,8 @@ function LoginForm() {
 function LoginFallback() {
   const { t } = useI18n();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-muted-foreground">{t('common.loading')}</div>
+    <div className={styles.shell} style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Text tone="muted">{t('common.loading')}</Text>
     </div>
   );
 }

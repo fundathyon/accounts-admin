@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Plus,
   Lock,
@@ -12,7 +12,6 @@ import {
   XCircle,
   Loader2,
   Copy,
-  MoreVertical,
   Users,
   AlertCircle,
   Eye,
@@ -20,74 +19,125 @@ import {
   RefreshCw,
   Trash2,
   ChevronRight,
-  ChevronDown,
+  Ellipsis,
   KeyRound,
   Download,
   FileCode,
   Search,
-  Filter,
-  ArrowDownAZ,
-  ArrowUpAZ,
   ShieldOff,
+  Database,
+  Mail,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/context/admin-context';
-import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH, IS_PRODUCTION } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
+  CodeBlock,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSubmenu,
+  DropdownMenuSubmenuTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
+  FormField,
+  Heading,
+  Icon,
+  IconButton,
+  Inline,
+  Input,
+  RoleBadge,
+  SecretField,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Stack,
+  Text,
+  Tooltip,
+  Spinner,
+} from '@foundathyon/community-ui';
+import type {
+  DataTableColumn,
+  DataTableRowAction,
+  DataTableSort,
+} from '@foundathyon/community-ui';
+import { useAdmin } from '@/context/admin-context';
+import { useI18n } from '@/context/i18n-context';
+import { BASE_PATH, IS_PRODUCTION } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
-import type { User, Role } from '@/lib/admin-types';
+import { AdminDataTable, DeleteSelectionButton } from '@/components/admin-data-table';
+import type { User, Role, MetadataFieldSchema } from '@/lib/admin-types';
 
 function truncateKey(key: string) {
   if (!key || key.length <= 20) return key;
   return key.slice(0, 12) + '••••••••••••' + key.slice(-8);
 }
 
+function primaryEmailOf(user: User) {
+  return user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
+}
+
+/** Values the `type` URL param accepts; `all` is the default and is never written. */
+const LOGIN_TYPE_FILTERS = ['all', 'email', 'oauth', 'google', 'apple', 'microsoft'] as const;
+type LoginTypeFilter = (typeof LOGIN_TYPE_FILTERS)[number];
+
+/**
+ * Login-method names as the Select already rendered them — provider names and
+ * protocol labels, not product copy. Hoisted so the applied-filter chip can
+ * show the same label the picker does.
+ */
+const LOGIN_TYPE_LABELS: Record<Exclude<LoginTypeFilter, 'all'>, string> = {
+  email: 'Email / Password',
+  oauth: 'Any OAuth',
+  google: 'Google',
+  apple: 'Apple',
+  microsoft: 'Microsoft',
+};
+
+function parseLoginTypeFilter(value: string | null): LoginTypeFilter {
+  return LOGIN_TYPE_FILTERS.includes(value as LoginTypeFilter) ? (value as LoginTypeFilter) : 'all';
+}
+
+/** §16 search debounce: 250 ms before the query reaches the table and the URL. */
+const SEARCH_DEBOUNCE_MS = 250;
+
+/**
+ * Searchable text of a row. This is the `user` column's `accessor`, so it is
+ * what `DataTable`'s `globalFilter` matches on — and the group-by-role view
+ * (which the DataTable API cannot express) reuses it to build its sections.
+ */
+function userSearchText(user: User) {
+  return `${user.id} ${user.user_name || ''} ${primaryEmailOf(user) || ''} ${user.name || ''}`;
+}
+
+/**
+ * Epoch value for the `date` / `relative-date` cells. Returning a number rather
+ * than the raw ISO string keeps human-readable dates out of the global filter,
+ * and an unparseable date renders `—` instead of throwing inside `formatDate`.
+ */
+function timestampOf(value?: string | null) {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
 export default function UsersPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { apiUrl, showNotification, savedSecretKey, savedPublishableKey } = useAdmin();
   const { t } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [signupForm, setSignupForm] = useState({ email: '', password: '', user_name: '' });
   const [isSignupSubmitting, setIsSignupSubmitting] = useState(false);
@@ -111,10 +161,14 @@ export default function UsersPage() {
   const [publicKeyValue, setPublicKeyValue] = useState<string | null>(null);
   const [publicKeyLoading, setPublicKeyLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  // `searchInput` is what the field shows (always controlled, never remounted so
+  // it keeps the caret and the focus when rows arrive); `searchQuery` is the
+  // debounced value the table filters by and the URL carries.
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [loginFilter, setLoginFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [loginFilter, setLoginFilter] = useState<LoginTypeFilter>('all');
+  const [sort, setSort] = useState<DataTableSort | null>({ id: 'created', direction: 'desc' });
   const [isGroupedByRole, setIsGroupedByRole] = useState(false);
   const [isRevokeRefreshOpen, setIsRevokeRefreshOpen] = useState(false);
   const [revokeByTokenValue, setRevokeByTokenValue] = useState('');
@@ -122,7 +176,11 @@ export default function UsersPage() {
   const [revokeLoading, setRevokeLoading] = useState(false);
   const [revokeMode, setRevokeMode] = useState<'token' | 'id'>('token');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  // The rows behind «Eliminar selección»; `null` means the dialog deletes ALL users.
+  const [bulkTargets, setBulkTargets] = useState<User[] | null>(null);
   const [bulkConfirmPhrase, setBulkConfirmPhrase] = useState('');
+  const [metadataSchema, setMetadataSchema] = useState<MetadataFieldSchema[] | null>(null);
+  const [metadataValues, setMetadataValues] = useState<Record<string, string>>({});
   const [bulkProgress, setBulkProgress] = useState<{
     running: boolean;
     finished: boolean;
@@ -130,6 +188,76 @@ export default function UsersPage() {
     total: number;
     errors: { id: string; email?: string; message: string }[];
   } | null>(null);
+
+  // §16 — the URL IS the state: `?q=` + `?role=` + `?type=` + `?group=role`
+  // make a filtered view shareable. The query string seeds the filters once,
+  // and every change is written back with `replace` (never `push`: filtering
+  // must not fill the history).
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setSearchInput(q);
+    setSearchQuery(q);
+    setRoleFilter(searchParams.get('role') || 'all');
+    setLoginFilter(parseLoginTypeFilter(searchParams.get('type')));
+    setIsGroupedByRole(searchParams.get('group') === 'role');
+    // Mount-only on purpose: from here on the page writes the URL, not the
+    // reverse. Seeding in an effect (rather than during render) also keeps the
+    // controls out of any prerendered markup, so nothing can mismatch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reads the live query string so unrelated params survive, and never depends
+  // on the `searchParams` object — that would re-fire on every replace.
+  const writeUrl = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(window.location.search);
+      mutate(params);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Debounced search: the input stays controlled by `searchInput` (it never
+  // remounts, so focus and caret survive the results arriving), and only the
+  // settled value reaches the table filter and the URL.
+  useEffect(() => {
+    if (searchInput === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+      writeUrl((params) => {
+        if (searchInput.trim()) params.set('q', searchInput);
+        else params.delete('q');
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery, writeUrl]);
+
+  // Defaults are omitted from the URL so an unfiltered view keeps a clean one.
+  const applyRoleFilter = (value: string) => {
+    setRoleFilter(value);
+    writeUrl((params) => {
+      if (value !== 'all') params.set('role', value);
+      else params.delete('role');
+    });
+  };
+
+  const applyLoginFilter = (value: LoginTypeFilter) => {
+    setLoginFilter(value);
+    writeUrl((params) => {
+      if (value !== 'all') params.set('type', value);
+      else params.delete('type');
+    });
+  };
+
+  const toggleGroupByRole = () => {
+    const next = !isGroupedByRole;
+    setIsGroupedByRole(next);
+    writeUrl((params) => {
+      if (next) params.set('group', 'role');
+      else params.delete('group');
+    });
+  };
 
   const handleRevokeByToken = async () => {
     const token = revokeByTokenValue.trim();
@@ -223,12 +351,18 @@ export default function UsersPage() {
       return;
     }
     setLoading(true);
+    setUsersError(null);
     try {
       const res = await fetch(apiUrl('/api/users'), { headers: { 'X-Secret-API-Key': savedSecretKey } });
       const data = await res.json();
       if (data.data && (data.status === 200 || data.success)) setUsers(data.data || []);
-      else showNotification(data.error?.message || data.errors?.[0] || t('users.errorLoadUsers'), 'error');
+      else {
+        const message = data.error?.message || data.errors?.[0] || t('users.errorLoadUsers');
+        setUsersError(message);
+        showNotification(message, 'error');
+      }
     } catch {
+      setUsersError(t('users.errorConnectionUsers'));
       showNotification(t('users.errorConnectionUsers'), 'error');
     } finally {
       setLoading(false);
@@ -254,6 +388,34 @@ export default function UsersPage() {
 
   const keyForAuth = savedPublishableKey;
 
+  const openSignupModal = async () => {
+    setMetadataValues({});
+    setMetadataSchema(null);
+    setIsSignupModalOpen(true);
+    if (savedSecretKey) {
+      try {
+        const behRes = await fetch(apiUrl('/api/behaviors'), {
+          headers: { 'X-Secret-API-Key': savedSecretKey },
+        });
+        const behData = await behRes.json();
+        const emailAuth = (behData.data || []).find((b: { behavior_code?: string }) => b.behavior_code === 'email_auth');
+        if (emailAuth?.id) {
+          const detailRes = await fetch(apiUrl(`/api/behaviors/${emailAuth.id}`), {
+            headers: { 'X-Secret-API-Key': savedSecretKey },
+          });
+          const detailData = await detailRes.json();
+          const schema = detailData.data?.config?.metadata_schema;
+          if (schema?.enabled && Array.isArray(schema.scheme) && schema.scheme.length > 0) {
+            setMetadataSchema(schema.scheme);
+            const defaults: Record<string, string> = {};
+            schema.scheme.forEach((f: MetadataFieldSchema) => { defaults[f.name] = ''; });
+            setMetadataValues(defaults);
+          }
+        }
+      } catch { /* skip, metadata schema is optional */ }
+    }
+  };
+
   const handleSignup = async () => {
     if (!keyForAuth) {
       showNotification(t('users.configPublishableKey'), 'error');
@@ -265,6 +427,20 @@ export default function UsersPage() {
     }
     setIsSignupSubmitting(true);
     try {
+      const metadataPayload: Record<string, unknown> = {};
+      if (metadataSchema && metadataSchema.length > 0) {
+        metadataSchema.forEach((field) => {
+          const raw = metadataValues[field.name] ?? '';
+          if (raw === '' && !field.required) return;
+          if (field.type === 'number') {
+            metadataPayload[field.name] = raw !== '' ? Number(raw) : undefined;
+          } else if (field.type === 'boolean') {
+            metadataPayload[field.name] = raw === 'true';
+          } else {
+            metadataPayload[field.name] = raw;
+          }
+        });
+      }
       const res = await fetch(apiUrl('/api/emails/signup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Publishable-API-Key': keyForAuth },
@@ -272,6 +448,7 @@ export default function UsersPage() {
           email: signupForm.email.trim(),
           password: signupForm.password,
           ...(signupForm.user_name.trim() && { user_name: signupForm.user_name.trim() }),
+          ...(Object.keys(metadataPayload).length > 0 && { metadata: metadataPayload }),
         }),
       });
       const data = await res.json();
@@ -420,9 +597,12 @@ export default function UsersPage() {
     }
   };
 
-  const handleBulkDeleteUsers = async () => {
-    if (IS_PRODUCTION || !savedSecretKey) return;
-    const targets = users.slice();
+  const handleBulkDeleteUsers = async (selection?: User[]) => {
+    if (!savedSecretKey) return;
+    // «Eliminar todos» stays out of production; deleting an explicit selection
+    // is the row action in bulk, so it is allowed wherever the row action is.
+    if (!selection && IS_PRODUCTION) return;
+    const targets = selection ? selection.slice() : users.slice();
     if (targets.length === 0) {
       showNotification(t('users.deleteAllNoUsers'), 'error');
       return;
@@ -528,13 +708,11 @@ export default function UsersPage() {
     }
   };
 
+  // Role and login-method are faceted filters. `DataTable` exposes a single
+  // `globalFilter` and no per-column filtering, so these two stay on the page
+  // and pre-filter the rows the table receives. Search and sort moved into the
+  // table (`globalFilter` + the sortable "Creado" / "Última actividad" heads).
   const filteredUsers = users.filter((user) => {
-    const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || '';
-    const searchableText = `${user.id} ${user.user_name || ''} ${primaryEmail} ${user.name || ''}`.toLowerCase();
-    const query = searchQuery.toLowerCase();
-
-    if (query && !searchableText.includes(query)) return false;
-
     if (roleFilter !== 'all' && user.role_id !== roleFilter && user.role_details?.name !== roleFilter) return false;
 
     if (loginFilter !== 'all') {
@@ -548,20 +726,18 @@ export default function UsersPage() {
     }
 
     return true;
-  }).sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
-    return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
   });
 
-  const groupedUsers = isGroupedByRole
-    ? filteredUsers.reduce((acc, user) => {
-      const roleName = user.role_details?.name || 'default';
-      if (!acc[roleName]) acc[roleName] = [];
-      acc[roleName].push(user);
-      return acc;
-    }, {} as Record<string, User[]>)
-    : { "All Users": filteredUsers };
+  const searchLower = searchQuery.trim().toLowerCase();
+  // The rows that survive every filter — the same set the table shows, since
+  // `userSearchText` is the accessor its `globalFilter` matches on. Feeds the
+  // grouped view and the §30 header count so both agree with the table.
+  const searchedUsers = filteredUsers.filter(
+    (user) => !searchLower || userSearchText(user).toLowerCase().includes(searchLower)
+  );
+  // Group key for the §14 grouped view — the table renders one group row per
+  // role and keeps the column sort inside each group.
+  const roleNameOf = (user: User) => user.role_details?.name || 'default';
 
   const handleExportCSV = () => {
     if (users.length === 0) {
@@ -616,381 +792,351 @@ export default function UsersPage() {
   };
 
   const settingsHref = `${BASE_PATH}/settings`.replace(/\/+/g, '/') || '/settings';
+  const bulkPhrase = bulkTargets
+    ? t('users.deleteSelectedConfirmPhrase', { count: bulkTargets.length })
+    : t('users.deleteAllConfirmPhrase');
+  const userHref = (user: User) => `${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/');
+
+
+  // §16 — the one exit out of «Sin resultados»: it drops every applied filter,
+  // the search term included. Grouping is a view mode, so it survives.
+  const clearAllFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setRoleFilter('all');
+    setLoginFilter('all');
+    writeUrl((params) => {
+      params.delete('q');
+      params.delete('role');
+      params.delete('type');
+    });
+  };
+
+  // §16 — an applied filter is never hidden: the search keeps its value and
+  // each facet button carries a counter. This only decides which empty copy
+  // the table shows when the page-level facets leave nothing to render.
+  const filtersActive =
+    searchQuery.trim() !== '' || roleFilter !== 'all' || loginFilter !== 'all';
+
+  // §16 — «Sin resultados» is not an empty state: it says nothing matched and
+  // offers the way out, which clears every filter including the search term.
+  const noResultsStateCopy = {
+    icon: Search,
+    title: t('common.noResults'),
+    description: t('common.noResultsDesc'),
+    action: (
+      <Button variant="secondary" onClick={clearAllFilters}>
+        {t('common.clearFilters')}
+      </Button>
+    ),
+  };
+
+  const userColumns = useMemo<DataTableColumn<User>[]>(() => [
+    {
+      // §21 Accounts spec — the `user` cell puts the technical id on top (support
+      // searches by id) and the human name below; the email is its own column.
+      // The global filter searches every part of the object.
+      id: 'user',
+      header: t('users.user'),
+      type: 'user',
+      primary: true,
+      accessor: (user) => ({
+        id: user.id,
+        name: user.name || user.user_name || undefined,
+        email: primaryEmailOf(user),
+      }),
+    },
+    {
+      id: 'email',
+      header: t('users.email'),
+      type: 'text',
+      accessor: (user) => primaryEmailOf(user),
+      sortable: true,
+    },
+    {
+      // Hidden by default (toggle it from «Columnas»), still fed to the global
+      // filter so "search by username" keeps working as the placeholder promises.
+      id: 'username',
+      header: 'Username',
+      type: 'text',
+      accessor: (user) => user.user_name,
+    },
+    {
+      id: 'provider',
+      header: t('users.provider'),
+      cell: (user) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {user.login_methods?.map((lm) =>
+            lm.entity_type === 'oauth' && lm.details?.platform ? (
+              <OAuthProviderLogo
+                key={lm.id}
+                provider={lm.details.platform}
+                size={22}
+                className="rounded"
+              />
+            ) : lm.entity_type === 'email' ? (
+              <span
+                key={lm.id}
+                className="inline-flex items-center justify-center gap-0.5 shrink-0"
+                title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
+              >
+                <span className="inline-flex items-center justify-center w-[22px] h-[22px] rounded-md bg-accent-bg text-accent">
+                  <Mail className="w-3.5 h-3.5" />
+                </span>
+                {lm.is_verify ? (
+                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                )}
+              </span>
+            ) : (
+              <Badge key={lm.id} variant="outline" tone="warning" className="px-1.5">
+                {lm.entity_type}
+                {lm.is_verify ? (
+                  <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
+                ) : (
+                  <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
+                )}
+              </Badge>
+            )
+          ) || <span className="text-text-muted-foreground text-xs">—</span>}
+        </div>
+      ),
+    },
+    {
+      id: 'role',
+      header: t('users.role'),
+      cell: (user) =>
+        user.role_details ? (
+          <RoleBadge role={user.role_details.name} />
+        ) : (
+          <span className="text-text-muted-foreground text-xs">—</span>
+        ),
+    },
+    {
+      id: 'created',
+      header: t('users.created'),
+      type: 'date',
+      accessor: (user) => timestampOf(user.created_at),
+      sortable: true,
+    },
+    {
+      id: 'lastActivity',
+      header: t('users.lastActivity'),
+      type: 'relative-date',
+      accessor: (user) => timestampOf(user.updated_at),
+      sortable: true,
+    },
+  ], [t]);
+
+  const userRowActions = (user: User): DataTableRowAction[] => [
+    {
+      label: t('users.viewDetail'),
+      icon: ChevronRight,
+      onSelect: () => router.push(userHref(user)),
+    },
+    {
+      label: t('users.deleteAccount'),
+      icon: Trash2,
+      destructive: true,
+      onSelect: () => setUserToDelete(user),
+    },
+  ];
 
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">{t('users.title')}</h1>
-          <div className="flex gap-2">
-            {savedSecretKey && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={() => setIsSignupModalOpen(true)} className="gap-2">
-                      <Plus className="w-4 h-4" /> {t('users.registerUser')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.registerUser')}
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={() => setIsSigninModalOpen(true)} className="gap-2">
-                      <Lock className="w-4 h-4" /> {t('users.testLogin')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('tooltips.testLogin')}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2">
-                          <Download className="w-4 h-4" /> {t('users.export')} <ChevronDown className="w-3 h-3 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10">
-                          <Download className="w-4 h-4" /> CSV
+        {/* §30 — título, subtítulo con el recuento, acciones a la derecha: una
+            sola primaria. "Registrar usuario" is that primary; everything else
+            (test login, export, revoke, public key, delete all) lives behind
+            the overflow menu with its handlers and dialogs untouched. */}
+        <Inline justify="between" align="start" className="mb-6">
+          <div>
+            <Heading level={1}>{t('users.title')}</Heading>
+            {/* §30 — the header states the count that matters. */}
+            {savedSecretKey && !loading && users.length > 0 && (
+              <Text variant="caption" tone="muted" as="span" className="mt-1 block">
+                {t('common.countOf', { shown: searchedUsers.length, total: users.length, entity: t('users.title').toLowerCase() })}
+              </Text>
+            )}
+          </div>
+          <Inline gap={2}>
+            {savedSecretKey ? (
+              <Tooltip content={t('tooltips.registerUser')}>
+                <Button variant="primary" onClick={openSignupModal} leading={<Icon icon={Plus} size={14} />}>
+                  {t('users.registerUser')}
+                </Button>
+              </Tooltip>
+            ) : (
+              <Link
+                href={settingsHref}
+                className={cn(
+                  buttonVariants({ variant: 'secondary', size: 'sm' }),
+                  'border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                )}
+              >
+                <Icon icon={Key} size={14} /> {t('users.configSecretKey')}
+              </Link>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="secondary" leading={<Icon icon={Ellipsis} size={14} />}>
+                    {t('commandPalette.actions')}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                {savedSecretKey && (
+                  <>
+                    <DropdownMenuItem onClick={() => setIsSigninModalOpen(true)} icon={Lock}>
+                      {t('users.testLogin')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSubmenu>
+                      <DropdownMenuSubmenuTrigger icon={Download}>
+                        {t('users.export')}
+                      </DropdownMenuSubmenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={handleExportCSV} icon={Download} className="cursor-pointer text-emerald-500 data-[highlighted]:text-emerald-500 data-[highlighted]:bg-emerald-500/10">
+                          CSV
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer text-sky-500 focus:text-sky-500 focus:bg-sky-500/10">
-                          <FileCode className="w-4 h-4" /> JSON
+                        <DropdownMenuItem onClick={handleExportJSON} icon={FileCode} className="cursor-pointer text-sky-500 data-[highlighted]:text-sky-500 data-[highlighted]:bg-sky-500/10">
+                          JSON
                         </DropdownMenuItem>
                       </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('users.export')}
-                  </TooltipContent>
-                </Tooltip>
-                {!IS_PRODUCTION && users.length > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setBulkConfirmPhrase('');
-                          setBulkProgress(null);
-                          setIsBulkDeleteOpen(true);
-                        }}
-                        className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" /> {t('users.deleteAll')}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('users.deleteAllTooltip')}</TooltipContent>
-                  </Tooltip>
+                    </DropdownMenuSubmenu>
+                  </>
                 )}
-              </>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsRevokeRefreshOpen(true)}
-                  className="gap-2"
-                >
-                  <ShieldOff className="w-4 h-4" /> Revocar refresh token
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Revocar un refresh token por JWT o por ID (cierre de sesión en un dispositivo).
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={fetchPublicKeyJWT}
-                  className="gap-2"
-                >
-                  <KeyRound className="w-4 h-4" /> {t('users.publicKeyJwt')}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('users.publicKeyJwtDesc') || "RSA public key for JWT verification"}
-              </TooltipContent>
-            </Tooltip>
-            {!savedSecretKey && (
-              <Button variant="outline" asChild className="gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10">
-                <Link href={settingsHref}>
-                  <Key className="w-4 h-4" /> {t('users.configSecretKey')}
-                </Link>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {savedSecretKey && (
-          <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-2xl border border-border/50">
-            <div className="relative flex-1 min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={t('users.searchPlaceholder') || "Search by email, username, name or ID..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10 border-none bg-background shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</span>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[160px] h-9 bg-background border-none shadow-none focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="All Roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('users.allRoles') || "All Roles"}</SelectItem>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.loginType')}</span>
-              <Select value={loginFilter} onValueChange={setLoginFilter}>
-                <SelectTrigger className="w-[160px] h-9 bg-background border-none shadow-none focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="Any Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('users.allTypes') || "Any Type"}</SelectItem>
-                  <SelectItem value="email">Email / Password</SelectItem>
-                  <SelectItem value="oauth">Any OAuth</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="apple">Apple</SelectItem>
-                  <SelectItem value="microsoft">Microsoft</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2 ml-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
-                    className="h-9 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    {sortBy === 'newest' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
-                    {sortBy === 'newest' ? t('users.sortByNewest') || "Newest first" : t('users.sortByOldest') || "Oldest first"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('tooltips.sortBy')}
-                </TooltipContent>
-              </Tooltip>
-              <div className="w-px h-4 bg-border" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsGroupedByRole(!isGroupedByRole)}
-                    className={cn(
-                      "h-9 gap-2 text-xs font-medium",
-                      isGroupedByRole ? "text-primary bg-primary/10" : "text-muted-foreground"
-                    )}
-                  >
-                    <Users className="w-4 h-4" />
-                    {t('users.groupByRole') || "Group by Role"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('tooltips.groupByRole')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        )}
+                <DropdownMenuItem onClick={() => setIsRevokeRefreshOpen(true)} icon={ShieldOff}>
+                  Revocar refresh token
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={fetchPublicKeyJWT} icon={KeyRound}>
+                  {t('users.publicKeyJwt')}
+                </DropdownMenuItem>
+                {/* §12 — destructive goes last, separated, and it only opens the
+                    phrase confirmation: the item never deletes anything itself. */}
+                {savedSecretKey && !IS_PRODUCTION && users.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      destructive
+                      icon={Trash2}
+                      onClick={() => {
+                        setBulkTargets(null);
+                        setBulkConfirmPhrase('');
+                        setBulkProgress(null);
+                        setIsBulkDeleteOpen(true);
+                      }}
+                    >
+                      {t('users.deleteAll')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Inline>
+        </Inline>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
-            </div>
-            <CardTitle className="text-amber-300 mb-2">{t('users.secretKeyRequired')}</CardTitle>
-            <CardDescription className="mb-6">{t('users.secretKeyRequiredDesc')}</CardDescription>
-            <Button asChild>
-              <Link href={settingsHref}>{t('users.goToSettings')}</Link>
-            </Button>
+          <Card className="border-amber-500/20">
+            <CardBody className="p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-amber-400" />
+              </div>
+              <Heading level={2} visual="h4" className="text-amber-300 mb-2">{t('users.secretKeyRequired')}</Heading>
+              <Text tone="secondary" as="p" className="mb-6">{t('users.secretKeyRequiredDesc')}</Text>
+              <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+                {t('users.goToSettings')}
+              </Link>
+            </CardBody>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <div className="px-6 py-3 bg-emerald-500/5 border-b border-emerald-500/10 flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4 shrink-0" /> {t('users.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
-            </div>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="py-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="py-16 text-center text-muted-foreground text-sm">
-                  {t('users.noUsers')}
-                </div>
-              ) : (
-                Object.entries(groupedUsers).map(([groupName, groupUsers]) => (
-                  <div key={groupName} className="border-b last:border-none">
-                    {isGroupedByRole && (
-                      <div className="px-6 py-3 bg-muted/20 flex items-center justify-between border-b border-border/50">
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          {groupName} <span className="ml-2 font-normal opacity-50">({groupUsers.length})</span>
-                        </span>
-                      </div>
-                    )}
-                    <Table>
-                      <TableHeader className={cn(isGroupedByRole ? "hidden" : "")}>
-                        <TableRow className="border-b hover:bg-transparent">
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.user')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.provider')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.role')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.created')}</TableHead>
-                          <TableHead className="px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('users.lastActivity')}</TableHead>
-                          <TableHead className="px-6 py-3 w-12" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupUsers.map((user) => {
-                          const primaryEmail = user.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email;
-                          const displayName = user.name || user.user_name || primaryEmail || 'Sin nombre';
-                          return (
-                            <TableRow
-                              key={user.id}
-                              className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                              onClick={() => router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'))}
-                            >
-                              <TableCell className="px-6 py-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
-                                    {(displayName || 'U').charAt(0).toUpperCase()}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="font-mono text-xs text-muted-foreground truncate max-w-[140px]" title={user.id}>
-                                      {user.id}
-                                    </div>
-                                    <div className="font-medium text-sm truncate">{primaryEmail || user.user_name || '—'}</div>
-                                    {displayName !== primaryEmail && displayName !== user.user_name && (
-                                      <div className="text-xs text-muted-foreground truncate">{displayName}</div>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-center">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {user.login_methods?.map((lm) =>
-                                    lm.entity_type === 'oauth' && lm.details?.platform ? (
-                                      <OAuthProviderLogo
-                                        key={lm.id}
-                                        provider={lm.details.platform}
-                                        size={22}
-                                        className="rounded"
-                                      />
-                                    ) : lm.entity_type === 'email' ? (
-                                      <span
-                                        key={lm.id}
-                                        className="inline-flex items-center justify-center gap-0.5 shrink-0"
-                                        title={lm.is_verify ? 'Email verificado' : 'Email no verificado'}
-                                      >
-                                        <span className="inline-flex items-center justify-center w-[22px] h-[22px]">
-                                          <img src="/email-svgrepo-com.svg" alt="Email" className="w-full h-full" />
-                                        </span>
-                                        {lm.is_verify ? (
-                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                                        ) : (
-                                          <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
-                                        )}
-                                      </span>
-                                    ) : (
-                                      <Badge
-                                        key={lm.id}
-                                        variant="outline"
-                                        className="text-[10px] px-1.5 py-0 font-medium border-orange-500/40 text-orange-400 bg-orange-500/5"
-                                      >
-                                        {lm.entity_type}
-                                        {lm.is_verify ? (
-                                          <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
-                                        ) : (
-                                          <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
-                                        )}
-                                      </Badge>
-                                    )
-                                  ) || <span className="text-muted-foreground text-xs">—</span>}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                {user.role_details ? (
-                                  <Badge variant="secondary" className="text-xs font-normal">
-                                    {user.role_details.name}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">—</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-xs text-muted-foreground">
-                                {new Date(user.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-xs text-muted-foreground">
-                                {new Date(user.updated_at).toLocaleDateString('es', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </TableCell>
-                              <TableCell className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        router.push(`${BASE_PATH}/users/${user.id}`.replace(/\/+/g, '/'));
-                                      }}
-                                    >
-                                      <ChevronRight className="w-4 h-4" />
-                                      {t('users.viewDetail')}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="text-rose-500 focus:text-rose-500"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setUserToDelete(user);
-                                      }}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      Eliminar cuenta
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          /* §14 — one frame: toolbar (search · Rol · Tipo de acceso · Columnas,
+             and the selection summary with «Eliminar selección» on the right),
+             the table, and the footer with the count and the key in use. */
+          <AdminDataTable<User>
+            entity={t('users.title').toLowerCase()}
+            columns={userColumns}
+            data={filteredUsers}
+            columnVisibility={{ defaultState: { username: false } }}
+            rowId={(user) => user.id}
+            loading={loading}
+            loadingRowCount={6}
+            error={usersError ? { title: t('users.errorLoadUsers'), description: usersError, retry: { label: t('common.retry'), onClick: () => { void fetchUsers(); } } } : undefined}
+            // The table derives "no results" from `globalFilter` alone, so the
+            // page-level role/login facets decide the copy here: rows exist,
+            // they just did not survive a filter — and the exit is clearing them.
+            emptyState={filtersActive ? noResultsStateCopy : { icon: Users, title: t('users.noUsers') }}
+            noResultsState={noResultsStateCopy}
+            globalFilter={searchQuery}
+            pageSize={20}
+            sorting={{ state: sort, onChange: setSort }}
+            search={{
+              value: searchInput,
+              onChange: setSearchInput,
+              placeholder: t('users.searchPlaceholder') || 'Search by email, username, name or ID...',
+            }}
+            filters={[
+              {
+                id: 'role',
+                label: t('users.role'),
+                multiple: false,
+                value: roleFilter === 'all' ? [] : [roleFilter],
+                onChange: (next) => applyRoleFilter(next[0] ?? 'all'),
+                options: roles.map((role) => ({
+                  value: role.id,
+                  label: role.name,
+                  count: users.filter((user) => user.role_id === role.id || user.role_details?.name === role.id).length,
+                })),
+              },
+              {
+                id: 'type',
+                label: t('users.loginType'),
+                multiple: false,
+                value: loginFilter === 'all' ? [] : [loginFilter],
+                onChange: (next) => applyLoginFilter(parseLoginTypeFilter(next[0] ?? null)),
+                options: (Object.keys(LOGIN_TYPE_LABELS) as Exclude<LoginTypeFilter, 'all'>[]).map((key) => ({
+                  value: key,
+                  label: LOGIN_TYPE_LABELS[key],
+                })),
+              },
+            ]}
+            columnsButton
+            toolbarEnd={
+              <Tooltip content={t('tooltips.groupByRole')}>
+                <Button
+                  variant="ghost"
+                  aria-pressed={isGroupedByRole}
+                  onClick={toggleGroupByRole}
+                  leading={<Icon icon={Users} size={14} />}
+                  className={cn(isGroupedByRole && 'bg-accent-bg text-accent')}
+                >
+                  {t('users.groupByRole') || 'Group by Role'}
+                </Button>
+              </Tooltip>
+            }
+            groupBy={isGroupedByRole ? { key: roleNameOf } : undefined}
+            selectable
+            bulkActions={(rows) => (
+              <DeleteSelectionButton
+                onClick={() => {
+                  setBulkTargets(rows);
+                  setBulkConfirmPhrase('');
+                  setBulkProgress(null);
+                  setIsBulkDeleteOpen(true);
+                }}
+              />
+            )}
+            rowActions={userRowActions}
+            onRowClick={(user) => router.push(userHref(user))}
+            footer={
+              <span className="inline-flex items-center gap-1.5">
+                <Icon icon={ShieldCheck} size={12} />
+                {t('users.consultingWith')}
+                <code className="font-mono">{truncateKey(savedSecretKey)}</code>
+              </span>
+            }
+          />
         )}
       </motion.div>
 
@@ -1008,10 +1154,10 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
+              <Users className="w-5 h-5 text-accent" />
               {signupResult
                 ? 'Usuario registrado'
                 : resendCodeMode
@@ -1038,8 +1184,7 @@ export default function UsersPage() {
               }}
               className="space-y-4"
             >
-              <div className="space-y-2">
-                <Label>Email</Label>
+              <FormField label="Email">
                 <Input
                   type="email"
                   required
@@ -1047,13 +1192,12 @@ export default function UsersPage() {
                   value={resendEmail}
                   onChange={(e) => setResendEmail(e.target.value)}
                 />
-              </div>
+              </FormField>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setResendCodeMode(false)}>
+                <Button type="button" variant="secondary" onClick={() => setResendCodeMode(false)}>
                   Volver
                 </Button>
-                <Button type="submit" disabled={isResendSubmitting} className="gap-2">
-                  {isResendSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button type="submit" variant="primary" loading={isResendSubmitting}>
                   Reenviar código
                 </Button>
               </DialogFooter>
@@ -1066,8 +1210,10 @@ export default function UsersPage() {
               }}
               className="space-y-4"
             >
-              <div className="space-y-2">
-                <Label>Código de verificación</Label>
+              <FormField
+                label="Código de verificación"
+                description={`Código de ${verificationCodeSize} dígitos enviado a tu correo`}
+              >
                 <Input
                   type="text"
                   inputMode="numeric"
@@ -1079,29 +1225,25 @@ export default function UsersPage() {
                   className="font-mono text-center text-lg tracking-[0.5em]"
                   autoFocus
                 />
-                <p className="text-xs text-muted-foreground">
-                  Código de {verificationCodeSize} dígitos enviado a tu correo
-                </p>
-              </div>
-              <div className="flex justify-end">
+              </FormField>
+              <Inline justify="end">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground gap-2"
+                  className="text-muted-foreground"
+                  leading={<Icon icon={RefreshCw} size={14} />}
                   onClick={() => {
                     setResendEmail(signupForm.email);
                     setResendCodeMode(true);
                   }}
                 >
-                  <RefreshCw className="w-4 h-4" />
                   Reenviar código
                 </Button>
-              </div>
+              </Inline>
               <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setNeedsVerification(false);
                     setVerificationCode('');
@@ -1109,8 +1251,12 @@ export default function UsersPage() {
                 >
                   Volver
                 </Button>
-                <Button type="submit" disabled={isVerificationSubmitting || verificationCode.length !== verificationCodeSize} className="gap-2">
-                  {isVerificationSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={verificationCode.length !== verificationCodeSize}
+                  loading={isVerificationSubmitting}
+                >
                   Verificar
                 </Button>
               </DialogFooter>
@@ -1118,45 +1264,34 @@ export default function UsersPage() {
           ) : signupResult ? (
             <div className="space-y-4">
               {signupResult.access_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Access Token (JWT)</Label>
-                  <div className="flex gap-2">
-                    <Input readOnly value={signupResult.access_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signupResult!.access_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <FormField label="Access Token (JWT)">
+                  <SecretField
+                    value={signupResult.access_token}
+                    prefix={24}
+                    suffix={8}
+                    revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                  />
+                </FormField>
               )}
               {signupResult.refresh_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Refresh Token</Label>
-                  <div className="flex gap-2">
-                    <Input readOnly value={signupResult.refresh_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signupResult!.refresh_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <FormField label="Refresh Token">
+                  <SecretField
+                    value={signupResult.refresh_token}
+                    prefix={24}
+                    suffix={8}
+                    revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                  />
+                </FormField>
               )}
               <DialogFooter>
                 <Button
+                  variant="primary"
                   onClick={() => {
                     setIsSignupModalOpen(false);
                     setSignupForm({ email: '', password: '', user_name: '' });
@@ -1165,6 +1300,8 @@ export default function UsersPage() {
                     setNeedsVerification(false);
                     setVerificationCode('');
                     setResendCodeMode(false);
+                    setMetadataValues({});
+                    setMetadataSchema(null);
                   }}
                 >
                   {t('users.close')}
@@ -1186,8 +1323,7 @@ export default function UsersPage() {
                 }}
                 className="space-y-4"
               >
-                <div className="space-y-2">
-                  <Label>Email *</Label>
+                <FormField label="Email *">
                   <Input
                     type="email"
                     required
@@ -1195,56 +1331,97 @@ export default function UsersPage() {
                     value={signupForm.email}
                     onChange={(e) => setSignupForm((p) => ({ ...p, email: e.target.value }))}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contraseña *</Label>
-                  <div className="relative">
-                    <Input
-                      type={showSignupPassword ? 'text' : 'password'}
-                      required
-                      placeholder="SecurePass123!"
-                      value={signupForm.password}
-                      onChange={(e) => setSignupForm((p) => ({ ...p, password: e.target.value }))}
-                      className="pr-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                      onClick={() => setShowSignupPassword((v) => !v)}
-                    >
-                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Nombre de usuario (opcional)</Label>
+                </FormField>
+                <FormField label="Contraseña *">
+                  <Input
+                    type={showSignupPassword ? 'text' : 'password'}
+                    required
+                    placeholder="SecurePass123!"
+                    value={signupForm.password}
+                    onChange={(e) => setSignupForm((p) => ({ ...p, password: e.target.value }))}
+                    trailing={
+                      <IconButton
+                        icon={showSignupPassword ? EyeOff : Eye}
+                        label={showSignupPassword ? t('login.hidePassword') : t('login.showPassword')}
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setShowSignupPassword((v) => !v)}
+                      />
+                    }
+                  />
+                </FormField>
+                <FormField label="Nombre de usuario (opcional)">
                   <Input
                     placeholder="john_doe"
                     value={signupForm.user_name}
                     onChange={(e) => setSignupForm((p) => ({ ...p, user_name: e.target.value }))}
                   />
-                </div>
-                <div className="flex justify-end">
+                </FormField>
+                {metadataSchema && metadataSchema.length > 0 && (
+                  <Stack gap={3} className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                    <Text variant="overline" as="div" className="text-indigo-400 flex items-center gap-2">
+                      <Icon icon={Database} size={12} />
+                      {t('users.metadataFields')}
+                    </Text>
+                    {metadataSchema.map((field) => (
+                      <FormField
+                        key={field.name}
+                        required={field.required}
+                        label={
+                          <>
+                            {field.name}
+                            <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
+                          </>
+                        }
+                      >
+                        {field.type === 'boolean' ? (
+                          <Select
+                            value={metadataValues[field.name] || null}
+                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v ?? '' }))}
+                            placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')}
+                            items={[
+                              { value: 'true', label: 'true' },
+                              { value: 'false', label: 'false' },
+                            ]}
+                          />
+                        ) : field.enum && field.enum.length > 0 ? (
+                          <Select
+                            value={metadataValues[field.name] || null}
+                            onValueChange={(v) => setMetadataValues((p) => ({ ...p, [field.name]: v ?? '' }))}
+                            placeholder={field.required ? t('users.metadataSelect') : t('users.metadataOptional')}
+                            items={field.enum.map((opt) => ({ value: opt, label: opt }))}
+                          />
+                        ) : (
+                          <Input
+                            type={field.type === 'number' ? 'number' : 'text'}
+                            required={field.required}
+                            placeholder={field.required ? field.name : `${field.name} (${t('users.optional')})`}
+                            value={metadataValues[field.name] ?? ''}
+                            onChange={(e) => setMetadataValues((p) => ({ ...p, [field.name]: e.target.value }))}
+                          />
+                        )}
+                      </FormField>
+                    ))}
+                  </Stack>
+                )}
+                <Inline justify="end">
                   <Button
                     type="button"
-                    variant="link"
-                    size="sm"
-                    className="text-muted-foreground h-auto p-0 gap-2"
+                    variant="ghost"
+                    className="text-muted-foreground"
+                    leading={<Icon icon={RefreshCw} size={14} />}
                     onClick={() => {
                       setResendEmail(signupForm.email || '');
                       setResendCodeMode(true);
                     }}
                   >
-                    <RefreshCw className="w-4 h-4" />
                     ¿Ya te registraste? Reenviar código
                   </Button>
-                </div>
+                </Inline>
                 <DialogFooter className="gap-4 pt-4">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => {
                       setIsSignupModalOpen(false);
                       setSignupForm({ email: '', password: '', user_name: '' });
@@ -1258,8 +1435,7 @@ export default function UsersPage() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isSignupSubmitting} className="flex-1 gap-2">
-                    {isSignupSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Button type="submit" variant="primary" disabled={isSignupSubmitting} leading={isSignupSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
                     {isSignupSubmitting ? t('users.registering') : t('users.register')}
                   </Button>
                 </DialogFooter>
@@ -1280,10 +1456,10 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-primary" />
+              <Lock className="w-5 h-5 text-accent" />
               {signinResult ? 'Sesión iniciada' : 'Iniciar sesión'}
             </DialogTitle>
             <DialogDescription>
@@ -1293,45 +1469,34 @@ export default function UsersPage() {
           {signinResult ? (
             <div className="space-y-4">
               {signinResult.access_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Access Token (JWT)</Label>
-                  <div className="flex gap-2">
-                    <Input readOnly value={signinResult.access_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signinResult!.access_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <FormField label="Access Token (JWT)">
+                  <SecretField
+                    value={signinResult.access_token}
+                    prefix={24}
+                    suffix={8}
+                    revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                  />
+                </FormField>
               )}
               {signinResult.refresh_token && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Refresh Token</Label>
-                  <div className="flex gap-2">
-                    <Input readOnly value={signinResult.refresh_token} className="font-mono text-xs overflow-x-auto min-w-0" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(signinResult!.refresh_token!);
-                        showNotification('Token copiado', 'success');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <FormField label="Refresh Token">
+                  <SecretField
+                    value={signinResult.refresh_token}
+                    prefix={24}
+                    suffix={8}
+                    revealLabel="Mostrar token"
+                    hideLabel="Ocultar token"
+                    copyLabel={t('common.copy')}
+                    copiedLabel="Copiado"
+                  />
+                </FormField>
               )}
               <DialogFooter>
                 <Button
+                  variant="primary"
                   onClick={() => {
                     setIsSigninModalOpen(false);
                     setSigninForm({ email: '', password: '' });
@@ -1358,8 +1523,7 @@ export default function UsersPage() {
                 }}
                 className="space-y-4"
               >
-                <div className="space-y-2">
-                  <Label>Email *</Label>
+                <FormField label="Email *">
                   <Input
                     type="email"
                     required
@@ -1367,33 +1531,29 @@ export default function UsersPage() {
                     value={signinForm.email}
                     onChange={(e) => setSigninForm((p) => ({ ...p, email: e.target.value }))}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contraseña *</Label>
-                  <div className="relative">
-                    <Input
-                      type={showSigninPassword ? 'text' : 'password'}
-                      required
-                      placeholder="SecurePass123!"
-                      value={signinForm.password}
-                      onChange={(e) => setSigninForm((p) => ({ ...p, password: e.target.value }))}
-                      className="pr-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                      onClick={() => setShowSigninPassword((v) => !v)}
-                    >
-                      {showSigninPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
+                </FormField>
+                <FormField label="Contraseña *">
+                  <Input
+                    type={showSigninPassword ? 'text' : 'password'}
+                    required
+                    placeholder="SecurePass123!"
+                    value={signinForm.password}
+                    onChange={(e) => setSigninForm((p) => ({ ...p, password: e.target.value }))}
+                    trailing={
+                      <IconButton
+                        icon={showSigninPassword ? EyeOff : Eye}
+                        label={showSigninPassword ? t('login.hidePassword') : t('login.showPassword')}
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setShowSigninPassword((v) => !v)}
+                      />
+                    }
+                  />
+                </FormField>
                 <DialogFooter className="gap-4 pt-4">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => {
                       setIsSigninModalOpen(false);
                       setSigninForm({ email: '', password: '' });
@@ -1404,8 +1564,7 @@ export default function UsersPage() {
                   >
                     {t('common.cancel')}
                   </Button>
-                  <Button type="submit" disabled={isSigninSubmitting} className="flex-1 gap-2">
-                    {isSigninSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Button type="submit" variant="primary" disabled={isSigninSubmitting} leading={isSigninSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
                     {isSigninSubmitting ? t('users.signingIn') : t('users.testLogin')}
                   </Button>
                 </DialogFooter>
@@ -1416,10 +1575,10 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={isPublicKeyModalOpen} onOpenChange={(open) => !open && setIsPublicKeyModalOpen(false)}>
-        <DialogContent className="sm:max-w-2xl max-w-full max-h-[85vh] overflow-y-auto">
+        <DialogContent size="lg" className="sm:max-w-2xl max-w-full max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-primary" />
+              <KeyRound className="w-5 h-5 text-accent" />
               {t('users.publicKeyJwt')}
             </DialogTitle>
             <DialogDescription>
@@ -1432,29 +1591,17 @@ export default function UsersPage() {
               {t('common.loading')}
             </div>
           ) : publicKeyValue ? (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">{t('users.publicKey')}</Label>
-              <div className="flex gap-2">
-                <textarea
-                  readOnly
-                  value={publicKeyValue}
-                  rows={10}
-                  className="flex-1 font-mono text-xs p-3 rounded-md border bg-muted/30 min-w-0 resize-none"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(publicKeyValue);
-                    showNotification(t('common.copied'), 'success');
-                  }}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+            <FormField label={t('users.publicKey')}>
+              <CodeBlock
+                code={publicKeyValue}
+                language="text"
+                copy
+                copyLabel={t('common.copy')}
+                copiedLabel={t('common.copied')}
+                lineNumbers
+                maxLines={12}
+              />
+            </FormField>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -1469,10 +1616,10 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent size="sm" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShieldOff className="w-5 h-5 text-primary" />
+              <ShieldOff className="w-5 h-5 text-accent" />
               Revocar refresh token
             </DialogTitle>
             <DialogDescription>
@@ -1480,11 +1627,10 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="flex gap-2 border-b border-border pb-2">
+            <Inline gap={2} className="border-b border-border pb-2">
               <Button
                 type="button"
                 variant={revokeMode === 'token' ? 'secondary' : 'ghost'}
-                size="sm"
                 onClick={() => setRevokeMode('token')}
               >
                 Por JWT
@@ -1492,53 +1638,54 @@ export default function UsersPage() {
               <Button
                 type="button"
                 variant={revokeMode === 'id' ? 'secondary' : 'ghost'}
-                size="sm"
                 onClick={() => setRevokeMode('id')}
               >
                 Por ID
               </Button>
-            </div>
+            </Inline>
             {revokeMode === 'token' ? (
-              <div className="space-y-2">
-                <Label>Refresh token (JWT)</Label>
-                <Input
-                  placeholder="eyJhbGciOiJSUzI1NiIs..."
-                  value={revokeByTokenValue}
-                  onChange={(e) => setRevokeByTokenValue(e.target.value)}
-                  className="font-mono text-xs"
-                />
+              <Stack gap={2}>
+                <FormField label="Refresh token (JWT)">
+                  <Input
+                    placeholder="eyJhbGciOiJSUzI1NiIs..."
+                    value={revokeByTokenValue}
+                    onChange={(e) => setRevokeByTokenValue(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </FormField>
                 <Button
                   type="button"
+                  variant="primary"
                   onClick={handleRevokeByToken}
-                  disabled={revokeLoading}
-                  className="gap-2 w-full"
+                  loading={revokeLoading}
+                  className="w-full"
                 >
-                  {revokeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                   Revocar por token
                 </Button>
-              </div>
+              </Stack>
             ) : (
-              <div className="space-y-2">
-                <Label>ID del refresh token</Label>
-                <Input
-                  placeholder="uuid-del-token"
-                  value={revokeByIdValue}
-                  onChange={(e) => setRevokeByIdValue(e.target.value)}
-                  className="font-mono text-xs"
-                />
-                <p className="text-xs text-muted-foreground">
-                  El ID es el claim &quot;id&quot; del JWT del refresh token.
-                </p>
+              <Stack gap={2}>
+                <FormField
+                  label="ID del refresh token"
+                  description={'El ID es el claim "id" del JWT del refresh token.'}
+                >
+                  <Input
+                    placeholder="uuid-del-token"
+                    value={revokeByIdValue}
+                    onChange={(e) => setRevokeByIdValue(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </FormField>
                 <Button
                   type="button"
+                  variant="primary"
                   onClick={handleRevokeById}
-                  disabled={revokeLoading}
-                  className="gap-2 w-full"
+                  loading={revokeLoading}
+                  className="w-full"
                 >
-                  {revokeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                   Revocar por ID
                 </Button>
-              </div>
+              </Stack>
             )}
           </div>
         </DialogContent>
@@ -1551,18 +1698,17 @@ export default function UsersPage() {
             <DialogDescription>
               {t('users.deleteConfirm')}
               {userToDelete && (
-                <span className="mt-2 block text-foreground font-medium">
+                <span className="mt-2 block text-text font-medium">
                   {userToDelete.login_methods?.find((lm) => lm.entity_type === 'email')?.details?.email || userToDelete.user_name || userToDelete.id}
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUserToDelete(null)}>
+            <Button variant="secondary" onClick={() => setUserToDelete(null)}>
               {t('common.cancel')}
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting} className="gap-2">
-              {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+            <Button variant="destructive" onClick={handleDeleteUser} loading={isDeleting}>
               {t('common.delete')}
             </Button>
           </DialogFooter>
@@ -1575,54 +1721,59 @@ export default function UsersPage() {
           if (bulkProgress?.running) return;
           setIsBulkDeleteOpen(open);
           if (!open) {
+            setBulkTargets(null);
             setBulkConfirmPhrase('');
             setBulkProgress(null);
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent size="md" className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="flex items-center gap-2 text-danger">
               <AlertCircle className="w-5 h-5" />
-              {t('users.deleteAllTitle')}
+              {bulkTargets
+                ? t('common.deleteSelectedTitle', { count: bulkTargets.length, entity: t('users.title').toLowerCase() })
+                : t('users.deleteAllTitle')}
             </DialogTitle>
             <DialogDescription>
-              {t('users.deleteAllDescription')}
+              {bulkTargets
+                ? t('common.deleteSelectedDesc', { count: bulkTargets.length, entity: t('users.title').toLowerCase() })
+                : t('users.deleteAllDescription')}
             </DialogDescription>
           </DialogHeader>
 
           {!bulkProgress ? (
             <div className="space-y-4">
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <div className="rounded-lg border border-danger-border/30 bg-danger-bg/5 p-3 text-sm">
                 <p className="text-muted-foreground">{t('users.deleteAllConfirmHint')}</p>
-                <p className="mt-1 font-mono font-semibold text-destructive">
-                  {t('users.deleteAllConfirmPhrase')}
+                <p className="mt-1 font-mono font-semibold text-danger">
+                  {bulkPhrase}
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bulk-delete-phrase">
-                  {t('users.deleteAllPhrasePlaceholder')}
-                </Label>
+              <FormField
+                label={t('users.deleteAllPhrasePlaceholder')}
+                error={
+                  bulkConfirmPhrase.length > 0 &&
+                    bulkConfirmPhrase !== bulkPhrase
+                    ? t('users.deleteAllPhraseMismatch')
+                    : undefined
+                }
+              >
                 <Input
                   id="bulk-delete-phrase"
                   value={bulkConfirmPhrase}
                   onChange={(e) => setBulkConfirmPhrase(e.target.value)}
-                  placeholder={t('users.deleteAllConfirmPhrase')}
+                  placeholder={bulkPhrase}
                   className="font-mono"
                   autoComplete="off"
                 />
-                {bulkConfirmPhrase.length > 0 &&
-                  bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase') && (
-                    <p className="text-xs text-destructive">
-                      {t('users.deleteAllPhraseMismatch')}
-                    </p>
-                  )}
-              </div>
+              </FormField>
               <DialogFooter>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setIsBulkDeleteOpen(false);
+                    setBulkTargets(null);
                     setBulkConfirmPhrase('');
                   }}
                 >
@@ -1631,14 +1782,13 @@ export default function UsersPage() {
                 <Button
                   variant="destructive"
                   disabled={
-                    bulkConfirmPhrase !== t('users.deleteAllConfirmPhrase') ||
-                    users.length === 0
+                    bulkConfirmPhrase !== bulkPhrase ||
+                    (bulkTargets ?? users).length === 0
                   }
-                  onClick={handleBulkDeleteUsers}
-                  className="gap-2"
+                  onClick={() => handleBulkDeleteUsers(bulkTargets ?? undefined)}
+                  leading={<Icon icon={Trash2} size={14} />}
                 >
-                  <Trash2 className="w-4 h-4" />
-                  {t('users.deleteAllConfirmButton', { count: users.length })}
+                  {t('users.deleteAllConfirmButton', { count: (bulkTargets ?? users).length })}
                 </Button>
               </DialogFooter>
             </div>
@@ -1659,13 +1809,13 @@ export default function UsersPage() {
                     })}
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-subtle">
                   <div
                     className={cn(
                       'h-full transition-all',
                       bulkProgress.errors.length > 0
                         ? 'bg-amber-500'
-                        : 'bg-destructive'
+                        : 'bg-danger-bg'
                     )}
                     style={{
                       width: `${bulkProgress.total === 0
@@ -1693,7 +1843,7 @@ export default function UsersPage() {
                   <ul className="space-y-0.5 text-muted-foreground">
                     {bulkProgress.errors.slice(0, 50).map((err) => (
                       <li key={err.id} className="font-mono">
-                        <span className="text-foreground">{err.email || err.id}</span>
+                        <span className="text-text">{err.email || err.id}</span>
                         {' — '}
                         <span className="text-amber-500">{err.message}</span>
                       </li>
@@ -1707,9 +1857,10 @@ export default function UsersPage() {
 
               <DialogFooter>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setIsBulkDeleteOpen(false);
+                    setBulkTargets(null);
                     setBulkConfirmPhrase('');
                     setBulkProgress(null);
                   }}

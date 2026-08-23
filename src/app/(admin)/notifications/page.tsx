@@ -3,13 +3,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowRight, Bell, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Bell, CheckCircle2 } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardBody,
+  CardHeader,
+  Heading,
+  Icon,
+  Inline,
+  Spinner,
+  Stack,
+  Text,
+} from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { buildAdminHref, cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 type PendingOAuthItem = {
   oauth_config_id: string;
@@ -138,96 +149,113 @@ export default function NotificationsPage() {
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Bell className="size-7 text-primary shrink-0" />
+          <Heading level={1} visual="h2" className="flex items-center gap-2">
+            <Bell className="size-7 text-accent shrink-0" />
             {t('notifications.title')}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">{t('notifications.subtitle')}</p>
+          </Heading>
+          <Text tone="secondary" className="mt-1">
+            {t('notifications.subtitle')}
+          </Text>
         </div>
       </div>
 
       {!secretConfigured && (
         <Card className="border-dashed">
-          <CardContent className="pt-6 text-sm text-muted-foreground">{t('notifications.secretRequired')}</CardContent>
+          <CardBody>
+            <Text tone="secondary">{t('notifications.secretRequired')}</Text>
+          </CardBody>
         </Card>
       )}
 
       {secretConfigured && loadError && (
-        <p className="text-sm text-destructive">{t('notifications.loadError')}</p>
+        <Text className="text-danger">{t('notifications.loadError')}</Text>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted-foreground">
           {t('notifications.pendingSection')}
-        </h2>
+        </Heading>
         {loading ? (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Loader2 className="size-4 animate-spin" />
-            {t('common.loading')}
-          </div>
+          <Inline gap={2} className="text-muted-foreground">
+            <Spinner size={16} label={null} />
+            <Text tone="muted">{t('common.loading')}</Text>
+          </Inline>
         ) : !secretConfigured ? null : migrationPending ? (
           <Card className="border-orange-500/40 bg-orange-500/5">
-            <CardHeader className="pb-2">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <AlertTriangle className="size-4 text-orange-500 shrink-0" />
-                    {t('notifications.oauthMigrationTitle')}
-                  </CardTitle>
-                  <CardDescription>{t('notifications.oauthMigrationBody')}</CardDescription>
-                </div>
-                <Badge variant="secondary" className="bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30">
+            <CardHeader
+              actions={
+                <Badge variant="tonal" tone="warning">
                   {t('notifications.badgeWarning')}
                 </Badge>
-              </div>
+              }
+            >
+              <Stack gap={1}>
+                <Heading level={3} visual="h4" className="flex items-center gap-2">
+                  <Icon icon={AlertTriangle} size={16} className="text-orange-500" />
+                  {t('notifications.oauthMigrationTitle')}
+                </Heading>
+                <Text tone="secondary">{t('notifications.oauthMigrationBody')}</Text>
+              </Stack>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="text-sm space-y-2 rounded-md border border-border/80 bg-background/50 px-3 py-2">
-                {migrationItems.map((item) => (
-                  <li key={item.oauth_config_id} className="flex flex-wrap gap-x-2 gap-y-0.5">
-                    <span className="font-medium capitalize">{item.provider}</span>
-                    {item.name ? (
-                      <span className="text-muted-foreground">({item.name})</span>
-                    ) : null}
-                    <span className="text-muted-foreground font-mono text-xs">· {item.oauth_config_id}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleApplyMigration}
-                  disabled={applyLoading}
-                  className="gap-2"
-                >
-                  {applyLoading ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {applyLoading ? t('notifications.migrating') : t('oauth.runMigration')}
-                </Button>
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={buildAdminHref('/oauth-providers')} className="gap-2">
+            <CardBody>
+              <Stack gap={4}>
+                <ul className="text-sm space-y-2 rounded-md border border-border/80 bg-bg/50 px-3 py-2">
+                  {migrationItems.map((item) => (
+                    <li key={item.oauth_config_id} className="flex flex-wrap gap-x-2 gap-y-0.5">
+                      <span className="font-medium capitalize">{item.provider}</span>
+                      {item.name ? (
+                        <span className="text-muted-foreground">({item.name})</span>
+                      ) : null}
+                      <span className="text-muted-foreground font-mono text-xs">· {item.oauth_config_id}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Inline gap={2} wrap>
+                  {/* Deliberately NOT Button's `loading`: it renders its children
+                      `invisible` behind the spinner, which would hide the
+                      `notifications.migrating` copy this button swaps in. */}
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={handleApplyMigration}
+                    disabled={applyLoading}
+                    leading={applyLoading ? <Spinner size={14} label={null} /> : undefined}
+                  >
+                    {applyLoading ? t('notifications.migrating') : t('oauth.runMigration')}
+                  </Button>
+                  {/* community-ui's Button has no `asChild`; `buttonVariants` is the
+                      supported way to give a router link the button surface. */}
+                  <Link
+                    href={buildAdminHref('/oauth-providers')}
+                    className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                  >
                     {t('notifications.goToOAuthProviders')}
-                    <ArrowRight className="size-4" />
+                    <Icon icon={ArrowRight} size={14} />
                   </Link>
-                </Button>
-              </div>
-            </CardContent>
+                </Inline>
+              </Stack>
+            </CardBody>
           </Card>
         ) : (
           <Card className="border-dashed">
-            <CardContent className="flex items-center gap-2 pt-6 text-sm text-muted-foreground">
-              <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-              {t('notifications.emptyPending')}
-            </CardContent>
+            <CardBody>
+              <Inline gap={2}>
+                <Icon icon={CheckCircle2} size={16} className="text-emerald-500" />
+                <Text tone="secondary">{t('notifications.emptyPending')}</Text>
+              </Inline>
+            </CardBody>
           </Card>
         )}
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted-foreground">
           {t('notifications.recentSection')}
-        </h2>
+        </Heading>
         <Card className={cn('border-dashed', 'opacity-80')}>
-          <CardContent className="pt-6 text-sm text-muted-foreground">{t('notifications.emptyRecent')}</CardContent>
+          <CardBody>
+            <Text tone="secondary">{t('notifications.emptyRecent')}</Text>
+          </CardBody>
         </Card>
       </section>
     </motion.div>
