@@ -19,6 +19,8 @@ import {
   Image as ImageIcon,
   ScrollText,
   ListFilter,
+  AppWindow,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   Button,
@@ -47,6 +49,7 @@ import {
 } from '@foundathyon/community-ui';
 import { cn, BASE_PATH } from '@/lib/utils';
 import { useAdmin } from '@/context/admin-context';
+import { useEdition } from '@/context/edition-context';
 import { useI18n } from '@/context/i18n-context';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -56,7 +59,9 @@ function buildHref(path: string) {
   return path === '/' ? `${BASE_PATH || '/'}` : `${BASE_PATH}${path}`.replace(/\/+/g, '/') || '/';
 }
 
-const navItems = [
+// `proOnly` items render only when GET /health reports the Pro edition; with
+// Community (or an unknown edition) the nav is exactly the list without them.
+const navItems: { id: string; path: string; icon: LucideIcon; labelKey: string; proOnly?: boolean }[] = [
   { id: 'dashboard', path: '/', icon: LayoutDashboard, labelKey: 'sidebar.dashboard' },
   { id: 'users', path: '/users', icon: Users, labelKey: 'sidebar.users' },
   { id: 'roles_policies', path: '/roles-policies', icon: Shield, labelKey: 'sidebar.roles' },
@@ -66,6 +71,7 @@ const navItems = [
   { id: 'behaviors', path: '/behaviors', icon: Puzzle, labelKey: 'sidebar.behaviors' },
   { id: 'email_templates', path: '/email-templates', icon: Mail, labelKey: 'sidebar.emailTemplates' },
   { id: 'email_access', path: '/email-access', icon: ListFilter, labelKey: 'sidebar.emailAccess' },
+  { id: 'embedded_auth', path: '/embedded-auth', icon: AppWindow, labelKey: 'sidebar.embeddedAuth', proOnly: true },
   { id: 'tokens', path: '/tokens', icon: Ticket, labelKey: 'sidebar.tokens' },
   { id: 'settings', path: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
 ];
@@ -80,6 +86,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const { savedSecretKey, apiUrl } = useAdmin();
   const { t } = useI18n();
+  const { isPro } = useEdition();
   const { collapsed, setCollapsed } = useSidebar();
   const isMobile = useIsMobile();
   const [app, setApp] = useState<AppInfo | null>(null);
@@ -289,13 +296,13 @@ export function AdminSidebar() {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <SidebarSection label={t('sidebar.nav')}>
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.proOnly || isPro).map((item) => {
             const href = buildHref(item.path);
             const isUsersSection = item.id === 'users';
             const usersActive = isUsersSection && (pathname === '/users' || pathname?.startsWith('/users/'));
             const pathMatch = item.path === '/' ? (pathname === '/' || pathname === '') : (pathname === item.path || pathname?.startsWith(item.path + '/'));
             const active = pathMatch || usersActive;
-            const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'oauth_providers', 'email_access'].includes(item.id);
+            const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'oauth_providers', 'email_access', 'embedded_auth'].includes(item.id);
             // Descriptive hint — distinct from the label, so it is kept. When the
             // sidebar collapses SidebarItem renders the label tooltip itself, and
             // two tooltips must not stack on one trigger.

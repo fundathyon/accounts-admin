@@ -21,6 +21,7 @@ import {
 } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
+import { useEdition } from '@/context/edition-context';
 import { BASE_PATH } from '@/lib/utils';
 import { EmailAuthConfigView, type EmailAuthConfig } from '@/components/behaviors/email-auth-config-view';
 import { EmailAuthConfigForm } from '@/components/behaviors/email-auth-config-form';
@@ -42,6 +43,7 @@ export default function BehaviorDetailPage() {
   const params = useParams();
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
   const { t } = useI18n();
+  const { isPro } = useEdition();
   const [behavior, setBehavior] = useState<AppBehaviorDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -126,7 +128,7 @@ export default function BehaviorDetailPage() {
     }
   };
 
-  const handleSaveConfig = async (newConfig: any) => {
+  const handleSaveConfig = async (newConfig: EmailAuthConfig) => {
     if (!savedSecretKey) return;
     setUpdating(true);
     try {
@@ -248,6 +250,16 @@ export default function BehaviorDetailPage() {
               copyValue
               copyPath
             />
+          )}
+          {/* Pro: embedded_auth is edited only on its own validated page. In
+              Community that page does not exist, so nothing is added. */}
+          {isPro && behavior.behavior_code === 'embedded_auth' && (
+            <Link
+              href={`${BASE_PATH}/embedded-auth`.replace(/\/+/g, '/')}
+              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'mt-4')}
+            >
+              {t('embeddedAuth.openEditor')}
+            </Link>
           )}
         </div>
 

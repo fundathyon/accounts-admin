@@ -5,7 +5,7 @@ Everything under this route group is behind the `admin_session` cookie (see [`..
 ## Layout hierarchy
 
 1. [`../layout.tsx`](../layout.tsx) — root: theme, DS, i18n, tooltip, toaster providers.
-2. [`layout.tsx`](layout.tsx) — adds admin providers (`AdminProvider`, `AdminSessionGuard`, `OnboardingGuard`, `SidebarProvider`, `AdminCommandPaletteProvider`) and renders the sidebar / topbar shell.
+2. [`layout.tsx`](layout.tsx) — adds admin providers (`AdminProvider`, `EditionProvider`, `AdminSessionGuard`, `OnboardingGuard`, `SidebarProvider`, `AdminCommandPaletteProvider`) and renders the sidebar / topbar shell.
 3. No nested layouts — each page renders straight into the `<main>` scroll container.
 
 ## Adding a new admin page
@@ -33,4 +33,4 @@ Everything under this route group is behind the `admin_session` cookie (see [`..
 
 ## Which routes exist today
 
-Read [`../admin-sidebar.tsx`](admin-sidebar.tsx) `navItems` — it's the single source of truth for the visible nav. Additional routes not in the sidebar: `/notifications`, `/release-notes`, `/users/[id]`, `/webhooks/[id]/test`, `/behaviors/[id]`.
+Read [`../admin-sidebar.tsx`](admin-sidebar.tsx) `navItems` — it's the single source of truth for the visible nav. Items with `proOnly: true` (today only `/embedded-auth`) render only when `useEdition().isPro` (backend `GET /health` → `edition: "pro"`); mirror the flag in the command palette's `DESTINATIONS`. Additional routes not in the sidebar: `/notifications`, `/release-notes`, `/users/[id]`, `/webhooks/[id]/test`, `/behaviors/[id]`.

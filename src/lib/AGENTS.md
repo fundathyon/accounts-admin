@@ -6,9 +6,10 @@ Small, purpose-clear modules. If a new file here would need more than a paragrap
 
 | File | Runs on | Purpose |
 |---|---|---|
-| [`accounts-api.ts`](accounts-api.ts) | server (Node & Edge) | Proxy helpers for `src/app/api/**` — `proxyToAccounts`, `fetchAccountsJson`, `requireSecretKey`, `requirePublishableKey`, `requireAdminKey`, `errorResponse`. |
+| [`accounts-api.ts`](accounts-api.ts) | server (Node & Edge) | Proxy helpers for `src/app/api/**` — `proxyToAccounts`, `fetchAccountsJson`, `fetchAccountsText` (non-JSON bodies), `requireSecretKey`, `requirePublishableKey`, `requireAdminKey`, `errorResponse`. |
 | [`admin-types.ts`](admin-types.ts) | anywhere | Shared TS types (`App`, `LoginMethodDetails`, …). Add cross-feature types here, not in `page.tsx`. |
 | [`auth/session.ts`](auth/session.ts) | Edge (middleware) | HMAC-signed `admin_session` cookie via Web Crypto. Do not import Node-only APIs here. |
+| [`embedded-auth.ts`](embedded-auth.ts) | anywhere (also imported by `mock-server/`) | Embedded Auth model: response normalization, a mirror of the backend's `Validate` (same field paths), the 422 message parser, accent helpers. Relative type-only imports only. |
 | [`brand.ts`](brand.ts) | anywhere | `BRAND_ACCENT` for the DS provider — one constant, kept isolated. |
 | [`utils.ts`](utils.ts) | anywhere | `cn()`, `apiUrl()`, `buildAdminHref()`, `BASE_PATH`, `INTERNAL_API_URL`, `ADMIN_API_KEY`, `ENVIRONMENT`, `IS_PRODUCTION`. Do not turn this into a general dumping ground — one purpose per export. |
 | [`i18n/index.ts`](i18n/index.ts) | anywhere | Barrel — the only sanctioned barrel in the repo. |
