@@ -68,6 +68,15 @@ real backend (`{status:200, data:"Nuevo role"}`, no created user) — but
 accounts-admin never calls it (only `GET /api/v1/users`), so the mock doesn't
 implement it.
 
+## Edition (Pro / Community)
+
+`GET /health` reports `edition` from `MOCK_EDITION` (default `pro`). In Pro the
+mock serves `GET`/`PUT /api/v1/app-behaviors/embedded-auth` (and `/ui/v1/*` when
+`MOCK_UI_DIR` points at a built bundle). As in the backend, the `embedded_auth`
+row does not exist until the first PUT creates it, so the seeded behavior lists
+are unchanged. `MOCK_EDITION=community` leaves those routes out, so every route
+is exactly what a Community backend answers.
+
 ## Adding a route
 
 Add a `route(method, path, handler)` call in `server.ts` — `path` is exactly
