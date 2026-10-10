@@ -202,3 +202,57 @@ export interface OAuthNativeAudience {
   label?: string;
   created_at?: string;
 }
+
+/** Edition reported by the backend's public `GET /health` (`data.edition`). */
+export type Edition = 'community' | 'pro';
+
+/**
+ * Brand accent of the embedded login components: the string `"neutral"` or an
+ * OKLCH triple (`hue` 0–360, `l` 0.30–0.80, `c` 0–0.37).
+ */
+export type EmbeddedAuthAccent = 'neutral' | { hue: number; l: number; c: number };
+
+export type EmbeddedAuthTheme = 'system' | 'light' | 'dark';
+export type EmbeddedAuthLayout = 'card' | 'split';
+export type EmbeddedAuthLocale = 'es' | 'en';
+
+/** Sign-in methods the components offer (also the shape of `available`). */
+export interface EmbeddedAuthStrategies {
+  password: boolean;
+  email_code: boolean;
+  magic_link: boolean;
+  /** Lowercase provider names (`google`, `github`, …). */
+  oauth: string[];
+}
+
+export interface EmbeddedAuthBranding {
+  name: string;
+  logo_url: string;
+  accent: EmbeddedAuthAccent;
+  theme: EmbeddedAuthTheme;
+  layout: EmbeddedAuthLayout;
+  locale: EmbeddedAuthLocale;
+}
+
+/** Body of `PUT /api/v1/app-behaviors/embedded-auth` (replaces the whole config). */
+export interface EmbeddedAuthConfig {
+  allowed_origins: string[];
+  redirect_urls: string[];
+  strategies: EmbeddedAuthStrategies;
+  branding: EmbeddedAuthBranding;
+  hide_branding: boolean;
+}
+
+/** `GET`/`PUT /api/v1/app-behaviors/embedded-auth` response data (Pro only). */
+export interface EmbeddedAuthBehavior {
+  /** Absent until the first PUT creates the row. */
+  id?: string;
+  app_id: string;
+  config: EmbeddedAuthConfig;
+  /** What applies today: enabled flag and the saved strategies still available. */
+  effective: { enabled: boolean; strategies: EmbeddedAuthStrategies };
+  /** What the app can enable today. */
+  available: EmbeddedAuthStrategies;
+  created_at?: string;
+  updated_at?: string;
+}

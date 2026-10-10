@@ -89,3 +89,17 @@ export async function fetchAccountsJson(path: string, init: RequestInit = {}): P
   const data = await res.json();
   return { status: res.status, ok: res.ok, data };
 }
+
+/**
+ * Same as fetchAccountsJson for a NON-JSON body (e.g. the Embedded Auth bundle
+ * `/ui/v1/accounts.js`): returns the raw text and its Content-Type. Throws on
+ * network failure, like fetchAccountsJson.
+ */
+export async function fetchAccountsText(
+  path: string,
+  init: RequestInit = {}
+): Promise<{ status: number; ok: boolean; text: string; contentType: string }> {
+  const res = await fetch(`${INTERNAL_API_URL}${path}`, init);
+  const text = await res.text();
+  return { status: res.status, ok: res.ok, text, contentType: res.headers.get('content-type') ?? '' };
+}

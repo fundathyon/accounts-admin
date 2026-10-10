@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  AppWindow,
   Key,
   KeyRound,
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { CommandPalette, Icon, useCommandPalette, type CommandGroup } from '@foundathyon/community-ui';
+import { useEdition } from '@/context/edition-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 
@@ -26,8 +28,9 @@ function buildHref(path: string) {
   return path === '/' ? `${BASE_PATH || '/'}` : `${BASE_PATH}${path}`.replace(/\/+/g, '/') || '/';
 }
 
-/** Every destination in the shell, mirroring the sidebar's own nav. */
-const DESTINATIONS: { id: string; path: string; icon: LucideIcon; labelKey: string }[] = [
+/** Every destination in the shell, mirroring the sidebar's own nav (`proOnly`
+ *  ones only when GET /health reports the Pro edition). */
+const DESTINATIONS: { id: string; path: string; icon: LucideIcon; labelKey: string; proOnly?: boolean }[] = [
   { id: 'dashboard', path: '/', icon: LayoutDashboard, labelKey: 'sidebar.dashboard' },
   { id: 'users', path: '/users', icon: Users, labelKey: 'sidebar.users' },
   { id: 'roles_policies', path: '/roles-policies', icon: Shield, labelKey: 'sidebar.roles' },
@@ -37,6 +40,7 @@ const DESTINATIONS: { id: string; path: string; icon: LucideIcon; labelKey: stri
   { id: 'behaviors', path: '/behaviors', icon: Puzzle, labelKey: 'sidebar.behaviors' },
   { id: 'email_templates', path: '/email-templates', icon: Mail, labelKey: 'sidebar.emailTemplates' },
   { id: 'email_access', path: '/email-access', icon: ListFilter, labelKey: 'sidebar.emailAccess' },
+  { id: 'embedded_auth', path: '/embedded-auth', icon: AppWindow, labelKey: 'sidebar.embeddedAuth', proOnly: true },
   { id: 'tokens', path: '/tokens', icon: Ticket, labelKey: 'sidebar.tokens' },
   { id: 'settings', path: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
   { id: 'release_notes', path: '/release-notes', icon: ScrollText, labelKey: 'sidebar.releaseNotesSection' },
@@ -69,6 +73,7 @@ export function useAdminCommandPalette(): CommandPaletteContextValue {
 export function AdminCommandPaletteProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { t } = useI18n();
+  const { isPro } = useEdition();
   // Owns the ⌘K / Ctrl+K binding.
   const { open, setOpen } = useCommandPalette();
 
@@ -77,7 +82,7 @@ export function AdminCommandPaletteProvider({ children }: { children: ReactNode 
     return [
       {
         heading: t('commandPalette.goTo'),
-        items: DESTINATIONS.map(({ id, path, icon, labelKey }) => ({
+        items: DESTINATIONS.filter((d) => !d.proOnly || isPro).map(({ id, path, icon, labelKey }) => ({
           id,
           label: t(labelKey),
           icon: <Icon icon={icon} size={16} />,
@@ -94,7 +99,7 @@ export function AdminCommandPaletteProvider({ children }: { children: ReactNode 
         })),
       },
     ];
-  }, [router, t]);
+  }, [router, t, isPro]);
 
   const value = useMemo(() => ({ open, setOpen }), [open, setOpen]);
 

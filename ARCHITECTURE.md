@@ -60,8 +60,8 @@ There is **no direct browser → accounts-backend** call. Everything routes thro
 |---|---|---|
 | Edge gate | [`src/middleware.ts`](src/middleware.ts) | session check; login redirect; sub-path (`BASE_PATH`) stripping |
 | Root providers | [`src/app/layout.tsx`](src/app/layout.tsx) | `ThemeProvider`, `DesignSystemProvider`, `I18nProvider`, `TooltipProvider`, `Toaster` |
-| Admin shell | [`src/app/(admin)/layout.tsx`](src/app/(admin)/layout.tsx) | `AdminProvider`, `OAuthLegacyMigrationNotifier`, `AdminSessionGuard`, `OnboardingGuard`, `SidebarProvider`, `AdminCommandPaletteProvider`; renders sidebar + topbar + `<main>` |
-| Pages | [`src/app/(admin)/<route>/page.tsx`](src/app/(admin)) | one client page per admin section (17 total incl. login); fetches its own `/api/*` |
+| Admin shell | [`src/app/(admin)/layout.tsx`](src/app/(admin)/layout.tsx) | `AdminProvider`, `EditionProvider` (edition from `GET /health`), `OAuthLegacyMigrationNotifier`, `AdminSessionGuard`, `OnboardingGuard`, `SidebarProvider`, `AdminCommandPaletteProvider`; renders sidebar + topbar + `<main>` |
+| Pages | [`src/app/(admin)/<route>/page.tsx`](src/app/(admin)) | one client page per admin section (18 total incl. login); fetches its own `/api/*` |
 | BFF proxies | [`src/app/api/<resource>/route.ts`](src/app/api) | forward to `INTERNAL_API_URL`; use helpers in [`src/lib/accounts-api.ts`](src/lib/accounts-api.ts) |
 | Admin auth (local) | [`src/app/api/admin/{login,logout,session}/route.ts`](src/app/api/admin) | mint / clear / verify `admin_session` |
 | Shared server lib | [`src/lib/`](src/lib) | `accounts-api.ts`, `auth/session.ts`, `admin-types.ts`, `utils.ts`, `brand.ts`, `i18n/` |
@@ -69,7 +69,7 @@ There is **no direct browser → accounts-backend** call. Everything routes thro
 | Local components | [`src/components/`](src/components) | wrappers around `@foundathyon/community-ui` primitives; local shadcn primitives under `ui/` |
 | DS boundary | `@foundathyon/community-ui` | provides `DataTable`, `FoundathyonProvider`, `OnboardingScreen`, `CommandPalette`, etc. Do not fork; extend upstream. |
 | Design tokens | [`src/app/globals.css`](src/app/globals.css) | Tailwind v4 + tw-animate-css; theme is `FoundathyonProvider` + `next-themes` |
-| Mock backend | [`mock-server/`](mock-server) | Bun HTTP server; 67 routes mirroring the Go API on port 8099 |
+| Mock backend | [`mock-server/`](mock-server) | Bun HTTP server; 71 routes mirroring the Go API on port 8099 |
 
 ## 4. Auth
 
@@ -129,4 +129,4 @@ Pages attach the client-held keys to `/api/*` requests as `X-Secret-API-Key` / `
 
 - **Backend (`INTERNAL_API_URL`)**: Go + Gin. Repo `/Users/rafa/work/foundathyon/apis/accounts/`. Route handlers under `internal/context/v1/`. OpenAPI spec: `apis/accounts/docs/swagger.yaml` (authoritative for payload shapes).
 - **Design system**: `@foundathyon/community-ui` (see [DEVELOPMENT.md §7](DEVELOPMENT.md#7-live-editing-the-design-system-alongside-this-repo) for the local-dist workflow).
-- **Mock backend**: [`mock-server/`](mock-server) in this repo — 67 routes, in-memory, no persistence. Reset by restarting the process.
+- **Mock backend**: [`mock-server/`](mock-server) in this repo — 71 routes, in-memory, no persistence. Reset by restarting the process.

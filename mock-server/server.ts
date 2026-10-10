@@ -16,8 +16,19 @@ import {
   APP_ID, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist,
   nextId, oauthAudiences, oauthConfigs, paginate, policies, rolePolicies, roles, users, webhookEvents, webhooks,
 } from './data';
+// Embedded Auth mirrors the backend contract with the admin's own client-side
+// model (no `@/` alias here: Bun resolves this file's relative imports only).
+import {
+  checkOrigin, checkRedirect, defaultEmbeddedAuthConfig, intersectStrategies, joinIssues, normalizeEmbeddedAuthConfig,
+  normalizeProvider, validateEmbeddedAuthConfig,
+} from '../src/lib/embedded-auth';
+import type { EmbeddedAuthAccent, EmbeddedAuthConfig, EmbeddedAuthStrategies } from '../src/lib/admin-types';
 
 const PORT = Number(process.env.MOCK_PORT || 8099);
+// Edition reported by GET /health. Pro by default so `make dev-mock` shows the
+// Pro-only screens; MOCK_EDITION=community mimics a Community backend (the
+// Pro-only routes are then not registered, exactly like the Go server).
+const EDITION = (process.env.MOCK_EDITION ?? '').trim().toLowerCase() === 'community' ? 'community' : 'pro';
 const PREFIX = '/accounts'; // matches INTERNAL_API_URL's own "/accounts" path segment
 
 function ok(data: unknown, status = 200, meta?: Record<string, unknown>) {
@@ -60,6 +71,12 @@ const routes: { method: string; pattern: URLPattern; handler: Handler }[] = [];
 function route(method: string, path: string, handler: Handler) {
   routes.push({ method, pattern: new URLPattern({ pathname: PREFIX + path }), handler });
 }
+
+// ---- health (public; the admin reads data.edition) ----
+route('GET', '/health', () => ok({
+  status: 'ok', message: 'Service is online and functioning correctly.', timestamp: Math.floor(Date.now() / 1000),
+  environment: 'local', version: 'mock', edition: EDITION,
+}));
 
 // ---- roles ----
 route('GET', '/api/v1/roles', (_req, _p, url) => {
@@ -113,7 +130,7 @@ route('POST', '/api/v1/role_policies', async (req) => {
 });
 
 // ---- api-keys ----
-route('GET', '/api/v1/api-keys', () => ok(apiKeys.map(({ secret_key: _s, secret_hash: _h, ...rest }: any) => rest)));
+route('GET', '/api/v1/api-keys', () => ok(apiKeys.map(({ secret_key: _s, secret_hash: _h, ...rest }) => rest)));
 route('POST', '/api/v1/api-keys/generate', async (req) => {
   const body = await readBody(req);
   const id = nextId('key');
@@ -124,8 +141,8 @@ route('POST', '/api/v1/api-keys/generate', async (req) => {
 route('PATCH', '/api/v1/api-keys/:id/deactivate', (_req, { id }) => {
   const key = apiKeys.find((k) => k.id === id);
   if (!key) return fail(404, 'API key not found', 'api_keys.update.not_found');
-  (key as any).is_active = false;
-  (key as any).revoked_at = new Date().toISOString();
+  key.is_active = false;
+  key.revoked_at = new Date().toISOString();
   return ok(key);
 });
 route('DELETE', '/api/v1/api-keys/:id', (_req, { id }) => {
@@ -206,20 +223,20 @@ route('PATCH', '/api/v1/users/:id/role', async (req, { id }) => {
   const user = users.find((u) => u.id === id);
   if (!user) return fail(404, 'User not found', 'users.update.not_found');
   const body = await readBody(req);
-  (user as any).role_id = body.role;
-  (user as any).role_details = roles.find((r) => r.id === body.role) ?? null;
+  user.role_id = body.role;
+  user.role_details = roles.find((r) => r.id === body.role) ?? null;
   return ok(user);
 });
 route('PATCH', '/api/v1/users/:id/metadata', async (req, { id }) => {
   const user = users.find((u) => u.id === id);
   if (!user) return fail(404, 'User not found', 'users.update.not_found');
-  (user as any).metadata = await readBody(req);
+  user.metadata = await readBody(req);
   return ok(user);
 });
 
 // ---- dashboard-stats ----
 route('GET', '/api/v1/dashboard-stats', () => ok({
-  users: users.length, webhooks: webhooks.length, behaviors: appBehaviors.filter((b: any) => b.is_active).length,
+  users: users.length, webhooks: webhooks.length, behaviors: appBehaviors.filter((b) => b.is_active).length,
   api_keys: apiKeys.length, roles: roles.length, oauth_configs: oauthConfigs.length,
 }));
 
@@ -249,11 +266,11 @@ route('DELETE', '/api/v1/oauth-configs/:id', (_req, { id }) => {
 route('POST', '/api/v1/oauth-configs/:id/disable', (_req, { id }) => {
   const config = oauthConfigs.find((c) => c.id === id);
   if (!config) return fail(404, 'OAuth config not found', 'oauth_configs.update.not_found');
-  (config as any).enabled = false;
+  config.enabled = false;
   return ok(config);
 });
 route('GET', '/api/v1/oauth-configs/:id/redirects', (_req, { id }) => {
-  const config = oauthConfigs.find((c) => c.id === id) as any;
+  const config = oauthConfigs.find((c) => c.id === id);
   if (!config) return fail(404, 'OAuth config not found', 'oauth_configs.get.not_found');
   return ok([config.redirect_uri_web, config.redirect_uri_android, config.redirect_uri_ios, config.redirect_uri_desktop].filter(Boolean));
 });
@@ -274,8 +291,137 @@ route('DELETE', '/api/v1/oauth-configs/:id/audiences/:audienceId', (_req, { id, 
 route('POST', '/api/v1/oauth-configs/migration/legacy-redirects-apply', () => ok({ migrated: 0 }));
 route('GET', '/api/v1/oauth-configs/migration/legacy-redirects-status', () => ok({ pending: 0, migrated: 0 }));
 
+// ---- embedded-auth (Pro) ----
+// Registered BEFORE the generic /app-behaviors/:id routes, which would
+// otherwise capture "/embedded-auth" (that is what a Community backend does:
+// a JSON 404 from the generic route).
+const EMBEDDED_AUTH_CODE = 'embedded_auth';
+
+/** What the app can enable (persistence EmbeddedAuthAvailability). */
+function embeddedAuthAvailability(): EmbeddedAuthStrategies {
+  const emailAuth = appBehaviors.find((b) => b.behavior_code === 'email_auth' && b.is_active === true && b.is_removed !== true);
+  const config = (emailAuth?.config ?? {}) as Record<string, unknown>;
+  const nodeEnabled = (key: string) => (config[key] as { enabled?: unknown } | undefined)?.enabled === true;
+  // The backend reads email_auth.config.magic_link.enabled; this mock's own
+  // magic-link toggle (POST /email/magic-link/activate) flips the separate
+  // `magic_link` seed row instead, so either one counts here.
+  const magicLinkRow = appBehaviors.some((b) => b.behavior_code === 'magic_link' && b.is_active === true);
+  const oauth = [...new Set(oauthConfigs.filter((c) => c.enabled === true).map((c) => normalizeProvider(String(c.provider ?? ''))))]
+    .filter(Boolean)
+    .sort();
+  return {
+    password: !!emailAuth,
+    email_code: !!emailAuth && nodeEnabled('email_code'),
+    magic_link: !!emailAuth && (nodeEnabled('magic_link') || magicLinkRow),
+    oauth,
+  };
+}
+
+/**
+ * The PUT body as the Go DTO decodes it, for Validate: unlike
+ * normalizeEmbeddedAuthConfig it keeps an unknown theme / layout / locale and
+ * a malformed accent, so they are rejected with the backend's 422 instead of
+ * being silently replaced. Empty or missing values are the defaults, as in Go.
+ */
+function embeddedAuthPutConfig(body: Record<string, unknown>): EmbeddedAuthConfig {
+  const config = normalizeEmbeddedAuthConfig(body);
+  const raw = (body.branding && typeof body.branding === 'object' ? body.branding : {}) as Record<string, unknown>;
+  const keep = <T extends string>(value: unknown, fallback: T): T => (typeof value === 'string' && value !== '' ? (value as T) : fallback);
+  const accent = raw.accent;
+  const neutral = typeof accent === 'string' && accent.trim().toLowerCase() === 'neutral';
+  return {
+    ...config,
+    branding: {
+      ...config.branding,
+      theme: keep(raw.theme, config.branding.theme),
+      layout: keep(raw.layout, config.branding.layout),
+      locale: keep(raw.locale, config.branding.locale),
+      accent: accent === undefined || accent === null || neutral ? config.branding.accent : (accent as EmbeddedAuthAccent),
+    },
+  };
+}
+
+/** Canonical stored form (embeddedauth.Settings.Node): normalized and de-duplicated. */
+function canonicalEmbeddedAuthConfig(c: EmbeddedAuthConfig): EmbeddedAuthConfig {
+  const origins: string[] = [];
+  for (const raw of c.allowed_origins) {
+    const res = checkOrigin(raw);
+    if ('origin' in res && !origins.includes(res.origin)) origins.push(res.origin);
+  }
+  const redirects: string[] = [];
+  for (const raw of c.redirect_urls) {
+    const res = checkRedirect(raw);
+    if ('redirect' in res && origins.includes(res.origin) && !redirects.includes(res.redirect)) redirects.push(res.redirect);
+  }
+  const oauth = [...new Set(c.strategies.oauth.map(normalizeProvider))];
+  return {
+    ...c,
+    allowed_origins: origins,
+    redirect_urls: redirects,
+    strategies: { ...c.strategies, oauth },
+    branding: { ...c.branding, name: c.branding.name.trim(), logo_url: c.branding.logo_url.trim() },
+  };
+}
+
+/** GET/PUT response: stored config (defaults without a row), effective and available. */
+function describeEmbeddedAuth() {
+  const available = embeddedAuthAvailability();
+  const row = appBehaviors.find((b) => b.behavior_code === EMBEDDED_AUTH_CODE);
+  const config = row ? normalizeEmbeddedAuthConfig(row.config) : defaultEmbeddedAuthConfig();
+  const enabled = !!row && row.is_active === true && config.allowed_origins.some((o) => 'origin' in checkOrigin(o));
+  return {
+    ...(row ? { id: row.id } : {}),
+    app_id: APP_ID,
+    config,
+    effective: { enabled, strategies: intersectStrategies(config.strategies, available) },
+    available,
+    ...(row ? { created_at: row.created_at, updated_at: row.updated_at } : {}),
+  };
+}
+
+if (EDITION === 'pro') {
+  // Like the backend, no row exists until the first PUT: GET answers the
+  // defaults (not configured, disabled) and the seeded behavior lists stay
+  // exactly as before.
+  route('GET', '/api/v1/app-behaviors/embedded-auth', () => ok(describeEmbeddedAuth()));
+  route('PUT', '/api/v1/app-behaviors/embedded-auth', async (req) => {
+    const body = await readBody(req);
+    const issues = validateEmbeddedAuthConfig(embeddedAuthPutConfig(body), embeddedAuthAvailability());
+    if (issues.length > 0) return fail(422, joinIssues(issues), 'app_behaviors.embedded_auth.invalid_config');
+    const stored = canonicalEmbeddedAuthConfig(normalizeEmbeddedAuthConfig(body));
+    const now = new Date().toISOString();
+    const row = appBehaviors.find((b) => b.behavior_code === EMBEDDED_AUTH_CODE);
+    if (row) Object.assign(row, { config: stored, is_active: true, updated_at: now });
+    else {
+      appBehaviors.push({
+        id: nextId('beh'), app_id: APP_ID, behavior_code: EMBEDDED_AUTH_CODE, is_active: true, config: stored,
+        created_by: 'system', created_at: now, updated_at: now,
+      });
+    }
+    return ok(describeEmbeddedAuth());
+  });
+}
+
+// ---- ui (Pro): the Embedded Auth bundle, only when MOCK_UI_DIR points at a build ----
+// e.g. MOCK_UI_DIR=../accounts/internal/ui/static make dev-mock → the admin's
+// live preview renders the real component. Unset: 404, like a backend without it.
+const MOCK_UI_DIR = process.env.MOCK_UI_DIR?.trim() ?? '';
+const UI_TYPES: Record<string, string> = {
+  js: 'application/javascript; charset=utf-8',
+  html: 'text/html; charset=utf-8',
+  json: 'application/json',
+};
+if (EDITION === 'pro' && MOCK_UI_DIR) {
+  route('GET', '/ui/v1/:file', async (_req, { file }) => {
+    const ext = /^[a-z0-9.-]+\.(js|html|json)$/.exec(file)?.[1];
+    const asset = ext ? Bun.file(`${MOCK_UI_DIR.replace(/\/+$/, '')}/${file}`) : null;
+    if (!ext || !asset || !(await asset.exists())) return new Response('404 page not found', { status: 404 });
+    return new Response(asset, { headers: { 'Content-Type': UI_TYPES[ext], 'X-Content-Type-Options': 'nosniff' } });
+  });
+}
+
 // ---- app-behaviors ----
-route('GET', '/api/v1/app-behaviors', () => ok(appBehaviors.map(({ config: _c, ...rest }: any) => rest)));
+route('GET', '/api/v1/app-behaviors', () => ok(appBehaviors.map(({ config: _c, ...rest }) => rest)));
 route('GET', '/api/v1/app-behaviors/:id', (_req, { id }) => {
   const behavior = appBehaviors.find((b) => b.id === id);
   if (!behavior) return fail(404, 'Behavior not found', 'app_behaviors.get.not_found');
@@ -284,12 +430,17 @@ route('GET', '/api/v1/app-behaviors/:id', (_req, { id }) => {
 route('PUT', '/api/v1/app-behaviors/:id', async (req, { id }) => {
   const behavior = appBehaviors.find((b) => b.id === id);
   if (!behavior) return fail(404, 'Behavior not found', 'app_behaviors.update.not_found');
+  // Pro: the generic route refuses the embedded_auth row (its config opens CORS
+  // to other origins, so it only goes through the validated endpoint).
+  if (EDITION === 'pro' && behavior.behavior_code === EMBEDDED_AUTH_CODE) {
+    return fail(422, 'the embedded_auth behavior is configured with PUT /api/v1/app-behaviors/embedded-auth', 'app_behaviors.update.use_embedded_auth_endpoint');
+  }
   Object.assign(behavior, await readBody(req), { updated_at: new Date().toISOString() });
   return ok(behavior);
 });
 function setBehaviorActive(code: string, active: boolean) {
   const behavior = appBehaviors.find((b) => b.behavior_code === code);
-  if (behavior) (behavior as any).is_active = active;
+  if (behavior) behavior.is_active = active;
   return behavior ?? null;
 }
 route('POST', '/api/v1/app-behaviors/email/magic-link/activate', () => ok(setBehaviorActive('magic_link', true)));
@@ -298,7 +449,7 @@ route('POST', '/api/v1/app-behaviors/email/verification/activate', () => ok(setB
 route('POST', '/api/v1/app-behaviors/email/verification/deactivate', () => ok(setBehaviorActive('email_auth', false)));
 route('POST', '/api/v1/app-behaviors/email/metadata-schema/activate', async (req) => {
   const behavior = setBehaviorActive('metadata_schema', true);
-  if (behavior) (behavior as any).config = { schema: (await readBody(req)).schema ?? {} };
+  if (behavior) behavior.config = { schema: (await readBody(req)).schema ?? {} };
   return ok(behavior);
 });
 
@@ -323,7 +474,7 @@ route('PUT', '/api/v1/email-access/settings', async (req) => {
 route('POST', '/api/v1/email-access/test', async (req) => {
   const body = await readBody(req);
   const email = String(body.email ?? '');
-  const blocked = emailBlocklist.some((e: any) => e.email === email);
+  const blocked = emailBlocklist.some((e) => e.email === email);
   return ok({ email, allowed: !blocked, reason: blocked ? 'blocklisted' : 'default_action' });
 });
 route('GET', '/api/v1/email-access/blocklist', (_req, _p, url) => {

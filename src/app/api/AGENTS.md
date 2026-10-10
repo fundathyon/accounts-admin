@@ -53,6 +53,12 @@ Use `fetchAccountsJson(path, init)` instead — it returns `{ status, ok, data }
 - Do NOT add server actions or turn a proxy into a server component.
 - Do NOT put business logic here beyond pagination aggregation. The backend is the source of truth.
 
+## Routes without a key helper
+
+- `health/route.ts` — the backend's public `GET /health` (the admin reads `data.edition`). No key: the backend route is public.
+- `embedded-auth/bundle/route.ts` — the public Embedded Auth bundle (`/ui/v1/accounts.js`, Pro only) as text, for the preview iframe. Uses `fetchAccountsText` because the body is JavaScript, not JSON.
+- `oauth-configs/callback-base/route.ts` — local: returns `INTERNAL_API_URL` as the browser-facing base.
+
 ## Extending
 
 New resource → new folder here with `route.ts` (and dynamic segments as `[id]/route.ts`). Grep for `proxyToAccounts` in a sibling resource to see the exact shape. Then mock it in [`../../../mock-server/server.ts`](../../../mock-server/server.ts) so `make dev-mock` still works end-to-end.
