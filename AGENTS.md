@@ -73,7 +73,7 @@ accounts-admin/
 ├── .github/workflows/                 ← CI (build+push Docker image only, no tests)
 ├── docker_images/app/Dockerfile.app   ← the Dockerfile CI actually uses
 │
-├── mock-server/                       ← Bun HTTP server, 67 routes, port 8099
+├── mock-server/                       ← Bun HTTP server, 71 routes, port 8099
 │   ├── server.ts · data.ts
 │   └── AGENTS.md                      ← how to add/edit a mocked endpoint
 │
@@ -104,6 +104,7 @@ accounts-admin/
     │   │   ├── oauth-providers/
     │   │   ├── behaviors/ · behaviors/[id]/
     │   │   ├── email-templates/ · email-access/
+    │   │   ├── embedded-auth/         ← Pro only (shown when GET /health says "pro")
     │   │   ├── tokens/ · notifications/ · release-notes/
     │   │   └── settings/
     │   │
@@ -116,10 +117,12 @@ accounts-admin/
     │   ├── AGENTS.md
     │   ├── admin-data-table.tsx       ← wrapper around community-ui DataTable
     │   ├── behaviors/                 ← behavior-config forms
+    │   ├── embedded-auth/             ← Embedded Auth sections, snippet, live preview
     │   └── ui/                        ← shadcn-style local primitives
     │
     ├── context/                       ← React contexts
     │   ├── admin-context.tsx          ← API keys, current app, notifications
+    │   ├── edition-context.tsx        ← edition from GET /health (Pro-only screens)
     │   └── i18n-context.tsx           ← locale + t()
     │
     ├── hooks/use-mobile.ts
@@ -217,6 +220,8 @@ Full documentation lives in [`.envs/.env.example`](.envs/.env.example). Summary:
 | `NEXT_PUBLIC_DEV_PUBLISHABLE_KEY` | client | unset | seeds `authify_publishable_key` |
 | `MOCK_NO_APPS` | mock only | unset | when set, mock starts with no apps (to test onboarding) |
 | `MOCK_PORT` | mock only | `8099` | override mock port |
+| `MOCK_EDITION` | mock only | `pro` | edition reported by the mock's `GET /health`; `community` hides the Pro-only screens and unregisters their routes |
+| `MOCK_UI_DIR` | mock only | unset | directory with a built Embedded Auth bundle (e.g. `../accounts/internal/ui/static`), served at `/ui/v1/*` so the Embedded Auth preview renders the real component |
 
 `NEXT_PUBLIC_*` values are inlined into the client bundle at build time. **Never put a real production secret in one.**
 

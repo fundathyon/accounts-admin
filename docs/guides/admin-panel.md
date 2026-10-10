@@ -118,6 +118,20 @@ Muestra la configuración del comportamiento según su tipo. Para **`email_auth`
 
 ---
 
+## `/embedded-auth` — Embedded Auth (solo Pro)
+
+Configura los **componentes de login embebidos** (`<accounts-sign-in>`, `<accounts-user-button>`…) del behavior `embedded_auth`. La entrada de la barra lateral (y del ⌘K) solo aparece cuando `GET /health` del backend reporta `edition: "pro"`; con Community (o sin respuesta) el panel es idéntico al de siempre y, si se entra por URL, la página muestra un aviso sin llamar a la API.
+
+- Estado **Activo/Inactivo** (`effective.enabled`: fila guardada y al menos un origen válido).
+- **Orígenes**: orígenes permitidos (`esquema://host[:puerto]`, https salvo localhost/127.0.0.1/[::1], máx. 20, sin ruta ni comodines) y URLs de retorno del magic link (su origen debe estar permitido). Validación en vivo con las mismas reglas que el backend.
+- **Métodos de acceso**: contraseña, código por correo, magic link y proveedores OAuth; lo que la app no tiene activo aparece deshabilitado con el motivo y un enlace a Behaviors / Proveedores OAuth.
+- **Apariencia**: nombre, logo, acento (neutro, presets o personalizado OKLCH), tema, diseño, idioma y ocultar la marca.
+- **Instalación**: snippet con la **publishable key** guardada en Ajustes (nunca la secret) y la URL pública de Accounts (por defecto `INTERNAL_API_URL`, editable solo para el snippet).
+- **Vista previa** del componente real (el `/ui/v1/accounts.js` del backend, cargado por el BFF y aislado en un iframe con sandbox) alimentada con el borrador; si el backend no sirve el bundle, una vista aproximada.
+- Guardar con la barra de cambios (`PUT /api/v1/app-behaviors/embedded-auth`); los 422 `app_behaviors.embedded_auth.invalid_config` se muestran campo por campo.
+
+---
+
 ## `/email-templates` — Plantillas de email
 
 - Lista de plantillas desde la API del sistema.
