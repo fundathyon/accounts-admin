@@ -22,6 +22,7 @@ import {
 } from '@foundathyon/community-ui';
 import { Button } from '@/components/fdn/button';
 import { useAdmin } from '@/context/admin-context';
+import { useEdition } from '@/context/edition-context';
 import { useI18n } from '@/context/i18n-context';
 import { cn } from '@/lib/utils';
 
@@ -33,12 +34,12 @@ interface AppInfo {
 
 /**
  * The app chip at the start of the header, the place the organization switcher
- * has in the Foundathyon admin. Community runs one app, so it only opens the
- * app's branding editor.
+ * has in the Foundathyon admin. It only opens the app's branding editor.
  */
 export function AdminAppSwitcher() {
   const { savedSecretKey, apiUrl, showNotification } = useAdmin();
   const { t } = useI18n();
+  const { name: editionName } = useEdition();
   const [app, setApp] = useState<AppInfo | null>(null);
 
   useEffect(() => {
@@ -146,7 +147,7 @@ export function AdminAppSwitcher() {
             </>
           )}
           <DropdownMenuItem disabled className="px-3 text-caption text-text-muted">
-            API Accounts · Community
+            {editionName ? t('dashboard.badge', { edition: editionName }) : 'API Accounts'}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

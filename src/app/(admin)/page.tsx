@@ -39,6 +39,7 @@ import { Button } from '@/components/fdn/button';
 import { Badge } from '@/components/fdn/badge';
 import { useI18n } from '@/context/i18n-context';
 import { useAdmin } from '@/context/admin-context';
+import { useEdition } from '@/context/edition-context';
 import { buildAdminHref } from '@/lib/utils';
 import { OAuthProviderLogo } from '@/components/oauth-provider-logo';
 import type {
@@ -102,6 +103,7 @@ function hasOAuthLogin(u: User) {
 export default function DashboardPage() {
   const { apiUrl, savedSecretKey } = useAdmin();
   const { t } = useI18n();
+  const { name: editionName } = useEdition();
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -233,7 +235,7 @@ export default function DashboardPage() {
         <div className="min-w-0">
           <Inline gap={3} className="mb-1.5">
             <Heading level={1} visual="h2">{t('dashboard.title')}</Heading>
-            <Badge variant="outline">{t('dashboard.badge')}</Badge>
+            {editionName && <Badge variant="outline">{t('dashboard.badge', { edition: editionName })}</Badge>}
           </Inline>
           <Text tone="secondary" className="text-body">
             {t('dashboard.subtitle')}

@@ -9,8 +9,12 @@ interface EditionContextValue {
   edition: Edition | null;
   /** Only true when the backend says so — anything else is treated as Community. */
   isPro: boolean;
+  /** Product name to show in the UI; `null` while unknown, so nothing claims an edition. */
+  name: 'Community' | 'Pro' | null;
   loading: boolean;
 }
+
+const EDITION_NAMES: Record<Edition, 'Community' | 'Pro'> = { community: 'Community', pro: 'Pro' };
 
 const EditionContext = createContext<EditionContextValue | null>(null);
 
@@ -25,9 +29,10 @@ function editionFrom(body: unknown): Edition | null {
 
 /**
  * Asks the backend's public `GET /health` once which edition it runs, so
- * Pro-only screens (Embedded Auth) can be shown or hidden. It never blocks
- * rendering, never retries and never toasts: while loading, on any failure or
- * without an `edition` field the admin behaves exactly as Community.
+ * Pro-only screens (Embedded Auth) can be shown or hidden and the shell can name
+ * the edition. It never blocks rendering, never retries and never toasts: while
+ * loading, on any failure or without an `edition` field Pro-only screens stay
+ * hidden, and no label names an edition.
  */
 export function EditionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{ edition: Edition | null; loading: boolean }>({ edition: null, loading: true });
@@ -48,7 +53,14 @@ export function EditionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <EditionContext.Provider value={{ edition: state.edition, isPro: state.edition === 'pro', loading: state.loading }}>
+    <EditionContext.Provider
+      value={{
+        edition: state.edition,
+        isPro: state.edition === 'pro',
+        name: state.edition ? EDITION_NAMES[state.edition] : null,
+        loading: state.loading,
+      }}
+    >
       {children}
     </EditionContext.Provider>
   );
