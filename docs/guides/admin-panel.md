@@ -134,11 +134,10 @@ Configura los **componentes de login embebidos** (`<accounts-sign-in>`, `<accoun
 
 ## `/email-templates` — Plantillas de email
 
-- Lista de plantillas desde la API del sistema.
-- Selector de plantilla, **variables** editables por plantilla, **vista previa HTML** en iframe (actualización con debounce).
-- Opción de **enviar email de prueba** (diálogo con dirección).
-
-No depende de la API Key del admin en el mismo sentido que otras secciones; usa endpoints de sistema (`/api/system/email-templates`).
+- **Marca**: tema, logo, nombre, acento, esquinas, fuente y pie, con vista previa real del borrador en un iframe con sandbox. Nada cambia hasta guardar.
+- **Plantillas**: catálogo de emails, vista previa, subir HTML propio, restaurar la plantilla predeterminada y **enviar email de prueba**.
+- La edición decide el alcance, porque cada una solo puede escribir en una familia de rutas: en **Pro** se edita la app de la Secret Key (`/api/v1/email-templates`); en **Community** se edita toda la instancia con la admin key, que solo usa el BFF (`/v1/email-templates`). Mientras no se conoce la edición no se llama a ninguna.
+- El remitente (`GET /api/v1/email-config`) solo se puede leer con Secret Key: en Community, sin ella, no se muestra.
 
 ---
 

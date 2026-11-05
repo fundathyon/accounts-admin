@@ -2165,24 +2165,172 @@
   },
   "emailTemplates": {
     "title": "Email Templates",
-    "subtitle": "Templates configured in environment variables. Fill in the fields to preview the email.",
-    "noTemplates": "No templates configured",
-    "noTemplatesDesc": "Configure EMAIL_TEMPLATE_ACTIVATION_URL, EMAIL_TEMPLATE_RESET_URL and EMAIL_TEMPLATE_WELCOME_URL in environment variables.",
-    "urlNotConfigured": "URL not configured",
-    "fillVariables": "Fill in variables",
-    "preview": "Preview",
-    "previewTitle": "Email preview",
-    "previewHint": "Fill in the variables and click Preview to see the result.",
-    "errorLoad": "Error loading templates",
-    "errorPreview": "Error generating preview",
-    "errorConnection": "Connection error",
-    "sendEmail": "Send test email",
-    "sendEmailComingSoon": "Send email feature coming soon",
-    "sendTestDialogTitle": "Send test email",
-    "sendTestDialogDescription": "Enter the email address where you want to receive the test template.",
-    "sendTestDialogEmailLabel": "Email",
-    "sendTestDialogCancel": "Cancel",
-    "sendTestDialogSend": "Send"
+    "subtitle": "Customize every email Accounts sends (verification, sign-in, password reset and more) with a theme, your logo and your colors. Need full control? Upload your own HTML for each email.",
+    "subtitlePro": "Customize the emails this app sends (verification, sign-in, password reset and more) with a theme, your logo and your colors. Need full control? Upload your own HTML for each email.",
+    "loadFailed": "Couldn't load the template catalog",
+    "editionUnknown": "Couldn't tell which Accounts edition is running. Check that the API is responding.",
+    "unavailable": {
+      "title": "Templates not available",
+      "body": "This version of Accounts has no editable email templates. Update it to use this screen."
+    },
+    "community": {
+      "title": "These changes apply to the whole instance",
+      "body": "Community has one look and one set of templates for every app. Per-app templates are part of Accounts Pro."
+    },
+    "tabs": {
+      "branding": "Brand",
+      "templates": "Templates"
+    },
+    "previewFrame": {
+      "updating": "Updating the preview",
+      "title": "Email preview",
+      "generating": "Generating the preview…"
+    },
+    "provider": {
+      "ok": "All emails are sent from <code>{sender}</code>, the instance sender.",
+      "missing": "Email sending isn't configured on this instance yet. <strong>Send test</strong> will stay disabled until then.",
+      "error": "Couldn't check the instance sender"
+    },
+    "catalog": {
+      "available": "{count} available",
+      "custom": "Custom"
+    },
+    "templates": {
+      "loadFailed": "Couldn't load the template",
+      "customHtml": "Custom HTML",
+      "customHtmlDisabled": "Custom HTML disabled",
+      "inheritedHtml": "Global HTML",
+      "inheritedNotice": "This email uses a global template of the instance, which can't be edited here. Upload HTML to replace it for this app.",
+      "themeBrand": "Theme and brand",
+      "select": "Select a template from the list."
+    },
+    "upload": {
+      "description": "Upload an <code>.html</code> file to replace the theme for this specific email. The subject and sender stay the same. Max. 200 KB.",
+      "prompt": "Drop your HTML file here or click to browse",
+      "hint": "Supported format: .html · up to 200 KB",
+      "tooLarge": "The HTML is too large: the limit is 200 KB.",
+      "notHtml": "Upload an .html file.",
+      "failed": "Couldn't upload the file: it doesn't meet the template requirements.",
+      "withWarningsOne": "Template uploaded with {count} warning.",
+      "withWarningsMany": "Template uploaded with {count} warnings.",
+      "success": "Custom template uploaded.",
+      "retry": "Retry {file}",
+      "remove": "Remove {file}"
+    },
+    "reset": {
+      "title": "Restore the default template",
+      "confirm": "The custom HTML of \"{name}\" will be deleted. This cannot be undone.",
+      "button": "Restore default",
+      "failed": "Couldn't restore the default template",
+      "success": "Default template restored."
+    },
+    "test": {
+      "failed": "Couldn't send the test email",
+      "sent": "Test email sent to {email}",
+      "buttonHintOk": "Sends a real email with the instance sender",
+      "buttonHintMissing": "Email sending isn't configured on this instance yet",
+      "button": "Send test",
+      "dialogTitle": "Send a test email",
+      "dialogDescription": "Sends the template you see in the preview to the given email.",
+      "emailLabel": "Recipient email",
+      "emailPlaceholder": "you@example.com",
+      "sendingFrom": "Sending from <code>{sender}</code>.",
+      "send": "Send"
+    },
+    "branding": {
+      "loadFailed": "Couldn't load the themes",
+      "previewFailed": "The preview failed",
+      "saveFailed": "Couldn't save the look of the emails",
+      "saved": "Saved. All emails now use this look.",
+      "active": "Active",
+      "customize": {
+        "title": "Customize",
+        "description": "The preview updates as you edit. Nothing changes until you save."
+      },
+      "resetBrandHint": "Removes all brand customization and keeps only the theme",
+      "resetBrand": "Reset brand",
+      "theme": {
+        "title": "Theme",
+        "description": "The palette, typography and base layout."
+      },
+      "logoName": {
+        "title": "Logo and name",
+        "description": "Shown at the top of every email."
+      },
+      "logo": {
+        "label": "Logo URL",
+        "hint": "A PNG or JPG over https, shown at 40 px tall. Leave it empty to use the Foundathyon mark with your app's name.",
+        "noImage": "No image"
+      },
+      "displayName": {
+        "label": "Display name",
+        "hintWithLogo": "Used as the logo's alt text.",
+        "hintNoLogo": "Shown next to the mark. Leave it empty to use the app's name.",
+        "placeholder": "Your app's name"
+      },
+      "accent": {
+        "title": "Accent color",
+        "description": "Buttons, codes and links. Button text adjusts to keep contrast.",
+        "themeAccent": "Theme accent",
+        "custom": "Custom color",
+        "hex": "Hex"
+      },
+      "shape": {
+        "title": "Shape and typography",
+        "corners": "Corners",
+        "font": "Font",
+        "options": {
+          "theme": "Theme",
+          "sharp": "Sharp",
+          "soft": "Soft",
+          "round": "Round",
+          "sans": "Sans",
+          "serif": "Serif",
+          "mono": "Mono"
+        }
+      },
+      "footer": {
+        "title": "Footer",
+        "description": "Every email also states why it was sent and credits Foundathyon.",
+        "label": "Footer text",
+        "hint": "Company name, address or a legal line. Plain text, up to 6 lines."
+      },
+      "support": {
+        "label": "Support email",
+        "hint": "Adds \"Need help?\" with a mailto link."
+      },
+      "previewEmail": "Email to preview",
+      "previewWidth": "Preview width",
+      "desktop": "Desktop",
+      "mobile": "Mobile",
+      "draftPreview": "Draft preview",
+      "customHtmlNotice": "This email uses custom HTML, so the theme and brand don't apply. Restore the default template in the Templates tab to use them.",
+      "inheritedHtmlNotice": "This email uses a global template of the instance, so the theme and brand don't apply.",
+      "errors": {
+        "logoUrl": "Use an https:// URL to a PNG or JPG.",
+        "displayNameLength": "Use 80 characters or fewer.",
+        "accentHex": "Use a hex color like #3bc7cb.",
+        "footerLength": "Use 300 characters or fewer.",
+        "footerLines": "Use 6 lines or fewer.",
+        "supportEmail": "Enter a valid email."
+      }
+    },
+    "errors": {
+      "editionRejected": "This Accounts edition can't edit this scope.",
+      "unknownTemplate": "Accounts doesn't know this template.",
+      "unknownTheme": "Accounts doesn't know this theme.",
+      "htmlRequired": "The HTML file is empty.",
+      "htmlTooLarge": "The HTML is too large: the limit is 200 KB.",
+      "sanitization": "The HTML has disallowed markup (script, iframe or event handlers).",
+      "missingVariables": "The HTML is missing these required variables: {variables}.",
+      "forbiddenVariables": "The HTML uses forbidden variables: {variables}.",
+      "invalidBranding": "Accounts rejected the brand: {details}",
+      "notInPlan": "This app's plan doesn't include custom email branding.",
+      "testEmailRequired": "Enter a recipient email",
+      "noEmailConfig": "This instance has no sender configured (EMAIL_SENDER).",
+      "sendFailed": "Couldn't send the test email: check the instance email settings.",
+      "rateLimited": "Too many test emails. Try again later."
+    }
   },
   "onboarding": {
     "branding": "Authentication and user management for your applications.",
@@ -2239,7 +2387,6 @@
     "getToken": "Generate a temporary access token from a refresh token",
     "validateToken": "Verify if the token is still valid with the server",
     "clearInput": "Remove all text from the field",
-    "sendTestEmail": "Send a preview of this template to your inbox",
     "saveSettings": "Store changes in the system configuration",
     "clearKey": "Remove the saved key from local storage",
     "exportCsv": "Export visible data to a CSV file",

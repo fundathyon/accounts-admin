@@ -53,6 +53,10 @@ Use `fetchAccountsJson(path, init)` instead — it returns `{ status, ok, data }
 - Do NOT add server actions or turn a proxy into a server component.
 - Do NOT put business logic here beyond pagination aggregation. The backend is the source of truth.
 
+## Routes with two scopes
+
+`email-templates/*` go through [`email-templates/proxy.ts`](email-templates/proxy.ts): by default they act on the app of the secret key (`/api/v1/email-templates`); with `X-Email-Templates-Scope: global` they act on the instance with the admin key (`/v1/email-templates`). Each edition can only write to one of the two, so the screen picks the scope from the edition.
+
 ## Routes without a key helper
 
 - `health/route.ts` — the backend's public `GET /health` (the admin reads `data.edition`). No key: the backend route is public.
