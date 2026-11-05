@@ -3,7 +3,6 @@
 import { useState, useMemo, useRef, useEffect, forwardRef } from 'react';
 import type { ComponentProps, UIEvent } from 'react';
 import {
-  Key,
   Copy,
   Check,
   RefreshCw,
@@ -12,7 +11,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Button,
   Card,
   CardBody,
   CardHeader,
@@ -25,7 +23,6 @@ import {
   FormField,
   Heading,
   Icon,
-  IconButton,
   Inline,
   JsonViewer,
   Text,
@@ -38,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@foundathyon/community-ui';
+import { Button, IconButton } from '@/components/fdn/button';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { cn } from '@/lib/utils';
@@ -271,7 +269,7 @@ function TokenSection({
                             </span>
                           }
                         >
-                          <span className="cursor-help underline decoration-dotted decoration-bg-subtle underline-offset-2">
+                          <span className="cursor-help underline decoration-dotted decoration-bg-bg-subtle underline-offset-2">
                             {displayValue}
                           </span>
                         </Tooltip>
@@ -691,8 +689,7 @@ export default function TokensPage() {
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <Heading level={1} className="flex items-center gap-2">
-            <Key className="w-8 h-8 text-accent" />
+          <Heading level={1} visual="h2">
             {t('tokens.title')}
           </Heading>
           <Text tone="secondary" as="p" className="mt-1">{t('tokens.subtitle')}</Text>
@@ -710,7 +707,7 @@ export default function TokensPage() {
       </div>
 
       <div className="space-y-4">
-        <Inline gap={1} className="p-1 rounded-lg bg-subtle/50 w-fit">
+        <Inline gap={1} className="p-1 rounded-lg bg-bg-subtle/50 w-fit">
           <Button
             type="button"
             variant={activeTab === 'access' ? 'secondary' : 'ghost'}
@@ -799,7 +796,7 @@ export default function TokensPage() {
               </div>
             </FormField>
             {dialogError && (
-              <p className="text-sm text-danger rounded-md bg-danger-bg/10 px-3 py-2">{dialogError}</p>
+              <p className="text-body text-danger rounded-md bg-danger-bg/10 px-3 py-2">{dialogError}</p>
             )}
             {dialogResult && (
               <div className="space-y-3 rounded-lg border border-success-border bg-success-bg p-4">
@@ -808,7 +805,7 @@ export default function TokensPage() {
                   {t('tokens.newAccessToken')}
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 min-h-[140px] max-h-[220px] overflow-auto rounded-md border bg-subtle/30 px-3 py-2">
+                  <div className="flex-1 min-w-0 min-h-[140px] max-h-[220px] overflow-auto rounded-md border bg-bg-subtle/30 px-3 py-2">
                     <JwtColoredView value={dialogResult.jwt} className="block" />
                   </div>
                   <IconButton

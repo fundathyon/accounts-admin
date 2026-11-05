@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowRight, Bell, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import {
-  Badge,
-  Button,
-  buttonVariants,
   Card,
   CardBody,
   CardHeader,
@@ -18,6 +15,8 @@ import {
   Stack,
   Text,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { buildAdminHref, cn } from '@/lib/utils';
@@ -149,8 +148,7 @@ export default function NotificationsPage() {
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Heading level={1} visual="h2" className="flex items-center gap-2">
-            <Bell className="size-7 text-accent shrink-0" />
+          <Heading level={1} visual="h2">
             {t('notifications.title')}
           </Heading>
           <Text tone="secondary" className="mt-1">
@@ -172,16 +170,16 @@ export default function NotificationsPage() {
       )}
 
       <section className="space-y-3">
-        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted-foreground">
+        <Heading level={2} visual="h5" className="uppercase tracking-wide text-text-muted">
           {t('notifications.pendingSection')}
         </Heading>
         {loading ? (
-          <Inline gap={2} className="text-muted-foreground">
+          <Inline gap={2} className="text-text-muted">
             <Spinner size={16} label={null} />
             <Text tone="muted">{t('common.loading')}</Text>
           </Inline>
         ) : !secretConfigured ? null : migrationPending ? (
-          <Card className="border-orange-500/40 bg-orange-500/5">
+          <Card className="border-warning-border bg-warning-bg">
             <CardHeader
               actions={
                 <Badge variant="tonal" tone="warning">
@@ -191,7 +189,7 @@ export default function NotificationsPage() {
             >
               <Stack gap={1}>
                 <Heading level={3} visual="h4" className="flex items-center gap-2">
-                  <Icon icon={AlertTriangle} size={16} className="text-orange-500" />
+                  <Icon icon={AlertTriangle} size={16} className="text-warning" />
                   {t('notifications.oauthMigrationTitle')}
                 </Heading>
                 <Text tone="secondary">{t('notifications.oauthMigrationBody')}</Text>
@@ -199,14 +197,14 @@ export default function NotificationsPage() {
             </CardHeader>
             <CardBody>
               <Stack gap={4}>
-                <ul className="text-sm space-y-2 rounded-md border border-border/80 bg-bg/50 px-3 py-2">
+                <ul className="text-body space-y-2 rounded-md border border-border/80 bg-bg/50 px-3 py-2">
                   {migrationItems.map((item) => (
                     <li key={item.oauth_config_id} className="flex flex-wrap gap-x-2 gap-y-0.5">
                       <span className="font-medium capitalize">{item.provider}</span>
                       {item.name ? (
-                        <span className="text-muted-foreground">({item.name})</span>
+                        <span className="text-text-muted">({item.name})</span>
                       ) : null}
-                      <span className="text-muted-foreground font-mono text-xs">· {item.oauth_config_id}</span>
+                      <span className="text-text-muted font-mono text-xs">· {item.oauth_config_id}</span>
                     </li>
                   ))}
                 </ul>
@@ -240,7 +238,7 @@ export default function NotificationsPage() {
           <Card className="border-dashed">
             <CardBody>
               <Inline gap={2}>
-                <Icon icon={CheckCircle2} size={16} className="text-emerald-500" />
+                <Icon icon={CheckCircle2} size={16} className="text-success" />
                 <Text tone="secondary">{t('notifications.emptyPending')}</Text>
               </Inline>
             </CardBody>
@@ -249,7 +247,7 @@ export default function NotificationsPage() {
       </section>
 
       <section className="space-y-3">
-        <Heading level={2} visual="h5" className="uppercase tracking-wide text-muted-foreground">
+        <Heading level={2} visual="h5" className="uppercase tracking-wide text-text-muted">
           {t('notifications.recentSection')}
         </Heading>
         <Card className={cn('border-dashed', 'opacity-80')}>

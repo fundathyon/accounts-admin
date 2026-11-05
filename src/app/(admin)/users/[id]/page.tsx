@@ -6,14 +6,10 @@ import Link from 'next/link';
 import { ChevronLeft, Shield, Mail, CheckCircle2, XCircle, Loader2, Copy, Database, Pencil, Save, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Badge,
-  Button,
-  buttonVariants,
   Card,
   CardBody,
   Heading,
   Icon,
-  IconButton,
   Inline,
   JsonEditor,
   JsonViewer,
@@ -23,6 +19,8 @@ import {
   Stack,
   Text,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants, IconButton } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
@@ -216,36 +214,36 @@ export default function UserDetailPage() {
             <Heading level={2} visual="h4" className="mb-4 flex items-center gap-2">
               <Icon icon={Shield} size={14} /> {t('userDetail.generalInfo')}
             </Heading>
-            <dl className="space-y-3 text-sm">
+            <dl className="space-y-3 text-body">
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">User ID</dt>
+                <dt className="text-text-muted">User ID</dt>
                 <dd className="font-mono text-xs truncate max-w-[200px]" title={user.id}>
                   {user.id}
                 </dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Nombre</dt>
+                <dt className="text-text-muted">Nombre</dt>
                 <dd>{user.name || '—'}</dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">{t('userDetail.userName')}</dt>
+                <dt className="text-text-muted">{t('userDetail.userName')}</dt>
                 <dd>{user.user_name || '—'}</dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">App ID</dt>
+                <dt className="text-text-muted">App ID</dt>
                 <dd className="font-mono text-xs truncate max-w-[200px]" title={user.app_id}>
                   {user.app_id}
                 </dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4 items-center">
-                <dt className="text-muted-foreground">{t('userDetail.role') || 'Rol'}</dt>
+                <dt className="text-text-muted">{t('userDetail.role') || 'Rol'}</dt>
                 <dd className="flex items-center gap-2">
                   {updatingRole ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
                   ) : roles.length > 0 ? (
                     <Select
                       value={user.role_details?.name || null}
@@ -263,12 +261,12 @@ export default function UserDetailPage() {
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Creado</dt>
+                <dt className="text-text-muted">Creado</dt>
                 <dd>{new Date(user.created_at).toLocaleString('es')}</dd>
               </div>
               <Separator />
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Última actividad</dt>
+                <dt className="text-text-muted">Última actividad</dt>
                 <dd>{new Date(user.updated_at).toLocaleString('es')}</dd>
               </div>
             </dl>
@@ -360,7 +358,7 @@ export default function UserDetailPage() {
                       type="button"
                       onClick={handleCopy}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg border border-border bg-subtle/30 transition-colors hover:bg-subtle/50',
+                        'w-full text-left p-3 rounded-lg border border-border bg-bg-subtle/30 transition-colors hover:bg-bg-subtle/50',
                         emailToCopy && 'cursor-pointer'
                       )}
                       title={emailToCopy ? (t('userDetail.clickToCopyEmail') || 'Click para copiar email') : (t('userDetail.clickToCopy') || 'Click para copiar')}
@@ -378,26 +376,26 @@ export default function UserDetailPage() {
                           </Badge>
                         )}
                         {lm.is_verify ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <CheckCircle2 className="w-4 h-4 text-success" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-rose-400" />
+                          <XCircle className="w-4 h-4 text-danger" />
                         )}
-                        {emailToCopy && <Copy className="w-3.5 h-3.5 text-muted-foreground ml-auto shrink-0" />}
+                        {emailToCopy && <Copy className="w-3.5 h-3.5 text-text-muted ml-auto shrink-0" />}
                       </div>
                       <dl className="space-y-1 text-xs">
                         <div className="flex gap-2">
-                          <dt className="text-muted-foreground shrink-0">ID:</dt>
+                          <dt className="text-text-muted shrink-0">ID:</dt>
                           <dd className="font-mono truncate">{lm.entity_id}</dd>
                         </div>
                         {lm.details?.email && (
                           <div className="flex gap-2">
-                            <dt className="text-muted-foreground shrink-0">Email:</dt>
+                            <dt className="text-text-muted shrink-0">Email:</dt>
                             <dd className="truncate">{lm.details.email}</dd>
                           </div>
                         )}
                         {lm.details?.created_at && (
                           <div className="flex gap-2">
-                            <dt className="text-muted-foreground shrink-0">Creado:</dt>
+                            <dt className="text-text-muted shrink-0">Creado:</dt>
                             <dd>{new Date(lm.details.created_at).toLocaleString('es')}</dd>
                           </div>
                         )}

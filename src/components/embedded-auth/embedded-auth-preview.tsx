@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Moon, RefreshCw, Sun } from 'lucide-react';
-import { Alert, Badge, Button, IconButton, Spinner, Text } from '@foundathyon/community-ui';
+import { Alert, Spinner, Text } from '@foundathyon/community-ui';
+import { Button, IconButton } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { cn } from '@/lib/utils';
@@ -298,7 +300,7 @@ export function EmbeddedAuthPreview({ config, available, adminScheme }: Embedded
             srcDoc={srcDoc}
             style={{ height }}
             className={cn(
-              'w-full rounded-xl border border-border bg-transparent',
+              'w-full rounded-lg border border-border bg-transparent',
               status === 'live' ? 'block' : 'pointer-events-none absolute inset-0 opacity-0'
             )}
           />

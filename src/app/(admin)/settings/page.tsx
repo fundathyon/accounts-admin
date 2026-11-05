@@ -12,8 +12,6 @@ import {
 import { motion } from 'framer-motion';
 import {
   Alert,
-  Badge,
-  Button,
   Card,
   CardHeader,
   FormField,
@@ -25,6 +23,8 @@ import {
   Text,
   Tooltip,
 } from '@foundathyon/community-ui';
+import { Button } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { apiUrl } from '@/lib/utils';
@@ -140,12 +140,12 @@ export default function SettingsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Heading level={1} className="mb-8">{t('settings.title')}</Heading>
+      <Heading level={1} visual="h2" className="mb-8">{t('settings.title')}</Heading>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           <Card className="p-8">
             <Inline gap={3} className="mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-accent-bg flex items-center justify-center text-accent">
+              <div className="w-10 h-10 rounded-lg bg-accent-bg flex items-center justify-center text-accent">
                 <Icon icon={Key} size={20} />
               </div>
               <div>
@@ -188,7 +188,7 @@ export default function SettingsPage() {
 
           <Card className="p-8">
             <Inline gap={3} className="mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+              <div className="w-10 h-10 rounded-lg bg-accent-bg flex items-center justify-center text-accent">
                 <Icon icon={Users} size={20} />
               </div>
               <div>
@@ -224,7 +224,7 @@ export default function SettingsPage() {
                 <Button
                   variant="primary"
                   onClick={handleSavePublishableKey}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
+                  className="flex-1"
                   leading={<Icon icon={Users} size={16} />}
                 >
                   {t('settings.savePublishableKey')}
@@ -247,7 +247,6 @@ export default function SettingsPage() {
                 variant="primary"
                 onClick={() => fetchEnvVars()}
                 disabled={envLoading}
-                className="bg-sky-600 hover:bg-sky-500 text-white"
                 leading={envLoading ? <Spinner size={16} label={null} /> : <Icon icon={RefreshCw} size={16} />}
               >
                 {envLoading ? t('common.loading') : t('settings.loadVars')}
@@ -255,7 +254,7 @@ export default function SettingsPage() {
             }
           >
             <Inline gap={3}>
-              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+              <div className="w-10 h-10 rounded-lg bg-info-bg flex items-center justify-center text-info">
                 <Icon icon={Server} size={20} />
               </div>
               <div>
@@ -287,13 +286,13 @@ export default function SettingsPage() {
             <div className="divide-y divide-border">
               {Array.from(new Set(envVars.map((e) => e.category))).map((category) => (
                 <div key={category}>
-                  <div className="px-6 py-2 bg-subtle/30">
+                  <div className="px-6 py-2 bg-bg-subtle/30">
                     <Text variant="overline" tone="muted" className="font-bold tracking-widest">{category}</Text>
                   </div>
                   {envVars
                     .filter((e) => e.category === category)
                     .map((envVar) => (
-                      <div key={envVar.key} className="px-6 py-3 hover:bg-subtle/50 transition-colors flex items-center gap-4">
+                      <div key={envVar.key} className="px-6 py-3 hover:bg-bg-subtle/50 transition-colors flex items-center gap-4">
                         <div className="w-64 shrink-0">
                           <Text
                             variant="code"
@@ -355,7 +354,7 @@ export default function SettingsPage() {
 
         <Card className="p-6">
           <Heading level={2} visual="h4" className="mb-3">{t('settings.securityNotes')}</Heading>
-          <ul className="space-y-1.5 text-sm text-text-muted list-disc list-inside">
+          <ul className="space-y-1.5 text-body text-text-muted list-disc list-inside">
             <li>{t('settings.securityNote1')}</li>
             <li>{t('settings.securityNote2')}</li>
             <li>{t('settings.securityNote3')}</li>

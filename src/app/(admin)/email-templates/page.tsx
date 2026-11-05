@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Button,
   Card,
   CardBody,
   Dialog,
@@ -24,6 +23,7 @@ import {
   Text,
   Tooltip,
 } from '@foundathyon/community-ui';
+import { Button } from '@/components/fdn/button';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { apiUrl } from '@/lib/utils';
@@ -169,7 +169,7 @@ export default function EmailTemplatesPage() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <Heading level={1}>{t('emailTemplates.title')}</Heading>
+          <Heading level={1} visual="h2">{t('emailTemplates.title')}</Heading>
           <Text tone="secondary" className="mt-1">
             {t('emailTemplates.subtitle')}
           </Text>
@@ -202,7 +202,7 @@ export default function EmailTemplatesPage() {
 
       {loading ? (
         <div className="py-20 flex justify-center">
-          <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+          <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
         </div>
       ) : error ? (
         <Card className="border-danger-border/30">

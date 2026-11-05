@@ -5,8 +5,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, FileJson, Loader2, ChevronRight } from 'lucide-react';
 import {
-  Button,
-  buttonVariants,
   Card,
   CardBody,
   CardHeader,
@@ -19,6 +17,7 @@ import {
   Text,
   Spinner,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants } from '@/components/fdn/button';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
@@ -182,7 +181,7 @@ export default function WebhookTestPage() {
   if (loading) {
     return (
       <Stack gap={4} align="center" className="justify-center min-h-[50vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+        <Loader2 className="w-10 h-10 animate-spin text-text-muted" />
         <Text tone="secondary">{t('webhooks.testPage.loadingWebhook')}</Text>
       </Stack>
     );
@@ -220,20 +219,20 @@ export default function WebhookTestPage() {
       </Inline>
 
       <div className="space-y-6">
-        <Collapsible defaultOpen className="rounded-xl border border-border bg-subtle/30 group/collapse">
+        <Collapsible defaultOpen className="rounded-lg border border-border bg-bg-subtle/30 group/collapse">
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-subtle/50 transition-colors rounded-xl"
+              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-bg-subtle/50 transition-colors rounded-lg"
             >
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-cyan-400" />
+                <Zap className="w-4 h-4 text-accent" />
                 <span className="font-medium">{t('webhooks.testPage.testEvent')}</span>
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-xs text-text-muted font-mono">
                   {testEventSelectedEvent || t('webhooks.testPage.select')}
                 </span>
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]/collapse:rotate-90" />
+              <ChevronRight className="w-4 h-4 text-text-muted transition-transform group-data-[state=open]/collapse:rotate-90" />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -246,12 +245,12 @@ export default function WebhookTestPage() {
                   className={cn(
                     'text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors',
                     testEventSelectedEvent === ev.code
-                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                      : 'bg-bg/50 text-muted-foreground hover:bg-subtle border border-transparent'
+                      ? 'bg-accent-bg text-accent border border-accent-border'
+                      : 'bg-bg/50 text-text-muted hover:bg-bg-subtle border border-transparent'
                   )}
                 >
                   <div className="font-medium">{ev.code}</div>
-                  <div className="text-muted-foreground mt-0.5">{ev.description}</div>
+                  <div className="text-text-muted mt-0.5">{ev.description}</div>
                 </button>
               ))}
             </div>

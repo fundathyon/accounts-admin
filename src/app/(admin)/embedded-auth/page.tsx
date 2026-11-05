@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import { AppWindow, Key } from 'lucide-react';
 import {
   Alert,
-  Badge,
   Card,
   CardBody,
   EmptyState,
@@ -21,8 +20,9 @@ import {
   TabsList,
   TabsPanel,
   Text,
-  buttonVariants,
 } from '@foundathyon/community-ui';
+import { buttonVariants } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useEdition } from '@/context/edition-context';
 import { useI18n } from '@/context/i18n-context';
@@ -420,8 +420,7 @@ export default function EmbeddedAuthPage() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <Heading level={1} className="flex items-center gap-3">
-            <Icon icon={AppWindow} size={20} className="text-accent" />
+          <Heading level={1} visual="h2" className="flex items-center gap-3">
             {t('sidebar.embeddedAuth')}
             <Badge variant="outline" tone="info">{t('embeddedAuth.proBadge')}</Badge>
           </Heading>
@@ -434,7 +433,7 @@ export default function EmbeddedAuthPage() {
             href={settingsHref}
             className={cn(
               buttonVariants({ variant: 'secondary' }),
-              'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+              'gap-2 border-warning-border text-warning hover:bg-warning-bg'
             )}
           >
             <Icon icon={Key} size={16} /> {t('embeddedAuth.configSecretKey')}
@@ -461,10 +460,10 @@ export default function EmbeddedAuthPage() {
           />
         </Card>
       ) : !savedSecretKey ? (
-        <Card className="border-amber-500/20">
+        <Card className="border-warning-border">
           <EmptyState
             icon={Key}
-            title={<span className="text-amber-300">{t('embeddedAuth.secretKeyRequired')}</span>}
+            title={<span className="text-warning">{t('embeddedAuth.secretKeyRequired')}</span>}
             description={t('embeddedAuth.secretKeyRequiredDesc')}
             action={
               <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@foundathyon/community-ui";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DesignSystemProvider } from "@/components/design-system-provider";
@@ -9,7 +9,8 @@ import { I18nProvider } from "@/context/i18n-context";
 // @source to generate the library's classes in this same Tailwind build.
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Accounts Admin",
@@ -25,8 +26,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
+      <body className="antialiased">
         {/* next-themes stays the outer theme owner (it drives the `class` strategy
             the remaining shadcn styles read); FoundathyonProvider contributes the
             accent and density tokens only. */}

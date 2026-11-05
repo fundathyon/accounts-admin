@@ -2,7 +2,7 @@ import { AdminProvider } from '@/context/admin-context';
 import { EditionProvider } from '@/context/edition-context';
 import { OAuthLegacyMigrationNotifier } from '@/components/oauth-legacy-migration-notifier';
 import { AdminSidebar } from './admin-sidebar';
-import { AdminTopbar } from './admin-topbar';
+import { AdminTopbar, SidebarToggleButton } from './admin-topbar';
 import { AdminSessionGuard } from '@/components/admin-session-guard';
 import { OnboardingGuard } from '@/components/onboarding-guard';
 import { AdminCommandPaletteProvider } from '@/components/admin-command-palette';
@@ -25,19 +25,23 @@ export default function AdminLayout({
                 (shadcn used a cookie that nothing ever read back). */}
             <SidebarProvider storageKey="authify_admin_sidebar_collapsed">
               <AdminCommandPaletteProvider>
-                {/* Replaces shadcn's SidebarProvider wrapper + SidebarInset: the shell
-                    is exactly one viewport tall so <Sidebar> (h-full) fills it and the
-                    content column owns the scroll. */}
-                <div className="flex h-svh w-full">
-                  <AdminSidebar />
-                  <main className="relative flex w-full min-w-0 flex-1 flex-col bg-bg">
-                    <AdminTopbar />
-                    {/* The Topbar owns the sidebar trigger now, so the content no
-                        longer needs extra top padding to clear a floating button. */}
-                    <div className="flex-1 overflow-y-auto p-8 max-w-7xl mx-auto w-full font-sans">
-                      {children}
+                {/* Same shell as the Foundathyon admin: the header spans the
+                    window and the sidebar and content sit below it. The content
+                    column owns the scroll. */}
+                <div className="flex h-svh w-full flex-col">
+                  <AdminTopbar />
+                  <div className="relative flex min-h-0 flex-1">
+                    <div className="relative">
+                      <AdminSidebar />
+                      {/* Below md the sidebar is off-canvas and the header owns the trigger. */}
+                      <div className="hidden md:block">
+                        <SidebarToggleButton />
+                      </div>
                     </div>
-                  </main>
+                    <main className="min-w-0 flex-1 overflow-y-auto bg-bg font-sans md:p-6">
+                      <div className="mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6 md:pb-0">{children}</div>
+                    </main>
+                  </div>
                 </div>
               </AdminCommandPaletteProvider>
             </SidebarProvider>

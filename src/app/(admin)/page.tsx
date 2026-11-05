@@ -21,8 +21,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Badge,
-  Button,
   Card,
   CardBody,
   CardHeader,
@@ -37,6 +35,8 @@ import {
   cn,
   formatRelativeDate,
 } from '@foundathyon/community-ui';
+import { Button } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useI18n } from '@/context/i18n-context';
 import { useAdmin } from '@/context/admin-context';
 import { buildAdminHref } from '@/lib/utils';
@@ -232,7 +232,7 @@ export default function DashboardPage() {
       <header className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Inline gap={3} className="mb-1.5">
-            <Heading level={1}>{t('dashboard.title')}</Heading>
+            <Heading level={1} visual="h2">{t('dashboard.title')}</Heading>
             <Badge variant="outline">{t('dashboard.badge')}</Badge>
           </Inline>
           <Text tone="secondary" className="text-body">
@@ -524,7 +524,7 @@ function MetricLinkCard({ icon, label, value, context, href, loading }: MetricLi
   return (
     <Link
       href={buildAdminHref(href)}
-      className="group block outline-none focus-visible:rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="group block outline-none focus-visible:rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <Card className="h-full transition-colors duration-[var(--fdn-dur-fast)] group-hover:bg-surface-hover">
         <CardBody className="flex items-start gap-3 p-4">

@@ -30,9 +30,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Badge,
-  Button,
-  buttonVariants,
   Card,
   CardBody,
   CodeBlock,
@@ -52,7 +49,6 @@ import {
   FormField,
   Heading,
   Icon,
-  IconButton,
   Inline,
   Input,
   RoleBadge,
@@ -63,6 +59,8 @@ import {
   Tooltip,
   Spinner,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants, IconButton } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import type {
   DataTableColumn,
   DataTableRowAction,
@@ -884,22 +882,22 @@ export default function UsersPage() {
                   <Mail className="w-3.5 h-3.5" />
                 </span>
                 {lm.is_verify ? (
-                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-2.5 h-2.5 text-success shrink-0" />
                 ) : (
-                  <XCircle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                  <XCircle className="w-2.5 h-2.5 text-danger shrink-0" />
                 )}
               </span>
             ) : (
               <Badge key={lm.id} variant="outline" tone="warning" className="px-1.5">
                 {lm.entity_type}
                 {lm.is_verify ? (
-                  <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-emerald-400 inline" />
+                  <CheckCircle2 className="w-2.5 h-2.5 ml-0.5 text-success inline" />
                 ) : (
-                  <XCircle className="w-2.5 h-2.5 ml-0.5 text-rose-400 inline" />
+                  <XCircle className="w-2.5 h-2.5 ml-0.5 text-danger inline" />
                 )}
               </Badge>
             )
-          ) || <span className="text-text-muted-foreground text-xs">—</span>}
+          ) || <span className="text-text-muted text-xs">—</span>}
         </div>
       ),
     },
@@ -910,7 +908,7 @@ export default function UsersPage() {
         user.role_details ? (
           <RoleBadge role={user.role_details.name} />
         ) : (
-          <span className="text-text-muted-foreground text-xs">—</span>
+          <span className="text-text-muted text-xs">—</span>
         ),
     },
     {
@@ -952,7 +950,7 @@ export default function UsersPage() {
             the overflow menu with its handlers and dialogs untouched. */}
         <Inline justify="between" align="start" className="mb-6">
           <div>
-            <Heading level={1}>{t('users.title')}</Heading>
+            <Heading level={1} visual="h2">{t('users.title')}</Heading>
             {/* §30 — the header states the count that matters. */}
             {savedSecretKey && !loading && users.length > 0 && (
               <Text variant="caption" tone="muted" as="span" className="mt-1 block">
@@ -972,7 +970,7 @@ export default function UsersPage() {
                 href={settingsHref}
                 className={cn(
                   buttonVariants({ variant: 'secondary', size: 'sm' }),
-                  'border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                  'border-warning-border text-warning hover:bg-warning-bg'
                 )}
               >
                 <Icon icon={Key} size={14} /> {t('users.configSecretKey')}
@@ -997,10 +995,10 @@ export default function UsersPage() {
                         {t('users.export')}
                       </DropdownMenuSubmenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onClick={handleExportCSV} icon={Download} className="cursor-pointer text-emerald-500 data-[highlighted]:text-emerald-500 data-[highlighted]:bg-emerald-500/10">
+                        <DropdownMenuItem onClick={handleExportCSV} icon={Download} className="cursor-pointer text-success data-[highlighted]:text-success data-[highlighted]:bg-success-bg">
                           CSV
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportJSON} icon={FileCode} className="cursor-pointer text-sky-500 data-[highlighted]:text-sky-500 data-[highlighted]:bg-sky-500/10">
+                        <DropdownMenuItem onClick={handleExportJSON} icon={FileCode} className="cursor-pointer text-info data-[highlighted]:text-info data-[highlighted]:bg-info-bg">
                           JSON
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1038,12 +1036,12 @@ export default function UsersPage() {
         </Inline>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20">
+          <Card className="border-warning-border">
             <CardBody className="p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-                <Key className="w-8 h-8 text-amber-400" />
+              <div className="w-16 h-16 rounded-lg bg-warning-bg flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-warning" />
               </div>
-              <Heading level={2} visual="h4" className="text-amber-300 mb-2">{t('users.secretKeyRequired')}</Heading>
+              <Heading level={2} visual="h4" className="text-warning mb-2">{t('users.secretKeyRequired')}</Heading>
               <Text tone="secondary" as="p" className="mb-6">{t('users.secretKeyRequiredDesc')}</Text>
               <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
                 {t('users.goToSettings')}
@@ -1230,7 +1228,7 @@ export default function UsersPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-muted-foreground"
+                  className="text-text-muted"
                   leading={<Icon icon={RefreshCw} size={14} />}
                   onClick={() => {
                     setResendEmail(signupForm.email);
@@ -1311,7 +1309,7 @@ export default function UsersPage() {
           ) : (
             <>
               {!keyForAuth && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
+                <div className="p-3 rounded-lg bg-warning-bg border border-warning-border text-warning text-body flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {t('users.configPublishableForSignup')}
                 </div>
@@ -1358,8 +1356,8 @@ export default function UsersPage() {
                   />
                 </FormField>
                 {metadataSchema && metadataSchema.length > 0 && (
-                  <Stack gap={3} className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-                    <Text variant="overline" as="div" className="text-indigo-400 flex items-center gap-2">
+                  <Stack gap={3} className="rounded-lg border border-border bg-bg-subtle p-4">
+                    <Text variant="overline" as="div" className="text-text-muted flex items-center gap-2">
                       <Icon icon={Database} size={12} />
                       {t('users.metadataFields')}
                     </Text>
@@ -1370,7 +1368,7 @@ export default function UsersPage() {
                         label={
                           <>
                             {field.name}
-                            <span className="ml-2 text-[10px] text-muted-foreground font-mono">{field.type}</span>
+                            <span className="ml-2 text-[10px] text-text-muted font-mono">{field.type}</span>
                           </>
                         }
                       >
@@ -1408,7 +1406,7 @@ export default function UsersPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="text-muted-foreground"
+                    className="text-text-muted"
                     leading={<Icon icon={RefreshCw} size={14} />}
                     onClick={() => {
                       setResendEmail(signupForm.email || '');
@@ -1431,11 +1429,10 @@ export default function UsersPage() {
                       setVerificationCode('');
                       setResendCodeMode(false);
                     }}
-                    className="flex-1"
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" variant="primary" disabled={isSignupSubmitting} leading={isSignupSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
+                  <Button type="submit" variant="primary" disabled={isSignupSubmitting} leading={isSignupSubmitting ? <Spinner size={14} /> : undefined}>
                     {isSignupSubmitting ? t('users.registering') : t('users.register')}
                   </Button>
                 </DialogFooter>
@@ -1511,7 +1508,7 @@ export default function UsersPage() {
           ) : (
             <>
               {!keyForAuth && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
+                <div className="p-3 rounded-lg bg-warning-bg border border-warning-border text-warning text-body flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {t('users.configPublishableKeyShort')}
                 </div>
@@ -1560,11 +1557,10 @@ export default function UsersPage() {
                       setShowSigninPassword(false);
                       setSigninResult(null);
                     }}
-                    className="flex-1"
                   >
                     {t('common.cancel')}
                   </Button>
-                  <Button type="submit" variant="primary" disabled={isSigninSubmitting} leading={isSigninSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
+                  <Button type="submit" variant="primary" disabled={isSigninSubmitting} leading={isSigninSubmitting ? <Spinner size={14} /> : undefined}>
                     {isSigninSubmitting ? t('users.signingIn') : t('users.testLogin')}
                   </Button>
                 </DialogFooter>
@@ -1586,7 +1582,7 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           {publicKeyLoading ? (
-            <div className="py-8 flex items-center justify-center gap-2 text-muted-foreground">
+            <div className="py-8 flex items-center justify-center gap-2 text-text-muted">
               <Loader2 className="w-5 h-5 animate-spin" />
               {t('common.loading')}
             </div>
@@ -1744,8 +1740,8 @@ export default function UsersPage() {
 
           {!bulkProgress ? (
             <div className="space-y-4">
-              <div className="rounded-lg border border-danger-border/30 bg-danger-bg/5 p-3 text-sm">
-                <p className="text-muted-foreground">{t('users.deleteAllConfirmHint')}</p>
+              <div className="rounded-lg border border-danger-border/30 bg-danger-bg/5 p-3 text-body">
+                <p className="text-text-muted">{t('users.deleteAllConfirmHint')}</p>
                 <p className="mt-1 font-mono font-semibold text-danger">
                   {bulkPhrase}
                 </p>
@@ -1795,26 +1791,26 @@ export default function UsersPage() {
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center justify-between text-body">
+                  <span className="flex items-center gap-2 text-text-muted">
                     {bulkProgress.running && <Loader2 className="w-4 h-4 animate-spin" />}
                     {bulkProgress.finished
                       ? t('users.deleteAllDone')
                       : t('users.deleteAllInProgress')}
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="font-mono text-xs text-text-muted">
                     {t('users.deleteAllProgress', {
                       done: bulkProgress.done,
                       total: bulkProgress.total,
                     })}
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-subtle">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-bg-subtle">
                   <div
                     className={cn(
                       'h-full transition-all',
                       bulkProgress.errors.length > 0
-                        ? 'bg-amber-500'
+                        ? 'bg-warning-solid'
                         : 'bg-danger-bg'
                     )}
                     style={{
@@ -1826,7 +1822,7 @@ export default function UsersPage() {
                   />
                 </div>
                 {bulkProgress.finished && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-text-muted">
                     {t('users.deleteAllDoneSummary', {
                       ok: bulkProgress.done - bulkProgress.errors.length,
                       failed: bulkProgress.errors.length,
@@ -1836,16 +1832,16 @@ export default function UsersPage() {
               </div>
 
               {bulkProgress.errors.length > 0 && (
-                <div className="max-h-48 overflow-auto rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs space-y-1">
-                  <p className="font-semibold text-amber-500">
+                <div className="max-h-48 overflow-auto rounded-lg border border-warning-border bg-warning-bg p-3 text-xs space-y-1">
+                  <p className="font-semibold text-warning">
                     {t('users.deleteAllErrors', { count: bulkProgress.errors.length })}
                   </p>
-                  <ul className="space-y-0.5 text-muted-foreground">
+                  <ul className="space-y-0.5 text-text-muted">
                     {bulkProgress.errors.slice(0, 50).map((err) => (
                       <li key={err.id} className="font-mono">
                         <span className="text-text">{err.email || err.id}</span>
                         {' — '}
-                        <span className="text-amber-500">{err.message}</span>
+                        <span className="text-warning">{err.message}</span>
                       </li>
                     ))}
                     {bulkProgress.errors.length > 50 && (

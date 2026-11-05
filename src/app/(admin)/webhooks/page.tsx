@@ -29,8 +29,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Button,
-  buttonVariants,
   Card,
   CardBody,
   Dialog,
@@ -45,12 +43,13 @@ import {
   Input,
   JsonEditor,
   Select,
-  StatusBadge,
   Switch,
   Text,
   Tooltip,
   Spinner,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants } from '@/components/fdn/button';
+import { StatusBadge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
@@ -91,17 +90,17 @@ function useCommonEvents(t: (k: string) => string): WebhookEvent[] {
 const categoryColor: Record<string, string> = {
   Comunes: 'text-cyan-400 bg-cyan-500/10',
   User: 'text-indigo-400 bg-indigo-500/10',
-  Auth: 'text-sky-400 bg-sky-500/10',
+  Auth: 'text-info bg-info-bg',
   Session: 'text-purple-400 bg-purple-500/10',
-  Code: 'text-amber-400 bg-amber-500/10',
-  'Role & Policy': 'text-emerald-400 bg-emerald-500/10',
+  Code: 'text-warning bg-warning-bg',
+  'Role & Policy': 'text-success bg-success-bg',
   OAuth: 'text-orange-400 bg-orange-500/10',
   'API Key / App': 'text-pink-400 bg-pink-500/10',
-  Security: 'text-rose-400 bg-rose-500/10',
+  Security: 'text-danger bg-danger-bg',
 };
 
 function getCategoryColor(cat: string) {
-  return categoryColor[cat] || 'text-muted-foreground bg-subtle';
+  return categoryColor[cat] || 'text-text-muted bg-bg-subtle';
 }
 
 export default function WebhooksPage() {
@@ -435,7 +434,7 @@ export default function WebhooksPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Inline justify="between" className="mb-8">
           <div>
-            <Heading level={1}>{t('webhooks.title')}</Heading>
+            <Heading level={1} visual="h2">{t('webhooks.title')}</Heading>
             <Text variant="body-sm" tone="secondary" as="p" className="mt-1">{t('webhooks.subtitle')}</Text>
           </div>
           <Inline gap={2}>
@@ -444,7 +443,7 @@ export default function WebhooksPage() {
                 href={settingsHref}
                 className={cn(
                   buttonVariants({ variant: 'secondary', size: 'sm' }),
-                  'border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                  'border-warning-border text-warning hover:bg-warning-bg'
                 )}
               >
                 <Icon icon={Key} size={14} /> {t('webhooks.configSecretKey')}
@@ -471,12 +470,12 @@ export default function WebhooksPage() {
         </Inline>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20">
+          <Card className="border-warning-border">
             <CardBody className="p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-                <Key className="w-8 h-8 text-amber-400" />
+              <div className="w-16 h-16 rounded-lg bg-warning-bg flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-warning" />
               </div>
-              <Heading level={2} visual="h4" className="text-amber-300 mb-2">{t('webhooks.secretKeyRequired')}</Heading>
+              <Heading level={2} visual="h4" className="text-warning mb-2">{t('webhooks.secretKeyRequired')}</Heading>
               <Text tone="secondary" as="p" className="mb-6">{t('webhooks.configSecretKeyCard')}</Text>
               <Link href={settingsHref} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
                 {t('webhooks.goToSettings')}
@@ -485,11 +484,11 @@ export default function WebhooksPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
+            <div className="px-6 py-3 bg-bg-subtle border border-border rounded-lg flex items-center gap-2 text-xs text-text-muted">
               <ShieldCheck className="w-4 h-4" /> {t('webhooks.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-subtle/30 rounded-2xl border border-border/50">
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-bg-subtle/30 rounded-lg border border-border/50">
               <div className="flex-1 min-w-[300px]">
                 <Input
                   leading={<Icon icon={Search} size={14} />}
@@ -538,7 +537,7 @@ export default function WebhooksPage() {
             {webhooks.length === 0 ? (
               <Card className="border-dashed">
                 <CardBody className="p-16 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-accent-bg flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 rounded-lg bg-accent-bg flex items-center justify-center mx-auto mb-4">
                     <Webhook className="w-8 h-8 text-accent" />
                   </div>
                   <Heading level={2} visual="h4" className="mb-2">{t('webhooks.noWebhooks')}</Heading>
@@ -565,10 +564,10 @@ export default function WebhooksPage() {
                   <Card key={wh.id} className="overflow-hidden">
                     <Button
                       variant="ghost"
-                      className="w-full justify-start px-6 py-5 h-auto hover:bg-subtle/50 [&>span]:w-full [&>span]:gap-4"
+                      className="w-full justify-start px-6 py-5 h-auto hover:bg-bg-subtle/50 [&>span]:w-full [&>span]:gap-4"
                       onClick={() => setExpandedWebhook(expandedWebhook === wh.id ? null : wh.id)}
                     >
-                      <div className={cn('w-3 h-3 rounded-full shrink-0', wh.active ? 'bg-emerald-400' : 'bg-slate-600')} />
+                      <div className={cn('w-3 h-3 rounded-full shrink-0', wh.active ? 'bg-success-solid' : 'bg-border-strong')} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3">
                           <span className="font-semibold">{wh.name}</span>
@@ -578,23 +577,23 @@ export default function WebhooksPage() {
                             <StatusBadge status="disabled">{t('behaviors.inactive')}</StatusBadge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                        <div className="text-xs text-text-muted mt-1 flex items-center gap-2">
                           <Globe className="w-3 h-3" /> <span className="truncate max-w-xs">{wh.url}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4 shrink-0 text-xs text-text-muted">
                         <div className="flex items-center gap-1">
                           <Zap className="w-3.5 h-3.5" /> {wh.events.length} {t('webhooks.events')}
                         </div>
                         <div className="flex items-center gap-1">
                           <RotateCcw className="w-3.5 h-3.5" /> {wh.retries} {t('webhooks.retries')}
                         </div>
-                        <div className="text-muted-foreground">{new Date(wh.created_at).toLocaleDateString()}</div>
+                        <div className="text-text-muted">{new Date(wh.created_at).toLocaleDateString()}</div>
                       </div>
                       {expandedWebhook === wh.id ? (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform shrink-0" />
+                        <ChevronDown className="w-4 h-4 text-text-muted transition-transform shrink-0" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-text-muted transition-transform shrink-0" />
                       )}
                     </Button>
                     <AnimatePresence>
@@ -609,26 +608,26 @@ export default function WebhooksPage() {
                           <div className="px-6 py-5 space-y-5">
                             <div className="grid grid-cols-2 gap-6">
                               <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">{t('webhooks.details')}</h4>
-                                <div className="space-y-2 text-sm">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">{t('webhooks.details')}</h4>
+                                <div className="space-y-2 text-body">
                                   {wh.description && <p className="text-text">{wh.description}</p>}
-                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                  <div className="flex items-center gap-2 text-text-muted">
                                     <Lock className="w-3.5 h-3.5" />
                                     <span className="font-mono text-xs">{wh.secret.slice(0, 6)}{'•'.repeat(8)}</span>
-                                    <span className="text-muted-foreground text-xs">{t('webhooks.secretHash')}</span>
+                                    <span className="text-text-muted text-xs">{t('webhooks.secretHash')}</span>
                                   </div>
-                                  <div className="text-xs text-muted-foreground font-mono">ID: {wh.id}</div>
+                                  <div className="text-xs text-text-muted font-mono">ID: {wh.id}</div>
                                 </div>
                               </div>
                               <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">
                                   {t('webhooks.subscribedEvents')} ({wh.events.length})
                                 </h4>
                                 <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                                   {wh.events.map((ev) => {
                                     const cat = ev.split('.')[1] || '';
                                     const colorKey = Object.keys(categoryColor).find((k) => k.toLowerCase().includes(cat.toLowerCase())) || '';
-                                    const color = categoryColor[colorKey] || 'text-muted-foreground bg-subtle';
+                                    const color = categoryColor[colorKey] || 'text-text-muted bg-bg-subtle';
                                     return (
                                       <span key={ev} className={cn('px-2 py-0.5 rounded-md text-xs font-mono font-medium', color)}>
                                         {ev}
@@ -686,7 +685,7 @@ export default function WebhooksPage() {
           <DialogHeader>
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-accent-bg flex items-center justify-center text-accent">
+                <div className="w-10 h-10 rounded-lg bg-accent-bg flex items-center justify-center text-accent">
                   <Webhook className="w-5 h-5" />
                 </div>
                 <DialogTitle>{editingWebhook ? t('webhooks.editWebhookTitle') : t('webhooks.newWebhook')}</DialogTitle>
@@ -801,7 +800,7 @@ export default function WebhooksPage() {
                     </FormField>
                   </div>
 
-                  <div className="p-4 bg-subtle/50 rounded-2xl border">
+                  <div className="p-4 bg-bg-subtle/50 rounded-lg border">
                     <Switch
                       label={t('webhooks.activateImmediately')}
                       description={t('webhooks.activateImmediatelyDesc')}
@@ -823,11 +822,11 @@ export default function WebhooksPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor('Comunes'))}>{t('webhooks.mostCommon')}</span>
                       </div>
-                      <div className="space-y-1 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                      <div className="space-y-1 rounded-lg border border-border bg-bg-subtle p-3">
                         {COMMON_EVENTS.map((ev) => (
                           <label
                             key={ev.code}
-                            className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-subtle/50 cursor-pointer transition-colors group"
+                            className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-bg-subtle/50 cursor-pointer transition-colors group"
                           >
                             <div
                               className={cn(
@@ -845,39 +844,40 @@ export default function WebhooksPage() {
                             />
                             <div className="flex-1 min-w-0">
                               <div className="text-xs font-mono font-medium">{ev.code}</div>
-                              <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
+                              <div className="text-xs text-text-muted mt-0.5 truncate">{ev.description}</div>
                             </div>
                           </label>
                         ))}
                       </div>
                     </div>
 
-                    <div className="space-y-2 bg-subtle/30 rounded-2xl border p-3 max-h-56 overflow-y-auto">
+                    <div className="space-y-2 bg-bg-subtle/30 rounded-lg border p-3 max-h-56 overflow-y-auto">
                       {Object.entries(eventsByCategory).map(([category, catEvents]) => {
                         const commonCodes = new Set(COMMON_EVENTS.map((e) => e.code));
                         const filteredEvents = catEvents.filter((e) => !commonCodes.has(e.code));
                         if (filteredEvents.length === 0) return null;
                         return (
                           <div key={category}>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="w-full justify-between px-3 py-2 h-auto [&>span]:w-full [&>span]:justify-between"
-                              onClick={() => toggleCategory(category)}
-                            >
-                              <div className="flex items-center gap-2">
+                            {/* Three siblings and not a button around another button, which
+                                is invalid HTML: name and chevron expand, "Todos" selects. */}
+                            <div className="flex items-center gap-2 rounded-md pr-3 transition-colors hover:bg-surface-hover">
+                              <button
+                                type="button"
+                                className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
+                                aria-expanded={expandedCategories.has(category)}
+                                onClick={() => toggleCategory(category)}
+                              >
                                 <span className={cn('px-2 py-0.5 rounded-md text-xs font-semibold', getCategoryColor(category))}>{category}</span>
-                                <span className="text-xs text-muted-foreground">{filteredEvents.length} {t('webhooks.events')}</span>
+                                <span className="text-xs text-text-muted">{filteredEvents.length} {t('webhooks.events')}</span>
                                 {filteredEvents.every((e) => selectedEvents.has(e.code)) && filteredEvents.length > 0 && (
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                                 )}
-                              </div>
-                              <div className="flex items-center gap-2">
+                              </button>
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="xs"
-                                  className="text-xs text-muted-foreground hover:text-accent h-auto py-0 px-2"
+                                  className="text-xs text-text-muted hover:text-accent h-auto py-0 px-2"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     selectAllInCategory(category, filteredEvents);
@@ -885,13 +885,19 @@ export default function WebhooksPage() {
                                 >
                                   {filteredEvents.every((e) => selectedEvents.has(e.code)) ? t('webhooks.removeAll') : t('webhooks.all')}
                                 </Button>
-                                {expandedCategories.has(category) ? (
-                                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                            </Button>
+                                <button
+                                  type="button"
+                                  tabIndex={-1}
+                                  aria-hidden
+                                  onClick={() => toggleCategory(category)}
+                                >
+                                  {expandedCategories.has(category) ? (
+                                    <ChevronDown className="w-4 h-4 text-text-muted" />
+                                  ) : (
+                                    <ChevronRight className="w-4 h-4 text-text-muted" />
+                                  )}
+                                </button>
+                            </div>
                             <AnimatePresence>
                               {expandedCategories.has(category) && (
                                 <motion.div
@@ -905,7 +911,7 @@ export default function WebhooksPage() {
                                     {filteredEvents.map((ev) => (
                                       <label
                                         key={ev.code}
-                                        className="flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-subtle/50 cursor-pointer transition-colors group"
+                                        className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-bg-subtle/50 cursor-pointer transition-colors group"
                                       >
                                         <div
                                           className={cn(
@@ -923,7 +929,7 @@ export default function WebhooksPage() {
                                         />
                                         <div className="flex-1 min-w-0">
                                           <div className="text-xs font-mono font-medium">{ev.code}</div>
-                                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{ev.description}</div>
+                                          <div className="text-xs text-text-muted mt-0.5 truncate">{ev.description}</div>
                                         </div>
                                       </label>
                                     ))}
@@ -940,11 +946,11 @@ export default function WebhooksPage() {
               )}
             </div>
 
-            <DialogFooter className="gap-4 pt-6">
-              <Button type="button" variant="secondary" onClick={closeWebhookModal} className="flex-1">
+            <DialogFooter className="pt-6">
+              <Button type="button" variant="secondary" onClick={closeWebhookModal}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" variant="primary" disabled={isWebhookSubmitting} leading={isWebhookSubmitting ? <Spinner size={14} /> : undefined} className="flex-1">
+              <Button type="submit" variant="primary" disabled={isWebhookSubmitting} leading={isWebhookSubmitting ? <Spinner size={14} /> : undefined}>
                 {isWebhookSubmitting
                   ? (editingWebhook ? t('webhooks.updating') : t('webhooks.creating'))
                   : (editingWebhook ? t('webhooks.updateWebhook') : t('webhooks.createWebhook'))}

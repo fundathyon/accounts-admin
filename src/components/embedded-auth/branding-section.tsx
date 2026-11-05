@@ -292,7 +292,7 @@ export function BrandingSection({
         </FormField>
       </div>
 
-      <div className="rounded-xl border border-border p-4">
+      <div className="rounded-lg border border-border p-4">
         <Switch
           checked={hideBranding}
           onCheckedChange={(value) => onHideBrandingChange(value === true)}

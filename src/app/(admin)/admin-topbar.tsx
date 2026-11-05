@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, Moon, Search, Sun } from 'lucide-react';
+import { Bell, Moon, PanelLeftClose, PanelLeftOpen, Search, Settings, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Icon, Kbd, SidebarTrigger, Tooltip, Topbar } from '@foundathyon/community-ui';
-import { AdminUserMenu } from '@/components/admin-user-menu';
+import { Icon, Kbd, SidebarTrigger, Tooltip, useSidebar } from '@foundathyon/community-ui';
+import { AdminAppSwitcher } from '@/components/admin-app-switcher';
+import { IconButton, buttonVariants } from '@/components/fdn/button';
 import { useAdminCommandPalette } from '@/components/admin-command-palette';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
-import { BASE_PATH } from '@/lib/utils';
+import { BASE_PATH, cn } from '@/lib/utils';
 
 function buildHref(path: string) {
   return path === '/' ? `${BASE_PATH || '/'}` : `${BASE_PATH}${path}`.replace(/\/+/g, '/') || '/';
@@ -41,9 +42,26 @@ function ThemeToggle({ label }: { label: (dark: boolean) => string }) {
   );
 }
 
+/** Same placement as the Foundathyon admin: on the sidebar's top right edge. */
+export function SidebarToggleButton() {
+  const { t } = useI18n();
+  const { collapsed, setCollapsed } = useSidebar();
+  return (
+    <div className="absolute right-0 top-2 z-20 translate-x-full">
+      <IconButton
+        icon={collapsed ? PanelLeftOpen : PanelLeftClose}
+        label={t('commandPalette.search')}
+        variant="ghost"
+        onClick={() => setCollapsed(!collapsed)}
+        className="ml-2 rounded-md border bg-bg shadow-sm hover:bg-surface-hover"
+      />
+    </div>
+  );
+}
+
 /**
- * Shell header (§12). Replaces the floating sidebar trigger, which is why the
- * content column no longer needs its extra top padding to clear it.
+ * Shell header, the Foundathyon admin's layout: three grid columns so the search
+ * stays centred on the bar whatever the width of the app chip.
  */
 export function AdminTopbar() {
   const { t } = useI18n();
@@ -51,42 +69,61 @@ export function AdminTopbar() {
   const { setOpen } = useAdminCommandPalette();
 
   return (
-    <Topbar
-      leading={<SidebarTrigger label={t('commandPalette.search')} />}
-      center={
+    <header className="sticky top-0 z-40 grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-border bg-bg px-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="flex min-w-0 items-center gap-2 justify-self-start">
+        <SidebarTrigger className="md:hidden" label={t('commandPalette.search')} />
+        <AdminAppSwitcher />
+      </div>
+
+      <div className="hidden w-[min(24rem,28vw)] sm:block">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex h-7 w-full max-w-80 items-center gap-2 rounded-md border border-border bg-subtle px-2.5 text-caption text-muted-foreground transition-colors duration-150 hover:bg-surface-hover"
+          className="flex h-8 w-full items-center gap-2 rounded-md border border-border bg-bg-subtle px-2.5 text-body-sm text-text-muted transition-colors duration-150 hover:bg-surface-hover"
         >
           <Icon icon={Search} size={14} />
           <span className="flex-1 truncate text-left">{t('commandPalette.placeholder')}</span>
           <Kbd>{t('commandPalette.shortcut')}</Kbd>
         </button>
-      }
-      trailing={
-        <>
-          <ThemeToggle
-            label={(dark) => (dark ? t('sidebar.themeLight') : t('sidebar.themeDark'))}
-          />
-          <Tooltip content={t('sidebar.notifications')}>
-            <Link
-              href={buildHref('/notifications')}
-              aria-label={t('sidebar.notifications')}
-              className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-hover hover:text-text"
-            >
-              <Icon icon={Bell} size={16} />
-              {pendingOAuthLegacyMigration && (
-                <span
-                  className="pointer-events-none absolute right-1.5 top-1.5 size-2 rounded-full bg-orange-500 ring-2 ring-[var(--fdn-bg)]"
-                  aria-hidden
-                />
-              )}
-            </Link>
-          </Tooltip>
-          <AdminUserMenu />
-        </>
-      }
-    />
+      </div>
+
+      <div className="flex min-w-0 items-center justify-end gap-1 justify-self-end">
+        <a
+          href="https://accounts.authify.dev/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'hidden lg:inline-flex')}
+        >
+          {t('sidebar.docs')}
+        </a>
+        <ThemeToggle
+          label={(dark) => (dark ? t('sidebar.themeLight') : t('sidebar.themeDark'))}
+        />
+        <Tooltip content={t('sidebar.notifications')}>
+          <Link
+            href={buildHref('/notifications')}
+            aria-label={t('sidebar.notifications')}
+            className="relative flex size-8 items-center justify-center rounded-md text-text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text"
+          >
+            <Icon icon={Bell} size={16} />
+            {pendingOAuthLegacyMigration && (
+              <span
+                className="pointer-events-none absolute right-1.5 top-1.5 size-2 rounded-full bg-warning-solid ring-2 ring-[var(--fdn-bg)]"
+                aria-hidden
+              />
+            )}
+          </Link>
+        </Tooltip>
+        <Tooltip content={t('sidebar.settings')}>
+          <Link
+            href={buildHref('/settings')}
+            aria-label={t('sidebar.settings')}
+            className="relative flex size-8 items-center justify-center rounded-md text-text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text"
+          >
+            <Icon icon={Settings} size={16} />
+          </Link>
+        </Tooltip>
+      </div>
+    </header>
   );
 }
