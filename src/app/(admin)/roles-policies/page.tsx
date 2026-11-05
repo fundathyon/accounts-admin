@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Button,
-  buttonVariants,
   Card,
   Dialog,
   DialogContent,
@@ -34,6 +32,7 @@ import {
   Tooltip,
   type DataTableColumn,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants } from '@/components/fdn/button';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
@@ -226,7 +225,7 @@ function RolesPageContent() {
         header: t('roles.appId'),
         cell: (role) => (
           <span
-            className="block max-w-[200px] truncate font-mono text-code text-text-muted-foreground"
+            className="block max-w-[200px] truncate font-mono text-code text-text-muted"
             title={role.app_id}
           >
             {role.app_id}
@@ -241,7 +240,7 @@ function RolesPageContent() {
         header: t('roles.created'),
         align: 'right',
         cell: (role) => (
-          <span className="tabular-nums text-caption text-text-muted-foreground">
+          <span className="tabular-nums text-caption text-text-muted">
             {role.created_at ? new Date(role.created_at).toLocaleDateString() : '\u2014'}
           </span>
         ),
@@ -276,7 +275,7 @@ function RolesPageContent() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Heading level={1}>{t('sidebar.roles')}</Heading>
+            <Heading level={1} visual="h2">{t('sidebar.roles')}</Heading>
             {/* §30 — subtitle carries the count that matters. */}
             {savedSecretKey && !loading && !loadError && (
               <Text tone="secondary" className="mt-1" tabular>
@@ -292,7 +291,7 @@ function RolesPageContent() {
               href={settingsHref}
               className={cn(
                 buttonVariants({ variant: 'secondary' }),
-                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                'gap-2 border-warning-border text-warning hover:bg-warning-bg'
               )}
             >
               <Icon icon={Key} size={16} /> {t('roles.configSecretKey')}
@@ -311,10 +310,10 @@ function RolesPageContent() {
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20">
+          <Card className="border-warning-border">
             <EmptyState
               icon={Key}
-              title={<span className="text-amber-300">{t('roles.secretKeyRequiredCard')}</span>}
+              title={<span className="text-warning">{t('roles.secretKeyRequiredCard')}</span>}
               description={t('roles.secretKeyRequiredDesc')}
               action={
                 <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>

@@ -16,8 +16,8 @@
 .shell {
   display: flex;
   min-height: 100dvh;
-  background: #0f0f12;
-  color: #ffffff;
+  background: var(--fdn-bg);
+  color: var(--fdn-text);
 }
 
 .branding {
@@ -26,14 +26,14 @@
   overflow: hidden;
   width: 50%;
   padding: 3rem;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.22), #0f0f12 55%, #0f0f12);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--fdn-text) 8%, transparent), var(--fdn-bg) 55%, var(--fdn-bg));
 }
 
 .orb {
   position: absolute;
   border-radius: 999px;
   filter: blur(64px);
-  background: rgba(249, 115, 22, 0.1);
+  background: color-mix(in oklab, var(--fdn-text) 4%, transparent);
   pointer-events: none;
 }
 
@@ -59,7 +59,7 @@
   height: 30rem;
   transform: translate(-50%, -50%);
   border-radius: 999px;
-  border: 1px solid rgba(249, 115, 22, 0.1);
+  border: 1px solid color-mix(in oklab, var(--fdn-text) 8%, transparent);
   pointer-events: none;
 }
 
@@ -72,7 +72,7 @@
   height: 28rem;
   border-radius: 999px;
   filter: blur(40px);
-  background: conic-gradient(from 0deg, transparent 0%, rgba(249, 115, 22, 0.45) 10%, transparent 30%, transparent 100%);
+  background: conic-gradient(from 0deg, transparent 0%, color-mix(in oklab, var(--fdn-text) 14%, transparent) 10%, transparent 30%, transparent 100%);
   animation: authOrbitSpin 14s linear infinite;
   pointer-events: none;
 }
@@ -117,8 +117,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: #f97316;
-  color: #ffffff;
+  background: var(--fdn-accent-solid);
+  color: var(--fdn-accent-on-solid);
   font-weight: 700;
   font-size: 1.125rem;
 }
@@ -143,7 +143,7 @@
 
 .tagline {
   margin: 0.75rem 0 0;
-  color: #94a3b8;
+  color: var(--fdn-text-muted);
   font-size: 0.875rem;
   max-width: 20rem;
 }
@@ -162,7 +162,7 @@
   align-items: center;
   gap: 0.625rem;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--fdn-text-secondary);
 }
 
 .featureCheck {
@@ -172,8 +172,8 @@
   width: 1.25rem;
   height: 1.25rem;
   border-radius: 999px;
-  background: rgba(249, 115, 22, 0.15);
-  color: #f97316;
+  background: var(--fdn-surface-hover);
+  color: var(--fdn-text-secondary);
   flex-shrink: 0;
 }
 
@@ -187,7 +187,7 @@
   align-items: center;
   justify-content: space-between;
   font-size: 0.6875rem;
-  color: #6b7280;
+  color: var(--fdn-text-muted);
 }
 
 .formPane {

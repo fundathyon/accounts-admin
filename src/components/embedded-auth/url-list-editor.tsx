@@ -1,7 +1,8 @@
 'use client';
 
 import { MinusCircle, Plus } from 'lucide-react';
-import { Button, FormField, IconButton, Input, Text } from '@foundathyon/community-ui';
+import { FormField, Input, Text } from '@foundathyon/community-ui';
+import { Button, IconButton } from '@/components/fdn/button';
 
 interface UrlListEditorProps {
   /** Group label, e.g. "Orígenes permitidos". */
@@ -105,7 +106,7 @@ export function UrlListEditor({
                   variant="ghost"
                   // mt-1.5 = the FormField's gap under its (visually hidden) label,
                   // so the button lines up with the input.
-                  className="mt-1.5 shrink-0 text-muted-foreground hover:text-danger"
+                  className="mt-1.5 shrink-0 text-text-muted hover:text-danger"
                   onClick={() => onChange(values.filter((_, i) => i !== index))}
                 />
               </div>

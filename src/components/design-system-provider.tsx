@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react';
 import { useTheme } from 'next-themes';
 import { FoundathyonProvider } from '@foundathyon/community-ui';
-import { BRAND_ACCENT } from '@/lib/brand';
 
 /**
  * Mounts the design system with next-themes as the single theme owner.
@@ -17,13 +16,13 @@ import { BRAND_ACCENT } from '@/lib/brand';
  *
  * Passing `theme` makes it controlled, and `storageKey={null}` stops it
  * persisting a second, competing preference: next-themes already owns that.
+ * The accent is set in globals.css, see the note there.
  */
 export function DesignSystemProvider({ children }: { children: ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <FoundathyonProvider
-      accent={BRAND_ACCENT}
       theme={resolvedTheme === 'light' ? 'light' : 'dark'}
       onThemeChange={(next) => setTheme(next)}
       storageKey={null}

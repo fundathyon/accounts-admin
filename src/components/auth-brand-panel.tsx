@@ -12,7 +12,7 @@ interface BrandPanelProps {
  * lg, where each screen instead renders the compact BrandMark above the form
  * card. Ported from Dokgistry's own BrandPanel (apps/web/components/BrandPanel.tsx),
  * itself ported from vault, so every product's first-run screens read as the
- * same family — same split layout, same orange glow, same feature-list shape.
+ * same family — same split layout, glow and feature-list shape, in the neutral accent.
  */
 export function BrandPanel({ headline, tagline }: BrandPanelProps) {
   const { t } = useI18n();

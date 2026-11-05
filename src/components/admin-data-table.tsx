@@ -3,7 +3,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Button,
   ConfirmDialog,
   DataTable,
   DataTableColumnsButton,
@@ -14,6 +13,7 @@ import {
   type DataTableLabels,
   type DataTableProps,
 } from '@foundathyon/community-ui';
+import { Button } from '@/components/fdn/button';
 import { Trash2 } from 'lucide-react';
 import { useI18n } from '@/context/i18n-context';
 

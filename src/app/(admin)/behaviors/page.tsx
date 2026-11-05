@@ -4,14 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Puzzle, Key, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
-import {
-  Badge,
-  buttonVariants,
-  Card,
-  Heading,
-  Spinner,
-  Text,
-} from '@foundathyon/community-ui';
+import { Card, Heading, Spinner, Text } from '@foundathyon/community-ui';
+import { buttonVariants } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
@@ -59,15 +54,15 @@ export default function BehaviorsPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">{t('sidebar.behaviors')}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{t('behaviors.desc')}</p>
+            <h1 className="text-h2 font-semibold tracking-tight">{t('sidebar.behaviors')}</h1>
+            <p className="text-text-muted text-body mt-1">{t('behaviors.desc')}</p>
           </div>
           {!savedSecretKey && (
             <Link
               href={settingsHref}
               className={cn(
                 buttonVariants({ variant: 'secondary', size: 'sm' }),
-                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                'gap-2 border-warning-border text-warning hover:bg-warning-bg'
               )}
             >
               <Key className="w-4 h-4" /> {t('behaviors.configSecretKey')}
@@ -76,11 +71,11 @@ export default function BehaviorsPage() {
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20 gap-6 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <Key className="w-8 h-8 text-amber-400" />
+          <Card className="border-warning-border gap-6 p-12 text-center">
+            <div className="w-16 h-16 rounded-lg bg-warning-bg flex items-center justify-center mx-auto mb-4">
+              <Key className="w-8 h-8 text-warning" />
             </div>
-            <Heading level={2} visual="h3" className="text-amber-300 mb-2">
+            <Heading level={2} visual="h3" className="text-warning mb-2">
               {t('behaviors.secretKeyRequired')}
             </Heading>
             <Text tone="secondary" className="mb-6">
@@ -92,18 +87,18 @@ export default function BehaviorsPage() {
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
+            <div className="px-6 py-3 bg-bg-subtle border border-border rounded-lg flex items-center gap-2 text-xs text-text-muted">
               <ShieldCheck className="w-4 h-4" /> {t('roles.consultingWith')} <span className="font-mono">{truncateKey(savedSecretKey)}</span>
             </div>
 
             {behaviors.length === 0 ? (
               <Card className="border-dashed gap-6 p-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
-                  <Puzzle className="w-8 h-8 text-rose-400" />
+                <div className="w-16 h-16 rounded-lg bg-danger-bg flex items-center justify-center mx-auto mb-4">
+                  <Puzzle className="w-8 h-8 text-text-muted" />
                 </div>
                 <Heading level={2} visual="h3" className="mb-2">
                   {t('behaviors.noBehaviors')}
@@ -116,7 +111,7 @@ export default function BehaviorsPage() {
                   <Link key={behavior.id} href={behaviorsHref(behavior.id)}>
                     <Card className="gap-6 p-6 cursor-pointer hover:border-accent-border transition-all group">
                       <div className="flex justify-between items-start mb-4">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-lg border border-border bg-bg-subtle flex items-center justify-center text-text-muted group-hover:scale-110 transition-transform">
                           <Puzzle className="w-5 h-5" />
                         </div>
                         <Badge
@@ -130,9 +125,9 @@ export default function BehaviorsPage() {
                       <Heading level={3} visual="h3" className="mb-1">
                         {behavior.behavior_code}
                       </Heading>
-                      <p className="text-xs text-muted-foreground font-mono mb-4">{behavior.id}</p>
+                      <p className="text-xs text-text-muted font-mono mb-4">{behavior.id}</p>
 
-                      <div className="text-xs text-muted-foreground mt-auto pt-4 border-t border-border flex flex-col gap-1">
+                      <div className="text-xs text-text-muted mt-auto pt-4 border-t border-border flex flex-col gap-1">
                         <div className="flex justify-between">
                           <span>{t('behaviors.updated')}:</span>
                           <span className="text-text">{new Date(behavior.updated_at).toLocaleDateString()}</span>

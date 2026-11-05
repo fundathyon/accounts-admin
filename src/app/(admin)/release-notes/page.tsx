@@ -29,7 +29,7 @@ function Subsection({
 function BulletList({ keys, prefix }: { keys: readonly string[]; prefix: string }) {
   const { t } = useI18n();
   return (
-    <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-text/90">
+    <ul className="list-disc space-y-2 pl-5 text-body leading-relaxed text-text/90">
       {keys.map((key) => (
         <li key={key}>{t(`${prefix}.${key}`)}</li>
       ))}

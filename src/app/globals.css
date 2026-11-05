@@ -22,8 +22,8 @@
 
 :root {
   --card: oklch(1 0 0);
-  --primary: #4dd4e0;
-  --primary-hover: #3bc4d0;
+  --primary: oklch(0.205 0 0);
+  --primary-hover: oklch(0.3 0 0);
   --border: oklch(0.922 0 0);
   --text-muted: #94a3b8;
   --radius: 0.625rem;
@@ -32,7 +32,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary-foreground: oklch(0.145 0 0);
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -41,16 +41,16 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --input: oklch(0.922 0 0);
-  --ring: #4dd4e0;
-  --chart-1: #4dd4e0;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #4dd4e0;
-  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
@@ -58,7 +58,7 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--fdn-font-sans);
 }
 
 @layer utilities {
@@ -73,10 +73,10 @@ body {
   /* `primary` is intentionally unmapped, like `accent`: the design system owns
      the brand colour now. Leaving it mapped would keep generating cyan
      `.text-primary`/`.bg-primary` utilities from this theme. */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: var(--fdn-radius-sm);
+  --radius-md: var(--fdn-radius-md);
+  --radius-lg: var(--fdn-radius-lg);
+  --radius-xl: var(--fdn-radius-xl);
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
@@ -118,8 +118,8 @@ body {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #30becb;
-  --primary-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -129,20 +129,20 @@ body {
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: #30becb;
-  --chart-1: #30becb;
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: #30becb;
+  --sidebar-primary: oklch(0.922 0 0);
   --sidebar-primary-foreground: oklch(0.145 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: #30becb;
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -280,4 +280,162 @@ body {
   --spacing-drawer-sm: var(--fdn-drawer-sm);
   --spacing-drawer-md: var(--fdn-drawer-md);
   --spacing-drawer-lg: var(--fdn-drawer-lg);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Look of the Foundathyon admin. Everything below is ported from
+   fundathyon/admin (src/app/globals.css) so both admins read as one product;
+   keep them in sync when that file changes.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Geist instead of Inter, 256px sidebar, 56px header. The variables come from
+   next/font, set on <html> in the root layout. */
+:root {
+  --fdn-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --fdn-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --fdn-sidebar-width: 16rem;
+  --fdn-header-height: 3.5rem;
+}
+
+/* Achromatic accent. It lives here and not in the provider's `accent` prop on
+   purpose: the prop is applied in a useEffect, so the first paint would flash
+   the library's default orange. */
+:root {
+  --fdn-accent-hue: 0;
+  --fdn-accent-c: 0;
+  --fdn-accent-l: 0.922;
+  --fdn-accent-on-solid: oklch(0.205 0 0);
+}
+
+:root[data-fdn-theme="light"] {
+  --fdn-accent-l: 0.21;
+  --fdn-accent-on-solid: oklch(0.985 0 0);
+}
+
+/* Achromatic neutral ramp: the library's lightness steps without its tint. */
+:root {
+  --fdn-bg: oklch(0.155 0 0);
+  --fdn-bg-subtle: oklch(0.185 0 0);
+  --fdn-surface: oklch(0.208 0 0);
+  --fdn-surface-raised: oklch(0.238 0 0);
+  --fdn-surface-hover: oklch(0.262 0 0);
+  --fdn-border: oklch(0.305 0 0);
+  --fdn-border-strong: oklch(0.42 0 0);
+  --fdn-text: oklch(0.945 0 0);
+  --fdn-text-secondary: oklch(0.79 0 0);
+  --fdn-text-muted: oklch(0.67 0 0);
+  --fdn-text-disabled: oklch(0.47 0 0);
+}
+
+:root[data-fdn-theme="light"] {
+  --fdn-bg: oklch(0.983 0 0);
+  --fdn-bg-subtle: oklch(0.962 0 0);
+  --fdn-surface: oklch(1 0 0);
+  --fdn-surface-raised: oklch(1 0 0);
+  --fdn-surface-hover: oklch(0.958 0 0);
+  --fdn-border: oklch(0.905 0 0);
+  --fdn-border-strong: oklch(0.775 0 0);
+  --fdn-text: oklch(0.21 0 0);
+  --fdn-text-secondary: oklch(0.37 0 0);
+  --fdn-text-muted: oklch(0.47 0 0);
+  --fdn-text-disabled: oklch(0.72 0 0);
+}
+
+/* Button metrics (set by @/components/fdn/button): 20/22/26/30. Unlayered so
+   they beat the library's utilities without `!`. */
+.fdn-btn-xs,
+.fdn-btn-sm,
+.fdn-btn-md,
+.fdn-btn-lg {
+  height: auto;
+}
+.fdn-btn-xs {
+  padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 1.5);
+  gap: calc(var(--spacing) * 1);
+  font-size: 0.6875rem;
+  line-height: 0.875rem;
+}
+.fdn-btn-sm {
+  padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 2);
+  gap: calc(var(--spacing) * 1);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+.fdn-btn-md {
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2.5);
+  gap: calc(var(--spacing) * 1);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+.fdn-btn-lg {
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+  gap: calc(var(--spacing) * 1.5);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.fdn-btn-xs svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.fdn-btn-sm svg,
+.fdn-btn-md svg,
+.fdn-btn-lg svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.fdn-icon-btn-xs,
+.fdn-icon-btn-sm,
+.fdn-icon-btn-md,
+.fdn-icon-btn-lg {
+  padding: 0;
+}
+.fdn-icon-btn-xs { width: 1.25rem; height: 1.25rem; }
+.fdn-icon-btn-sm { width: 1.375rem; height: 1.375rem; }
+.fdn-icon-btn-md { width: 1.625rem; height: 1.625rem; }
+.fdn-icon-btn-lg { width: 1.875rem; height: 1.875rem; }
+.fdn-icon-btn-xs svg { width: 0.75rem; height: 0.75rem; }
+.fdn-icon-btn-sm svg,
+.fdn-icon-btn-md svg,
+.fdn-icon-btn-lg svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Badge metrics (set by @/components/fdn/badge): 22px, radius 6, 12/16 text. */
+.fdn-badge {
+  height: auto;
+  gap: calc(var(--spacing) * 1);
+  padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+.fdn-badge svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* Fields focus with a 1px ring; buttons, checkboxes and switches keep 2px. */
+.focus-within\:outline-focus:focus-within,
+[data-slot="input"]:focus-visible,
+[data-slot="textarea"]:focus-visible,
+button[role="combobox"]:focus-visible {
+  outline: 1px solid var(--fdn-focus);
+  outline-offset: 2px;
+}
+
+/* Dialogs at the Foundathyon admin metrics: page background, 24px padding and an
+   18px title. community-ui's are surface-raised, 16px and 15px. */
+[role="dialog"].fdn-z-modal,
+[role="alertdialog"].fdn-z-modal {
+  padding: calc(var(--spacing) * 6);
+  background: var(--fdn-bg);
+}
+[role="dialog"].fdn-z-modal h2,
+[role="alertdialog"].fdn-z-modal h2 {
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  font-weight: var(--text-h3--font-weight);
+  letter-spacing: var(--text-h3--letter-spacing);
 }

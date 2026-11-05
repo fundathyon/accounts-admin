@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { RotateCcw } from 'lucide-react';
-import { Alert, CodeBlock, FormField, IconButton, Input, Text, buttonVariants } from '@foundathyon/community-ui';
+import { Alert, CodeBlock, FormField, Input, Text } from '@foundathyon/community-ui';
+import { IconButton, buttonVariants } from '@/components/fdn/button';
 import { useI18n } from '@/context/i18n-context';
 import { buildAdminHref, cn } from '@/lib/utils';
 

@@ -10,17 +10,9 @@ import {
   Info,
   Check,
 } from 'lucide-react';
-import {
-  Badge,
-  Button,
-  FormField,
-  IconButton,
-  Input,
-  Select,
-  Spinner,
-  Text,
-  Tooltip,
-} from '@foundathyon/community-ui';
+import { FormField, Input, Select, Spinner, Text, Tooltip } from '@foundathyon/community-ui';
+import { Button, IconButton } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { FieldHint } from '@/components/ui/field-hint';
@@ -255,8 +247,8 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border ${
                       active
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                        : 'border-border/60 bg-subtle/30 text-muted-foreground'
+                        ? 'border-success-border bg-success-bg text-success'
+                        : 'border-border/60 bg-bg-subtle/30 text-text-muted'
                     }`}
                   >
                     {pl.label} · {count}
@@ -269,15 +261,15 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
       </div>
 
       {showProviderHint && (
-        <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 p-3 flex gap-2 items-start text-xs">
-          <Info className="w-4 h-4 text-sky-300 shrink-0 mt-0.5" />
+        <div className="rounded-lg border border-info-border bg-info-bg p-3 flex gap-2 items-start text-xs">
+          <Info className="w-4 h-4 text-info shrink-0 mt-0.5" />
           <div className="space-y-1 min-w-0">
-            <p className="text-sky-200 leading-relaxed">
+            <p className="text-info leading-relaxed">
               {providerKey === 'apple'
                 ? t('oauth.audiences.appleHint')
                 : t('oauth.audiences.googleHint')}
             </p>
-            <p className="text-[11px] text-sky-200/70 leading-relaxed">
+            <p className="text-[11px] text-info leading-relaxed">
               {t('oauth.audiences.audSource')}
             </p>
           </div>
@@ -286,7 +278,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
 
       {loading ? (
         <div className="py-6 flex justify-center">
-          <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+          <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
         </div>
       ) : sortedAudiences.length > 0 ? (
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -299,7 +291,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
-                className="rounded-lg border border-border/60 bg-subtle/30 p-3 space-y-2"
+                className="rounded-lg border border-border/60 bg-bg-subtle/30 p-3 space-y-2"
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
@@ -307,13 +299,13 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                       {a.platform}
                     </Badge>
                     {a.label?.trim() && (
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="text-xs text-text-muted truncate">
                         {a.label}
                       </span>
                     )}
                   </div>
                   {a.created_at && (
-                    <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                    <span className="text-[10px] font-mono text-text-muted shrink-0">
                       {new Date(a.created_at).toLocaleDateString()}
                     </span>
                   )}
@@ -326,14 +318,14 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
                     icon={copiedId === a.id ? Check : Copy}
                     label={t('oauth.audiences.copy')}
                     variant="secondary"
-                    className={`shrink-0 h-8 w-8 ${copiedId === a.id ? 'text-emerald-400' : ''}`}
+                    className={`shrink-0 h-8 w-8 ${copiedId === a.id ? 'text-success' : ''}`}
                     onClick={() => handleCopy(a)}
                   />
                   <IconButton
                     icon={Trash2}
                     label={t('oauth.audiences.delete')}
                     variant="secondary"
-                    className="shrink-0 h-8 w-8 text-muted-foreground hover:text-danger hover:border-danger-border/40"
+                    className="shrink-0 h-8 w-8 text-text-muted hover:text-danger hover:border-danger-border/40"
                     loading={deletingId === a.id}
                     disabled={deletingId === a.id}
                     onClick={() => handleDelete(a)}
@@ -344,8 +336,8 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
           </AnimatePresence>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-border/60 bg-subtle/20 p-4 text-center">
-          <p className="text-xs text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border/60 bg-bg-subtle/20 p-4 text-center">
+          <p className="text-xs text-text-muted">
             {t('oauth.audiences.empty')}
           </p>
         </div>
@@ -384,7 +376,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
               <FormField
                 label={
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="text-[10px] uppercase tracking-wide text-text-muted">
                     {t('oauth.audiences.platform')}
                   </span>
                 }
@@ -399,7 +391,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
               <FormField
                 className="min-w-0"
                 label={
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <span className="text-[10px] uppercase tracking-wide text-text-muted flex items-center gap-1">
                     {t('oauth.audiences.audience')}
                     <FieldHint text={t('oauth.audiences.audienceHint')} />
                   </span>
@@ -418,7 +410,7 @@ export function OAuthNativeAudiences({ configId, provider }: Props) {
             </div>
             <FormField
               label={
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                <span className="text-[10px] uppercase tracking-wide text-text-muted">
                   {t('oauth.audiences.label')}
                 </span>
               }

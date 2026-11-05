@@ -18,11 +18,12 @@
 The design system is `@foundathyon/community-ui`, pinned in `package.json`. Use it directly for primitives:
 
 ```ts
-import { DataTable, Button, FoundathyonProvider, OnboardingScreen } from '@foundathyon/community-ui';
+import { DataTable, FoundathyonProvider, OnboardingScreen } from '@foundathyon/community-ui';
 ```
 
 - `DataTable` is exposed via the **framed wrapper** [`admin-data-table.tsx`](admin-data-table.tsx) (a.k.a. `AdminDataTable`) — always use this wrapper in pages, not the raw DS `DataTable`. See memory `tables-follow-ds-figure` for the reasoning.
-- `FoundathyonProvider` is wrapped by [`design-system-provider.tsx`](design-system-provider.tsx) with the app's `BRAND_ACCENT`. Do not re-mount it.
+- `Button`, `IconButton`, `buttonVariants`, `Badge` and `StatusBadge` come from [`fdn/`](fdn/), never directly from community-ui: that layer applies the Foundathyon admin metrics.
+- `FoundathyonProvider` is wrapped by [`design-system-provider.tsx`](design-system-provider.tsx). The accent lives in `globals.css`. Do not re-mount it.
 - Some DS-suggested Tailwind utilities (`h-control-*`, `text-body`, etc.) are not present in this app's tokens (see memory `admin-globals-css-theme-gap`). If you need one, either use an existing token or add it to [`src/app/globals.css`](../app/globals.css) intentionally.
 
 If a needed primitive is missing, **extend the DS repo**, not this folder. That keeps other Foundathyon apps aligned.

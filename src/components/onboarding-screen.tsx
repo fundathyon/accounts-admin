@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Key, Shield } from 'lucide-react';
 import {
   Alert,
-  Button,
   Card,
   CardBody,
   FormField,
@@ -14,13 +13,12 @@ import {
   Text,
   TokenDisplay,
 } from '@foundathyon/community-ui';
+import { Button } from '@/components/fdn/button';
 import { BrandMark, BrandPanel } from '@/components/auth-brand-panel';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH } from '@/lib/utils';
 import styles from '@/styles/auth-shell.module.css';
-
-// Same orange as Dokgistry's --vault-accent (#f97316) — see login/page.tsx.
 
 interface CreateAppResponse {
   data?: {
@@ -129,7 +127,7 @@ export function OnboardingScreen() {
                       onChange={(e) => setFormData((p) => ({ ...p, root_email: e.target.value }))}
                     />
                   </FormField>
-                  <Button type="submit" variant="primary" loading={isSubmitting} className="w-full">
+                  <Button type="submit" variant="primary" size="lg" loading={isSubmitting} className="w-full">
                     {isSubmitting ? t('onboarding.creating') : t('onboarding.createApp')}
                   </Button>
                 </form>
@@ -153,7 +151,7 @@ export function OnboardingScreen() {
                   </div>
 
                   {data?.created_role && (
-                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-subtle p-4">
+                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-bg-subtle p-4">
                       <Text variant="label" tone="muted" className="flex items-center gap-1.5">
                         <Icon icon={Shield} size={14} /> {t('onboarding.roleCreated')}
                       </Text>
@@ -169,7 +167,7 @@ export function OnboardingScreen() {
                     </div>
                   )}
 
-                  <Button onClick={handleFinish} variant="primary" className="w-full">
+                  <Button onClick={handleFinish} variant="primary" size="lg" className="w-full">
                     {t('onboarding.goToDashboard')}
                   </Button>
                 </div>

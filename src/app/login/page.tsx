@@ -4,7 +4,6 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AuthForm,
-  Button,
   Card,
   CardBody,
   FormField,
@@ -13,14 +12,11 @@ import {
   PasswordInput,
   Text,
 } from '@foundathyon/community-ui';
+import { Button } from '@/components/fdn/button';
 import { BrandMark, BrandPanel } from '@/components/auth-brand-panel';
 import { useI18n } from '@/context/i18n-context';
 import { apiUrl, BASE_PATH } from '@/lib/utils';
 import styles from '@/styles/auth-shell.module.css';
-
-// Same orange as Dokgistry's --vault-accent (#f97316), expressed as the
-// oklch triple @foundathyon/community-ui's accent engine needs — see
-// accounts-admin-community-ui-migration memory for the exact conversion.
 
 function LoginForm() {
   const router = useRouter();
@@ -80,7 +76,7 @@ function LoginForm() {
                 loading={loading}
                 onSubmit={handleSubmit}
                 submitSlot={
-                  <Button type="submit" variant="primary" loading={loading} className="w-full">
+                  <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
                     {loading ? t('login.entering') : t('login.enter')}
                   </Button>
                 }

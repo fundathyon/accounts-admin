@@ -14,9 +14,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Badge,
-  Button,
-  buttonVariants,
   Card,
   CardBody,
   CardHeader,
@@ -38,6 +35,8 @@ import {
   Textarea,
   type DataTableColumn,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants } from '@/components/fdn/button';
+import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { BASE_PATH, cn } from '@/lib/utils';
@@ -471,7 +470,7 @@ function EmailAccessPageContent() {
         hideBelow: 'sm',
         align: 'right',
         cell: (row) => (
-          <span className="tabular-nums text-caption text-text-muted-foreground">
+          <span className="tabular-nums text-caption text-text-muted">
             {new Date(row.created_at).toLocaleString()}
           </span>
         ),
@@ -569,8 +568,7 @@ function EmailAccessPageContent() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Heading level={1} className="flex items-center gap-3">
-              <Icon icon={ListFilter} size={20} className="text-accent" />
+            <Heading level={1} visual="h2">
               {t('sidebar.emailAccess')}
             </Heading>
             {/* §30 — subtitle carries the count that matters: the size of the
@@ -598,7 +596,7 @@ function EmailAccessPageContent() {
                 href={settingsHref}
                 className={cn(
                   buttonVariants({ variant: 'secondary' }),
-                  'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                  'gap-2 border-warning-border text-warning hover:bg-warning-bg'
                 )}
               >
                 <Icon icon={Key} size={16} /> {t('emailAccess.configSecretKey')}
@@ -608,10 +606,10 @@ function EmailAccessPageContent() {
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20">
+          <Card className="border-warning-border">
             <EmptyState
               icon={Key}
-              title={<span className="text-amber-300">{t('emailAccess.secretKeyRequired')}</span>}
+              title={<span className="text-warning">{t('emailAccess.secretKeyRequired')}</span>}
               description={t('emailAccess.secretKeyRequiredDesc')}
               action={
                 <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
@@ -622,7 +620,7 @@ function EmailAccessPageContent() {
           </Card>
         ) : (
           <div className="space-y-6">
-            <div className="px-6 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-2 text-xs text-emerald-400">
+            <div className="px-6 py-3 bg-bg-subtle border border-border rounded-lg flex items-center gap-2 text-xs text-text-muted">
               <Icon icon={ShieldCheck} size={16} />
               <span>
                 {t('roles.consultingWith')}{' '}
@@ -643,7 +641,7 @@ function EmailAccessPageContent() {
                   <Text tone="secondary">
                     {t('emailAccess.desc')}
                     {settings?.app_id ? (
-                      <span className="mt-2 block font-mono text-code text-text-muted-foreground">
+                      <span className="mt-2 block font-mono text-code text-text-muted">
                         app_id: {settings.app_id}
                       </span>
                     ) : null}
@@ -652,7 +650,7 @@ function EmailAccessPageContent() {
                 <CardBody className="p-6 pt-0">
                   {settingsLoading && !settings ? (
                     <div className="py-12 flex justify-center">
-                      <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+                      <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
                     </div>
                   ) : (
                     <form onSubmit={handleSaveSettings} className="space-y-8 max-w-lg">
@@ -667,7 +665,7 @@ function EmailAccessPageContent() {
                         />
                       </FormField>
 
-                      <div className="rounded-xl border border-border/60 p-4">
+                      <div className="rounded-lg border border-border/60 p-4">
                         <Switch
                           id="eval-block"
                           checked={evalBlockOnLogin}
@@ -885,32 +883,32 @@ function EmailAccessPageContent() {
             {testResult && (
               <div
                 className={cn(
-                  'rounded-md border p-3 text-sm',
+                  'rounded-md border p-3 text-body',
                   testResult.allowed
-                    ? 'border-emerald-500/40 bg-emerald-500/5'
-                    : 'border-red-500/40 bg-red-500/5',
+                    ? 'border-success-border bg-success-bg'
+                    : 'border-danger-border bg-danger-bg',
                 )}
               >
                 <div className="flex items-center gap-2 font-medium">
                   {testResult.allowed ? (
                     <>
-                      <Icon icon={ShieldCheck} size={16} className="text-emerald-500" />
+                      <Icon icon={ShieldCheck} size={16} className="text-success" />
                       Permitido
                     </>
                   ) : (
                     <>
-                      <Icon icon={ShieldOff} size={16} className="text-red-500" />
+                      <Icon icon={ShieldOff} size={16} className="text-danger" />
                       Bloqueado
                     </>
                   )}
                 </div>
                 {testResult.scope && (
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="mt-1 text-xs text-text-muted">
                     scope: <code className="font-mono">{testResult.scope}</code>
                   </div>
                 )}
                 {testResult.reason && (
-                  <div className="mt-1 text-xs text-muted-foreground">{testResult.reason}</div>
+                  <div className="mt-1 text-xs text-text-muted">{testResult.reason}</div>
                 )}
               </div>
             )}

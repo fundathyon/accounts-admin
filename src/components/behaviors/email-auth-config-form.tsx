@@ -3,21 +3,20 @@
 import { useMemo, useState } from 'react';
 import { Mail, Link2, Lock, ShieldCheck, Info, AlertTriangle, Palette, Database, Plus, Trash2 } from 'lucide-react';
 import {
-    Button,
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    FormField,
-    IconButton,
-    Input,
-    Select,
-    Switch,
-    Text,
-    Tooltip,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  FormField,
+  Input,
+  Select,
+  Switch,
+  Text,
+  Tooltip,
 } from '@foundathyon/community-ui';
+import { Button, IconButton } from '@/components/fdn/button';
 import { useI18n } from '@/context/i18n-context';
 import type { MetadataFieldSchema } from '@/lib/admin-types';
 import { cn } from '@/lib/utils';
@@ -41,7 +40,7 @@ function HintIcon({ text, className }: { text: string; className?: string }) {
     return (
         <span className="inline-flex" onClick={(e) => e.preventDefault()}>
             <Tooltip content={text} className={cn('whitespace-normal', className)}>
-                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                <Info className="w-3.5 h-3.5 text-text-muted cursor-help" />
             </Tooltip>
         </span>
     );
@@ -183,10 +182,10 @@ export function EmailAuthConfigForm({
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={cn(
-                            "flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap",
+                            "flex items-center gap-1.5 px-4 py-3 text-body font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap",
                             activeTab === tab.id
                                 ? "border-accent-border text-accent"
-                                : "border-transparent text-muted-foreground hover:text-text"
+                                : "border-transparent text-text-muted hover:text-text"
                         )}
                     >
                         <tab.icon className="w-3.5 h-3.5 shrink-0" />
@@ -198,7 +197,7 @@ export function EmailAuthConfigForm({
             <div className="flex-1 overflow-y-auto pr-2 space-y-6">
                 {activeTab === 'email' && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.active')}
                                 description="Habilita el inicio de sesión con email"
@@ -206,7 +205,7 @@ export function EmailAuthConfigForm({
                                 onCheckedChange={(val) => updateSubConfig('email', 'enabled', val)}
                             />
                         </div>
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.allowPlusAlias')}
                                 description="Permitir alias con el signo + (ej: user+test@gmail.com)"
@@ -214,7 +213,7 @@ export function EmailAuthConfigForm({
                                 onCheckedChange={(val) => updateSubConfig('email', 'allow_plus_alias', val)}
                             />
                         </div>
-                        <div className="p-4 rounded-xl border bg-subtle/30 space-y-4">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30 space-y-4">
                             <Text as="div" variant="label" tone="muted" className="text-xs uppercase tracking-wider">
                                 {t('emailAuth.normalization')}
                             </Text>
@@ -240,7 +239,7 @@ export function EmailAuthConfigForm({
 
                 {activeTab === 'password' && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.active')}
                                 description="Permite autenticación por contraseña"
@@ -294,7 +293,7 @@ export function EmailAuthConfigForm({
                             </FormField>
                         </div>
 
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.denyCommonPasswords')}
                                 description="Bloquea contraseñas comunes (123456, password, etc)"
@@ -307,7 +306,7 @@ export function EmailAuthConfigForm({
 
                 {activeTab === 'magic' && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.active')}
                                 description={t('emailAuth.helpers.magicLinkActive')}
@@ -316,7 +315,7 @@ export function EmailAuthConfigForm({
                             />
                         </div>
 
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={
                                     <span className="flex items-center gap-2">
@@ -389,12 +388,12 @@ export function EmailAuthConfigForm({
                                 />
                             </FormField>
                         </div>
-                        <p className="text-xs text-amber-400 flex items-start gap-1">
+                        <p className="text-xs text-warning flex items-start gap-1">
                             <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                             <span>{t('emailAuth.helpers.rateLimit')}</span>
                         </p>
 
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.singleUse')}
                                 description="El link solo sirve para un uso"
@@ -403,7 +402,7 @@ export function EmailAuthConfigForm({
                             />
                         </div>
 
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.bindToIp')}
                                 description={t('emailAuth.helpers.bindToIp')}
@@ -412,7 +411,7 @@ export function EmailAuthConfigForm({
                             />
                         </div>
 
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.bindToUserAgent')}
                                 description={t('emailAuth.helpers.bindToUserAgent')}
@@ -421,14 +420,14 @@ export function EmailAuthConfigForm({
                             />
                         </div>
 
-                        <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
+                        <div className="rounded-lg border border-border bg-bg-subtle p-4 space-y-4">
                             <div className="flex items-center gap-2">
-                                <Palette className="w-4 h-4 text-violet-400" />
-                                <Text as="span" variant="label" className="text-sm font-semibold">
+                                <Palette className="w-4 h-4 text-text-muted" />
+                                <Text as="span" variant="label" className="text-body font-semibold">
                                     {t('emailAuth.branding')}
                                 </Text>
                             </div>
-                            <p className="text-xs text-muted-foreground -mt-2">{t('emailAuth.helpers.branding')}</p>
+                            <p className="text-xs text-text-muted -mt-2">{t('emailAuth.helpers.branding')}</p>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField label={t('emailAuth.fromName')}>
@@ -479,7 +478,7 @@ export function EmailAuthConfigForm({
 
                 {activeTab === 'verification' && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={
                                     <span className="flex items-center gap-2">
@@ -565,18 +564,18 @@ export function EmailAuthConfigForm({
                         </FormField>
 
                         {config.verification?.code_strategy === 'fixed' && (
-                            <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/5">
+                            <div className="p-4 rounded-lg border border-warning-border bg-warning-bg">
                                 <FormField
                                     label={
                                         <>
-                                            <span className="text-amber-700 dark:text-amber-400">
+                                            <span className="text-warning">
                                                 {t('emailAuth.fixedCode')}
                                             </span>
                                             <HintIcon text={t('emailAuth.tooltips.fixedCode')} className="max-w-sm" />
                                         </>
                                     }
                                     description={
-                                        <span className="text-amber-700 dark:text-amber-400 flex items-start gap-1">
+                                        <span className="text-warning flex items-start gap-1">
                                             <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                                             <span>{t('emailAuth.strategy.fixedWarning')}</span>
                                         </span>
@@ -596,7 +595,7 @@ export function EmailAuthConfigForm({
                             <Input
                                 value={config.verification?.mode || ''}
                                 readOnly
-                                className="text-muted-foreground cursor-not-allowed"
+                                className="text-text-muted cursor-not-allowed"
                             />
                         </FormField>
                     </div>
@@ -604,7 +603,7 @@ export function EmailAuthConfigForm({
 
                 {activeTab === 'metadata' && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.active')}
                                 description={t('emailAuth.metadataSchemaHelp')}
@@ -613,7 +612,7 @@ export function EmailAuthConfigForm({
                             />
                         </div>
 
-                        <div className="p-4 rounded-xl border bg-subtle/30">
+                        <div className="p-4 rounded-lg border bg-bg-subtle/30">
                             <Switch
                                 label={t('emailAuth.metadataAdditionalProps')}
                                 description={t('emailAuth.metadataAdditionalPropsHelp')}
@@ -634,15 +633,15 @@ export function EmailAuthConfigForm({
                             </div>
 
                             {(metadataSchema.scheme ?? []).length === 0 && (
-                                <p className="text-xs text-muted-foreground text-center py-6 border rounded-xl border-dashed">
+                                <p className="text-xs text-text-muted text-center py-6 border rounded-lg border-dashed">
                                     {t('emailAuth.metadataNoFields')}
                                 </p>
                             )}
 
                             {(metadataSchema.scheme ?? []).map((field, idx) => (
-                                <div key={idx} className="rounded-xl border bg-subtle/20 p-4 space-y-3">
+                                <div key={idx} className="rounded-lg border bg-bg-subtle/20 p-4 space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                        <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                                             {t('emailAuth.metadataField')} #{idx + 1}
                                         </span>
                                         <IconButton
@@ -651,7 +650,7 @@ export function EmailAuthConfigForm({
                                             label={t('common.delete')}
                                             variant="ghost"
                                             onClick={() => removeMetadataField(idx)}
-                                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 h-7 w-7 p-0"
+                                            className="text-danger hover:text-danger hover:bg-danger-bg h-7 w-7 p-0"
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
@@ -661,14 +660,14 @@ export function EmailAuthConfigForm({
                                                 onChange={(e) => updateMetadataField(idx, 'name', e.target.value)}
                                                 placeholder="phone_number"
                                                 wrapperClassName="h-8"
-                                                className="font-mono text-sm"
+                                                className="font-mono text-body"
                                             />
                                         </FormField>
                                         <FormField label={<span className="text-xs">{t('emailAuth.metadataFieldType')}</span>}>
                                             <Select
                                                 value={field.type}
                                                 onValueChange={(val) => updateMetadataField(idx, 'type', val as MetadataFieldSchema['type'])}
-                                                className="h-8 text-sm"
+                                                className="h-8 text-body"
                                                 items={[
                                                     { value: 'string', label: 'string' },
                                                     { value: 'number', label: 'number' },
@@ -690,7 +689,7 @@ export function EmailAuthConfigForm({
                                                     value={field.min_length ?? ''}
                                                     onChange={(e) => updateMetadataField(idx, 'min_length', e.target.value ? parseInt(e.target.value) : undefined)}
                                                     wrapperClassName="h-8"
-                                                    className="text-sm"
+                                                    className="text-body"
                                                 />
                                             </FormField>
                                             <FormField label={<span className="text-xs">{t('emailAuth.metadataMaxLength')}</span>}>
@@ -699,7 +698,7 @@ export function EmailAuthConfigForm({
                                                     value={field.max_length ?? ''}
                                                     onChange={(e) => updateMetadataField(idx, 'max_length', e.target.value ? parseInt(e.target.value) : undefined)}
                                                     wrapperClassName="h-8"
-                                                    className="text-sm"
+                                                    className="text-body"
                                                 />
                                             </FormField>
                                         </div>
@@ -712,7 +711,7 @@ export function EmailAuthConfigForm({
                                                     value={field.minimum ?? ''}
                                                     onChange={(e) => updateMetadataField(idx, 'minimum', e.target.value ? parseFloat(e.target.value) : undefined)}
                                                     wrapperClassName="h-8"
-                                                    className="text-sm"
+                                                    className="text-body"
                                                 />
                                             </FormField>
                                             <FormField label={<span className="text-xs">{t('emailAuth.metadataMaximum')}</span>}>
@@ -721,7 +720,7 @@ export function EmailAuthConfigForm({
                                                     value={field.maximum ?? ''}
                                                     onChange={(e) => updateMetadataField(idx, 'maximum', e.target.value ? parseFloat(e.target.value) : undefined)}
                                                     wrapperClassName="h-8"
-                                                    className="text-sm"
+                                                    className="text-body"
                                                 />
                                             </FormField>
                                         </div>
@@ -739,7 +738,7 @@ export function EmailAuthConfigForm({
                                                 }}
                                                 placeholder="value1, value2, value3"
                                                 wrapperClassName="h-8"
-                                                className="font-mono text-sm"
+                                                className="font-mono text-body"
                                             />
                                         </FormField>
                                     )}
@@ -764,7 +763,7 @@ export function EmailAuthConfigForm({
             <Dialog open={pendingFixed} onOpenChange={(open) => { if (!open) setPendingFixed(false); }}>
                 <DialogContent className="max-w-lg sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                        <DialogTitle className="flex items-center gap-2 text-warning">
                             <AlertTriangle className="w-5 h-5" />
                             {t('emailAuth.confirmFixed.title')}
                         </DialogTitle>
@@ -772,13 +771,13 @@ export function EmailAuthConfigForm({
                             <p>{t('emailAuth.confirmFixed.warning')}</p>
                             <p className="font-medium">
                                 {t('emailAuth.confirmFixed.allowedEnvs')}{' '}
-                                <code className="font-mono text-xs bg-subtle px-1.5 py-0.5 rounded">
+                                <code className="font-mono text-xs bg-bg-subtle px-1.5 py-0.5 rounded">
                                     {FIXED_CODE_ALLOWED_ENVS.join(', ')}
                                 </code>
                             </p>
                             <p>
                                 {t('emailAuth.confirmFixed.typeToConfirm')}{' '}
-                                <code className="font-mono font-semibold text-xs bg-subtle px-1.5 py-0.5 rounded">
+                                <code className="font-mono font-semibold text-xs bg-bg-subtle px-1.5 py-0.5 rounded">
                                     {FIXED_CODE_CONFIRM_PHRASE}
                                 </code>
                             </p>
@@ -798,10 +797,9 @@ export function EmailAuthConfigForm({
                             {t('common.cancel')}
                         </Button>
                         <Button
-                            variant="primary"
+                            variant="destructive"
                             onClick={confirmSwitchToFixed}
                             disabled={confirmInput.trim() !== FIXED_CODE_CONFIRM_PHRASE}
-                            className="bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-500"
                         >
                             {t('emailAuth.confirmFixed.confirm')}
                         </Button>

@@ -16,9 +16,6 @@ import {
 import { motion } from 'framer-motion';
 import {
   Alert,
-  Badge,
-  Button,
-  buttonVariants,
   Card,
   Dialog,
   DialogContent,
@@ -30,15 +27,15 @@ import {
   FormField,
   Heading,
   Icon,
-  IconButton,
   Inline,
   Input,
   KeyValue,
   SecretField,
   Spinner,
-  StatusBadge,
   Text,
 } from '@foundathyon/community-ui';
+import { Button, buttonVariants, IconButton } from '@/components/fdn/button';
+import { Badge, StatusBadge } from '@/components/fdn/badge';
 import type { DataTableColumn, DataTableSort, StatusKey } from '@foundathyon/community-ui';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
@@ -455,7 +452,7 @@ export default function ApiKeysPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Heading level={1}>{t('apiKeys.title')}</Heading>
+            <Heading level={1} visual="h2">{t('apiKeys.title')}</Heading>
             <Text tone="secondary" className="mt-1">
               {t('apiKeys.subtitle')}
             </Text>
@@ -471,7 +468,7 @@ export default function ApiKeysPage() {
               href={settingsHref}
               className={cn(
                 buttonVariants({ variant: 'secondary' }),
-                'gap-2 border-amber-500/20 text-amber-500 hover:bg-amber-500/10'
+                'gap-2 border-warning-border text-warning hover:bg-warning-bg'
               )}
             >
               <Icon icon={Key} size={16} /> {t('apiKeys.configSecretKey')}
@@ -489,10 +486,10 @@ export default function ApiKeysPage() {
         </div>
 
         {!savedSecretKey ? (
-          <Card className="border-amber-500/20">
+          <Card className="border-warning-border">
             <EmptyState
               icon={Key}
-              title={<span className="text-amber-300">{t('apiKeys.secretKeyRequired')}</span>}
+              title={<span className="text-warning">{t('apiKeys.secretKeyRequired')}</span>}
               description={t('apiKeys.configSecretKeyCard')}
               action={
                 <Link href={settingsHref} className={cn(buttonVariants({ variant: 'primary' }))}>
@@ -503,7 +500,7 @@ export default function ApiKeysPage() {
           </Card>
         ) : loading ? (
           <div className="py-20 flex justify-center">
-            <Spinner size={20} label={t('common.loading')} className="text-muted-foreground" />
+            <Spinner size={20} label={t('common.loading')} className="text-text-muted" />
           </div>
         ) : apps.length === 0 && apiKeys.length === 0 ? (
           <Card className="border-dashed">
@@ -583,7 +580,7 @@ export default function ApiKeysPage() {
             {apps.length > 0 && envFilteredKeys.length > 0 && !filtersActive && (
               <Card className="p-8">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-accent-bg flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-accent-bg flex items-center justify-center shrink-0">
                     <Icon icon={Key} size={20} className="text-accent" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -680,7 +677,7 @@ export default function ApiKeysPage() {
             </div>
           ) : (
             <form onSubmit={handleGenerate} className="space-y-4">
-              <Text variant="body-sm" tone="secondary" className="block rounded-lg border border-border bg-subtle/20 px-3 py-2">
+              <Text variant="body-sm" tone="secondary" className="block rounded-lg border border-border bg-bg-subtle/20 px-3 py-2">
                 {t('apiKeys.generateUsesSecretApp') ||
                   'Las claves se crearán para la aplicación asociada a tu Secret Key guardada en ajustes.'}
               </Text>
@@ -767,7 +764,7 @@ export default function ApiKeysPage() {
               <div className="space-y-2">
                 <Text variant="caption" tone="muted" className="block">{t('apiKeys.publishableKey')}</Text>
                 <Inline gap={2} align="start">
-                  <Text variant="code" as="p" className="break-all bg-subtle/50 rounded-lg p-3 flex-1 min-w-0">
+                  <Text variant="code" as="p" className="break-all bg-bg-subtle/50 rounded-lg p-3 flex-1 min-w-0">
                     {selectedApiKey.publishable_key}
                   </Text>
                   <IconButton
@@ -799,7 +796,7 @@ export default function ApiKeysPage() {
                   </KeyValue>
                 )}
                 {selectedApiKey.revoked_at && (
-                  <KeyValue label={t('apiKeys.revoked')} className="col-span-2 text-amber-500">
+                  <KeyValue label={t('apiKeys.revoked')} className="col-span-2 text-warning">
                     {new Date(selectedApiKey.revoked_at).toLocaleString()}
                   </KeyValue>
                 )}
@@ -813,7 +810,7 @@ export default function ApiKeysPage() {
                       size="md"
                       loading={actionLoading}
                       onClick={handleDeactivate}
-                      className="text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      className="text-warning border-warning-border hover:bg-warning-bg"
                       leading={<Icon icon={PowerOff} size={14} />}
                     >
                       {t('apiKeys.deactivate')}
