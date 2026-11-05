@@ -17,6 +17,15 @@ import {
   ScrollText,
   ListFilter,
   AppWindow,
+  FileJson,
+  Fingerprint,
+  Gauge,
+  History,
+  Link2,
+  Lock,
+  LockKeyhole,
+  MapPin,
+  Plug,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -48,14 +57,23 @@ function buildHref(path: string) {
 const navItems: { id: string; path: string; icon: LucideIcon; labelKey: string; proOnly?: boolean }[] = [
   { id: 'dashboard', path: '/', icon: LayoutDashboard, labelKey: 'sidebar.dashboard' },
   { id: 'users', path: '/users', icon: Users, labelKey: 'sidebar.users' },
+  { id: 'user_metadata', path: '/user-metadata', icon: FileJson, labelKey: 'sidebar.userMetadata' },
   { id: 'roles_policies', path: '/roles-policies', icon: Shield, labelKey: 'sidebar.roles' },
+  { id: 'policies', path: '/policies', icon: Lock, labelKey: 'sidebar.policies' },
   { id: 'webhooks', path: '/webhooks', icon: Webhook, labelKey: 'sidebar.webhooks' },
   { id: 'api_keys', path: '/api-keys', icon: Key, labelKey: 'sidebar.apiKeys' },
   { id: 'oauth_providers', path: '/oauth-providers', icon: LogIn, labelKey: 'sidebar.oauthProviders' },
+  { id: 'mcp_connect', path: '/mcp-connect', icon: Plug, labelKey: 'sidebar.mcpConnect' },
   { id: 'behaviors', path: '/behaviors', icon: Puzzle, labelKey: 'sidebar.behaviors' },
   { id: 'email_templates', path: '/email-templates', icon: Mail, labelKey: 'sidebar.emailTemplates' },
   { id: 'email_access', path: '/email-access', icon: ListFilter, labelKey: 'sidebar.emailAccess' },
   { id: 'embedded_auth', path: '/embedded-auth', icon: AppWindow, labelKey: 'sidebar.embeddedAuth', proOnly: true },
+  { id: 'mfa', path: '/mfa', icon: Fingerprint, labelKey: 'sidebar.mfa' },
+  { id: 'session_security', path: '/session-security', icon: LockKeyhole, labelKey: 'sidebar.sessionSecurity' },
+  { id: 'security_limits', path: '/security-limits', icon: Gauge, labelKey: 'sidebar.securityLimits' },
+  { id: 'geo_access', path: '/geo-access', icon: MapPin, labelKey: 'sidebar.geoAccess', proOnly: true },
+  { id: 'access_log', path: '/access-log', icon: History, labelKey: 'sidebar.accessLog' },
+  { id: 'identity_linking', path: '/identity-linking', icon: Link2, labelKey: 'sidebar.identityLinking' },
   { id: 'tokens', path: '/tokens', icon: Ticket, labelKey: 'sidebar.tokens' },
   { id: 'settings', path: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
 ];
@@ -87,7 +105,7 @@ export function AdminSidebar() {
             const usersActive = isUsersSection && (pathname === '/users' || pathname?.startsWith('/users/'));
             const pathMatch = item.path === '/' ? (pathname === '/' || pathname === '') : (pathname === item.path || pathname?.startsWith(item.path + '/'));
             const active = pathMatch || usersActive;
-            const needsKey = ['users', 'webhooks', 'behaviors', 'roles_policies', 'oauth_providers', 'email_access', 'embedded_auth'].includes(item.id);
+            const needsKey = ['users', 'user_metadata', 'webhooks', 'behaviors', 'roles_policies', 'policies', 'oauth_providers', 'mcp_connect', 'email_access', 'embedded_auth', 'mfa', 'session_security', 'security_limits', 'geo_access', 'access_log', 'identity_linking'].includes(item.id);
             // Descriptive hint — distinct from the label, so it is kept. When the
             // sidebar collapses SidebarItem renders the label tooltip itself, and
             // two tooltips must not stack on one trigger.

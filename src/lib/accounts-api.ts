@@ -44,6 +44,18 @@ export function requireAdminKey(
   return { key: ADMIN_API_KEY };
 }
 
+/** The allowed query params of a request, ready to append to a path ("" when there are none). */
+export function pickQuery(request: Request, allowed: readonly string[]): string {
+  const source = new URL(request.url).searchParams;
+  const out = new URLSearchParams();
+  for (const key of allowed) {
+    const value = source.get(key);
+    if (value) out.set(key, value);
+  }
+  const query = out.toString();
+  return query ? `?${query}` : '';
+}
+
 interface ProxyInit extends Omit<RequestInit, 'body'> {
   body?: BodyInit;
   /** Message returned in the `{success:false,error:{message}}` envelope on network failure. */

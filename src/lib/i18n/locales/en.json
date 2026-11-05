@@ -3,14 +3,23 @@
     "edition": "{edition} Edition",
     "dashboard": "Dashboard",
     "users": "Users",
+    "userMetadata": "User metadata",
     "roles": "Roles",
+    "policies": "Policies",
     "webhooks": "Webhooks",
     "apiKeys": "API Keys",
     "oauthProviders": "OAuth Providers",
+    "mcpConnect": "MCP Connect",
     "behaviors": "Behaviors",
     "emailTemplates": "Email Templates",
     "emailAccess": "Email access",
     "embeddedAuth": "Embedded Auth",
+    "mfa": "Second factor",
+    "sessionSecurity": "Session security",
+    "securityLimits": "Security limits",
+    "geoAccess": "Regional blocking",
+    "accessLog": "Access",
+    "identityLinking": "Identity linking",
     "tokens": "Tokens",
     "settings": "Settings",
     "logout": "Log out",
@@ -548,6 +557,938 @@
       "createAccount": "Create account",
       "unavailable": "Sign-in is not available right now.",
       "protectedBy": "Secured by Foundathyon Accounts"
+    }
+  },
+  "securityScreens": {
+    "proBadge": "Pro",
+    "configSecretKey": "Configure Secret Key",
+    "secretKeyRequired": "Secret Key required",
+    "secretKeyRequiredDesc": "Set the app's Secret Key in Settings to view and edit this screen.",
+    "proOnlyTitle": "Available in Accounts Pro",
+    "backToDashboard": "Back to dashboard",
+    "dirty": "You have unsaved changes.",
+    "clean": "No pending changes.",
+    "discard": "Discard",
+    "saveChanges": "Save changes",
+    "saved": "Changes saved",
+    "networkError": "Network error",
+    "result": "Result"
+  },
+  "mfa": {
+    "modes": {
+      "off": {
+        "label": "Disabled",
+        "description": "The second factor is never requested, even if the person has set up an authenticator app."
+      },
+      "optional": {
+        "label": "Optional",
+        "description": "Only requested from people who enabled the authenticator app on their account."
+      },
+      "required": {
+        "label": "Required",
+        "description": "Everyone must set up the authenticator app when signing in and use it every time."
+      }
+    },
+    "recommendedLabel": "{label} (recommended)",
+    "flows": {
+      "password": {
+        "label": "Password",
+        "description": "Sign-in with email and password."
+      },
+      "oauth": {
+        "label": "Web and embedded OAuth",
+        "description": "Google, Apple, GitHub… in the browser or embedded."
+      },
+      "native": {
+        "label": "Native login",
+        "description": "Sign-in from native apps (iOS, Android)."
+      },
+      "magic_link": {
+        "label": "Magic link",
+        "description": "Access link sent by email."
+      },
+      "email_code": {
+        "label": "Email code",
+        "description": "One-time code sent by email."
+      },
+      "title": "In which flows",
+      "offHint": "With the second factor off, it's not asked for in any flow.",
+      "onHint": "The second factor is only asked for in the checked flows.",
+      "none": "Choose at least one flow or turn off the second factor."
+    },
+    "summary": {
+      "off": "Nobody will have to confirm a second factor when signing in.",
+      "noFlows": "It won't be requested in any flow: choose at least one.",
+      "allFlows": "all flows",
+      "someFlows": "{count} of {total} flows",
+      "required": "All users will confirm a code from their authenticator app in {flows}.",
+      "optional": "Anyone who enabled the authenticator app will confirm a code in {flows}."
+    },
+    "errors": {
+      "invalidMode": "Accounts doesn't recognize that second-factor mode.",
+      "invalidFlow": "Accounts doesn't recognize one of the chosen flows. Update Accounts or remove that flow."
+    },
+    "loadFailed": "Couldn't load the second factor ({status})",
+    "saveFailed": "Couldn't save ({status})",
+    "unsupportedInstance": "This Accounts instance doesn't have the second factor.",
+    "title": "Second factor (MFA)",
+    "description": "When an authenticator app code (TOTP) is asked for on top of the first factor, and in which sign-in methods.",
+    "upgrade": {
+      "title": "Update Accounts",
+      "body": "This Accounts instance doesn't support configuring the second factor yet. It's available from the version that includes it."
+    },
+    "when": {
+      "title": "When it's asked for",
+      "description": "The second factor is a 6-digit code from an authenticator app (Google Authenticator, 1Password…).",
+      "requiredWarning": "Users without a second factor will have to set it up on their next sign-in. Let your users know before saving."
+    },
+    "notes": {
+      "optional": "“Optional” doesn't force anyone: each person decides whether to turn on the authenticator app from their account.",
+      "unchecked": "Unchecking a flow leaves it with a single factor, even if the person has the authenticator app turned on."
+    }
+  },
+  "sessionSecurity": {
+    "fields": {
+      "oauth_token_delivery": "Token delivery after OAuth",
+      "refresh_rotation": "Refresh token rotation",
+      "revoke_sessions_on_password_change": "Sign out other sessions when the password changes"
+    },
+    "delivery": {
+      "code": {
+        "label": "One-time code (recommended)",
+        "description": "After sign-in, Accounts redirects to your app with a code that expires in seconds. Your backend or app exchanges it for the tokens; they never appear in the URL or the browser history."
+      },
+      "query": {
+        "label": "Tokens in the URL (legacy)",
+        "description": "Accounts redirects with the access token and refresh token in the URL. They can end up in the history, in proxy logs and in the Referer header."
+      },
+      "description": "How the user returns to your app after signing in with Google, GitHub, Microsoft or Apple."
+    },
+    "errors": {
+      "unknownField": "Accounts doesn't recognize the “{label}” field. Update Accounts.",
+      "unknownFields": "Accounts doesn't recognize some of the fields. Update Accounts.",
+      "rejectedValue": "Accounts rejected the value of “{label}”.",
+      "rejectedValues": "Accounts rejected some of the values."
+    },
+    "legacy": "Legacy",
+    "impactLabel": "Impact on client apps:",
+    "guide": {
+      "title": "Migration guide to the one-time code",
+      "intro": "Do this before changing token delivery: apps that keep reading tokens from the URL will stop signing in with OAuth.",
+      "step1": "On your app's callback page, read the <code>code</code> parameter from the URL instead of <code>access_token</code> and <code>refresh_token</code>.",
+      "step2": "Exchange it immediately with <code>{endpoint}</code>, sending <code>{body}</code> with your publishable key. The response includes the access token and the refresh token, just like a normal login.",
+      "step3": "The code is single-use and expires in seconds: don't store it or retry it. If the exchange fails, start the login again.",
+      "step4": "Remove the code from the URL (for example with <code>history.replaceState</code>).",
+      "step5": "Deploy your client apps and, once they all exchange the code, change the delivery here and save."
+    },
+    "loadFailed": "Could not load session security ({status})",
+    "notConfigurable": "This Accounts instance has no configurable session security.",
+    "saveFailed": "Could not save ({status})",
+    "title": "Session security",
+    "subtitle": "How your app receives tokens after an OAuth login and what happens to open sessions.",
+    "status": {
+      "recommended": "Recommended configuration",
+      "noPending": "No pending changes",
+      "legacyCountOne": "{count} legacy setting",
+      "legacyCountMany": "{count} legacy settings"
+    },
+    "unavailable": {
+      "title": "Update Accounts",
+      "body": "This Accounts instance does not yet allow adjusting session security per app. It is available from the version that includes it."
+    },
+    "legacyWarning": {
+      "body": "They were kept so your client apps don't break; new apps start with the recommended settings. Migrate when your clients are ready: {fields}."
+    },
+    "codeWarning": {
+      "title": "Update your client apps before saving",
+      "body": "They'll receive a <code>code</code> instead of the tokens and must exchange it with <code>{endpoint}</code>; apps that read the tokens from the URL will stop signing in with OAuth.",
+      "viewGuide": "View the migration guide"
+    },
+    "sessions": {
+      "description": "Open sessions pick it up on their next refresh.",
+      "rotation": {
+        "description": "Each use of a refresh token returns a new one and invalidates the previous one. If someone reuses an old one, Accounts closes that session.",
+        "impact": "always store the refresh_token returned by each refresh. If two tabs or processes refresh at the same time with the same token, one of them will lose the session."
+      },
+      "revoke": {
+        "description": "When the password is changed or reset, Accounts closes all of the user's sessions except the current one.",
+        "impact": "the user's other devices will have to sign in again: their refresh token stops working and the next refresh returns 401."
+      }
+    }
+  },
+  "securityLimits": {
+    "sections": {
+      "rate_limit": {
+        "title": "Request rate limit",
+        "description": "Throttles anyone who makes too many consecutive requests to the authentication endpoints."
+      },
+      "lockout": {
+        "title": "Account lockout",
+        "description": "After several failed password attempts the account is locked for a while. Each consecutive lockout lasts longer, following the ladder."
+      },
+      "api_keys": {
+        "title": "Secret keys",
+        "description": "Throttles anyone trying invalid secret keys against the API."
+      },
+      "mfa": {
+        "title": "Second factor",
+        "description": "How long the temporary second-factor code lasts and how many mistakes are allowed."
+      }
+    },
+    "fields": {
+      "rateLimitIpMax": {
+        "label": "Requests per IP",
+        "description": "How many requests a single IP can make in the window."
+      },
+      "rateLimitIpWindow": {
+        "label": "Window per IP",
+        "description": "Time over which an IP's requests are counted."
+      },
+      "rateLimitAccountMax": {
+        "label": "Emails sent per account",
+        "description": "How many emails (codes, magic links, recovery) are sent to a single account in the window."
+      },
+      "rateLimitAccountWindow": {
+        "label": "Window per account",
+        "description": "Time over which emails sent to an account are counted."
+      },
+      "lockoutThreshold": {
+        "label": "Failed attempts",
+        "description": "Failed attempts that lock the account."
+      },
+      "lockoutWindow": {
+        "label": "Attempts window",
+        "description": "Time over which failed attempts are counted."
+      },
+      "lockoutReset": {
+        "label": "Reset the ladder after",
+        "description": "With no lockouts during this time, the next one goes back to the first step."
+      },
+      "apiKeysFailureMax": {
+        "label": "Failed attempts",
+        "description": "Invalid secret keys accepted from a single origin before blocking it."
+      },
+      "apiKeysFailureWindow": {
+        "label": "Window",
+        "description": "Time over which failed attempts are counted."
+      },
+      "mfaTokenTtl": {
+        "label": "Temporary code lifetime",
+        "description": "Time the person has to confirm the second factor after the first step."
+      },
+      "mfaMaxAttempts": {
+        "label": "Attempts per code",
+        "description": "Wrong codes accepted before the temporary code is invalidated."
+      },
+      "mfaFailureMax": {
+        "label": "Failures per user",
+        "description": "Second-factor failures from a user before blocking them."
+      },
+      "mfaFailureWindow": {
+        "label": "Failures window",
+        "description": "Time over which a user's failures are counted."
+      }
+    },
+    "units": {
+      "s": "seconds",
+      "min": "minutes",
+      "h": "hours",
+      "d": "days"
+    },
+    "format": {
+      "daysOne": "1 day",
+      "daysMany": "{count} days",
+      "hours": "{count} h",
+      "minutes": "{count} min",
+      "seconds": "{count} s"
+    },
+    "range": "Between {min} and {max}",
+    "validation": {
+      "enterNumber": "Enter a number.",
+      "wholeSeconds": "Use whole seconds.",
+      "wholeNumber": "Use a whole number.",
+      "outOfRange": "Out of range. {range}.",
+      "ladderLength": "The ladder takes 1 to {max} durations.",
+      "ladderOrder": "Each step must last the same as or longer than the previous one."
+    },
+    "api": {
+      "outOfRangeWithRange": "Accounts rejected it for being out of range. {range}.",
+      "outOfRange": "Accounts rejected it for being out of range.",
+      "invalidLadder": "Accounts rejected the ladder: 1 to {max} durations, each equal to or longer than the previous one."
+    },
+    "errors": {
+      "unknownField": "Accounts doesn't recognize the “{field}” field. Update Accounts.",
+      "unknownFields": "Accounts doesn't recognize some of the fields. Update Accounts.",
+      "outOfRange": "Some value is outside the allowed range.",
+      "invalidLadder": "The duration ladder isn't valid."
+    },
+    "unitLabel": "{label} (unit)",
+    "source": {
+      "custom": "Custom"
+    },
+    "reset": {
+      "aria": "Use the instance value: {label}"
+    },
+    "durations": {
+      "title": "Duration of each lockout",
+      "description": "The first lockout lasts as long as step 1; each consecutive lockout goes up one step and the last one repeats. From 1 to {max} durations, each equal to or greater than the previous one.",
+      "step": "Step {n}",
+      "remove": "Remove step {n}",
+      "add": "Add step",
+      "eachStep": "Each step: {range}"
+    },
+    "loadFailed": "Couldn't load the limits ({status})",
+    "saveFailed": "Couldn't save ({status})",
+    "unsupportedInstance": "This Accounts instance doesn't have configurable security limits.",
+    "reviewFields": "Review the marked fields.",
+    "title": "Security limits",
+    "description": "How many requests, failed attempts and codes Accounts accepts before slowing someone down in this app.",
+    "status": {
+      "allDefault": "All default",
+      "customOne": "{count} custom",
+      "customMany": "{count} custom"
+    },
+    "upgrade": {
+      "title": "Update Accounts",
+      "body": "This Accounts instance doesn't support adjusting security limits per app yet. It's available from the version that includes it."
+    },
+    "help": {
+      "noDisable": "These limits can't be turned off per app: they can only be adjusted within the allowed range. Only whoever operates Accounts can turn them off for the whole instance.",
+      "defaults": "“Instance default” follows the instance value even if it changes. “Use the instance value” stops pinning it for this app.",
+      "webhooks": "Webhook protection isn't configurable."
+    },
+    "fixErrors": "Fix the marked fields to save.",
+    "instance": "Instance: {value}"
+  },
+  "geoAccess": {
+    "validation": {
+      "allowlistEmpty": "Add at least one country: with an empty allowlist nobody could sign in.",
+      "invalidCode": "{code}: it isn't a valid ISO 3166-1 country code."
+    },
+    "warnings": {
+      "blocklistEmpty": "The list is empty: no country is blocked for now.",
+      "blockAllDenyUnknown": "You block every country and also unknown ones: nobody could sign in.",
+      "blockAll": "You block every country: only connections with no identified country could get in.",
+      "denyUnknown": "Blocking unknown countries also locks out anyone connecting from a private network, some VPNs or an IP with no location data."
+    },
+    "summary": {
+      "unknownDenied": "Connections with no identified country are blocked.",
+      "unknownAllowed": "Connections with no identified country are allowed.",
+      "off": "Anyone can sign in, from any country.",
+      "allowlistEmpty": "Nobody will be able to sign in: the list of allowed countries is empty.",
+      "allowlist": "Only users in {countries} will be able to sign in. {unknown}",
+      "blocklistEmpty": "No country is blocked. {unknown}",
+      "blocklist": "Users in {countries} won't be able to sign in; the rest of the countries will. {unknown}"
+    },
+    "presets": {
+      "mx": "Mexico only",
+      "na": "North America",
+      "latam": "Latin America"
+    },
+    "loadFailed": "Couldn't load Regional blocking ({status})",
+    "saveFailed": "Couldn't save ({status})",
+    "reviewFields": "Review the marked fields before saving.",
+    "unsupportedInstance": "This Accounts instance doesn't have Regional blocking.",
+    "rejected": "Accounts rejected the configuration: review the marked fields.",
+    "title": "Regional blocking",
+    "description": "Decide which countries can sign in to your app. The country is derived from the IP.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "rule": {
+      "title": "Rule",
+      "description": "What to do with the country each user connects from."
+    },
+    "modes": {
+      "off": {
+        "label": "Off",
+        "description": "The country isn't checked: anyone can sign in from anywhere."
+      },
+      "allowlist": {
+        "label": "Only allow these countries",
+        "description": "Only people connecting from a country on the list get in. Everyone else gets an error when signing in."
+      },
+      "blocklist": {
+        "label": "Block these countries",
+        "description": "Everyone gets in except people connecting from a country on the list."
+      }
+    },
+    "countries": {
+      "blocked": "Blocked countries",
+      "allowed": "Allowed countries",
+      "offHint": "The list is saved, but it isn't applied while the rule is off.",
+      "allowHint": "Only these countries will be able to sign in.",
+      "blockHint": "These countries won't be able to sign in."
+    },
+    "unknown": {
+      "title": "Unknown country",
+      "description": "Sometimes the IP can't be located: private or corporate networks, some VPNs and proxies, or IPs the geolocation database doesn't have. Accounts records them as country “Unknown”."
+    },
+    "unknownOptions": {
+      "allow": {
+        "label": "Allow",
+        "description": "Recommended. Anyone who can't be located gets in as if the rule didn't exist."
+      },
+      "deny": {
+        "label": "Block",
+        "description": "Stricter: it also locks out private networks, some VPNs and IPs with no data."
+      }
+    },
+    "notes": {
+      "loginOnly": "The rule applies <strong>only at sign-in</strong>: open sessions keep working until they expire or are revoked.",
+      "testers": "Testers are exempt: they can sign in from any country.",
+      "blocked": "Anyone locked out gets a 403 with <code>geo_access.country_not_allowed</code> or <code>geo_access.unknown_country</code>. Blocked attempts show up in <link>Access</link>."
+    },
+    "picker": {
+      "none": "No country selected.",
+      "remove": "Remove {name}",
+      "removeAll": "Remove all",
+      "searchLabel": "Search country",
+      "searchPlaceholder": "Search country by name or code (MX, US…)",
+      "listLabel": "Countries",
+      "noResults": "No results for “{query}”."
+    },
+    "countryList": {
+      "listAnd": "{list} and {last}",
+      "listAndMoreOne": "{list} and {count} more country",
+      "listAndMoreMany": "{list} and {count} more countries"
+    },
+    "proOnlyDesc": "This Accounts instance doesn't have Regional blocking. It requires the Pro edition of Accounts in a version that records sign-ins with their country."
+  },
+  "accessLog": {
+    "title": "Access",
+    "subtitle": "Your users' sign-ins: from where, with which method and which ones were blocked by <link>Regional blocking</link>.",
+    "period": "Period",
+    "days": "{count} days",
+    "unsupported": {
+      "title": "This Accounts version doesn't record sign-ins",
+      "body": "The sign-in history and IP geolocation arrive with a more recent version of Accounts."
+    },
+    "columns": {
+      "country": "Country",
+      "logins": "Sign-ins",
+      "blocked": "Blocked",
+      "uniqueIps": "Unique IPs"
+    },
+    "stats": {
+      "uniqueUsers": "Unique users",
+      "lastDays": "Last {count} days"
+    },
+    "byCountry": {
+      "title": "By country",
+      "hint": "Click a country to see its sign-ins.",
+      "emptyTitle": "No sign-ins in this period",
+      "emptyDescription": "When your users sign in, you'll see here which countries they come from.",
+      "entity": "countries"
+    },
+    "footer": {
+      "retention": "Accounts keeps sign-ins for {days} days. The location is approximate: it comes from the IP and may be that of a VPN or the internet provider.",
+      "credit": "IP geolocation by <link>DB-IP (db-ip.com)</link>, under the CC BY 4.0 license."
+    },
+    "table": {
+      "columns": {
+        "date": "Date",
+        "user": "User",
+        "result": "Result",
+        "method": "Method",
+        "place": "Country / City",
+        "device": "Device",
+        "ip": "IP"
+      },
+      "copyIp": "Copy IP {ip}",
+      "ipCopied": "IP copied to the clipboard",
+      "country": "Country",
+      "geoSource": "Location source",
+      "userId": "User ID",
+      "clearFilters": "Clear filters",
+      "refresh": "Refresh",
+      "loadFailed": "Couldn't load the sign-ins",
+      "viewDetail": "View details",
+      "emptyFilteredTitle": "No sign-ins for those filters",
+      "emptyFilteredDescription": "Try another result, method, country, location source or user.",
+      "emptyTitle": "No sign-ins in this period yet",
+      "emptyDescription": "Every sign-in (successful, failed or blocked by the regional rule) and every IP change of a session shows up here.",
+      "entity": "sign-ins"
+    },
+    "detail": {
+      "copy": "Copy {what}",
+      "copied": "{what} copied to the clipboard",
+      "copyFailed": "Couldn't copy",
+      "title": "Sign-in",
+      "blocked": "Blocked: {reason}",
+      "ipChanged": "The session kept being used from another IP. It isn't a new sign-in: the IP and location are the new ones.",
+      "date": "Date",
+      "user": "User",
+      "userId": "User ID",
+      "method": "Method",
+      "country": "Country",
+      "region": "Region",
+      "city": "City",
+      "geoSource": "Location source",
+      "device": "Device",
+      "sessionId": "Session ID",
+      "eventId": "Sign-in ID",
+      "viewUser": "View user",
+      "failed": "Failed: {reason}",
+      "userAgent": "User agent"
+    },
+    "events": {
+      "type": {
+        "login_succeeded": "Successful",
+        "login_blocked": "Blocked",
+        "ip_changed": "IP change",
+        "login_failed": "Failed"
+      },
+      "method": {
+        "password": "Email and password",
+        "email_password_signup": "Password signup",
+        "activation": "Account activation",
+        "magic_link": "Magic link",
+        "email_code": "Email code",
+        "oauth": "OAuth",
+        "native_oauth": "Native OAuth (app)"
+      },
+      "reason": {
+        "country_not_allowed": {
+          "title": "Country not allowed",
+          "detail": "The IP was located in a country that the Regional block rule doesn't let in (outside the allowlist or inside the blocklist). The user received the geo_access.country_not_allowed error."
+        },
+        "unknown_country": {
+          "title": "Unknown country",
+          "detail": "The IP couldn't be located (private IP, VPN or no data in the geolocation database) and the rule blocks unknown countries. The user received the geo_access.unknown_country error."
+        },
+        "bad_password": {
+          "title": "Wrong password",
+          "detail": "The account exists, but the password doesn't match."
+        },
+        "unknown_account": {
+          "title": "Unknown account",
+          "detail": "There's no account with that email in the app."
+        },
+        "rate_limited": {
+          "title": "Too many attempts",
+          "detail": "The sign-in was rejected for going over the attempt limit."
+        },
+        "mfa_failed": {
+          "title": "Second factor rejected",
+          "detail": "The password was right, but the authenticator or backup code was rejected, or the attempts ran out."
+        },
+        "oauth_failed": {
+          "title": "OAuth rejected",
+          "detail": "The provider or the callback rejected the sign-in: invalid code or id_token, provider down, rejected state or configuration."
+        },
+        "link_invalid": {
+          "title": "Invalid link",
+          "detail": "The magic link is unknown, expired, already used or opened from another IP or browser."
+        },
+        "code_invalid": {
+          "title": "Invalid code",
+          "detail": "The email code is wrong, expired, already used or replaced by a newer one."
+        },
+        "account_not_verified": {
+          "title": "Email not verified",
+          "detail": "The password was right, but the email isn't verified yet."
+        },
+        "reportedByAccounts": "Reason reported by Accounts."
+      },
+      "geoSource": {
+        "database": {
+          "label": "Database",
+          "detail": "Match in the DB-IP database synced in Accounts."
+        },
+        "headers": {
+          "label": "Cloudflare headers",
+          "detail": "There was no match in the database, so the Cloudflare headers were used."
+        },
+        "none": {
+          "label": "No data",
+          "detail": "No location data: the country is left as unknown."
+        }
+      },
+      "geoSourceShort": {
+        "database": "database",
+        "headers": "headers",
+        "none": "no data"
+      },
+      "locationLabel": "Location:",
+      "sourceTooltipOne": "{detail} {count} sign-in.",
+      "sourceTooltipMany": "{detail} {count} sign-ins.",
+      "unknownCountry": "Unknown",
+      "loadFailed": "Couldn't load the sign-ins",
+      "summaryLoadFailed": "Couldn't load the sign-in summary"
+    }
+  },
+  "userMetadata": {
+    "title": "User metadata",
+    "subtitle": "Define which fields <code>user_metadata</code> can include when signing users. Mark individually which ones are injected into the <code>access_token</code>.",
+    "previewButton": "Test JWT",
+    "errors": {
+      "behaviors": "Behaviors error {status}",
+      "behaviorDetail": "Error in the behavior details {status}",
+      "duplicateName": "Duplicate name: {name}",
+      "reservedClaim": "\"{name}\" is a reserved claim and can't be included in the JWT.",
+      "needField": "Add at least one field or turn off the schema before saving.",
+      "noEmailAuth": "This app doesn't have email login configured: there's nowhere to save the fields.",
+      "schemaSave": "Couldn't save the schema ({status})",
+      "policySave": "Couldn't save the JWT policy ({status})",
+      "generic": "Error {status}"
+    },
+    "toasts": {
+      "schemaActivated": "Schema turned on: signup will validate the fields you define",
+      "policyActivated": "JWT policy turned on to include the field in the access_token"
+    },
+    "schema": {
+      "title": "Schema settings",
+      "active": "Schema on",
+      "activeHint": "When on, signup validates <code>user_metadata</code> against the defined fields.",
+      "allowExtra": "Allow extra fields",
+      "allowExtraHint": "If turned off, signup rejects any key that isn't in the list below.",
+      "offWarning": "The schema is off: the fields are saved, but signup doesn't validate them and the Register user form doesn't require them."
+    },
+    "policy": {
+      "title": "JWT policy",
+      "description": "Master switch for inclusion in the access_token. If it's off, no field is injected regardless of what's checked below. Already issued tokens don't change: the fields appear from the next login or refresh.",
+      "userWritable": "Include in the token the keys written by the user themselves (legacy)",
+      "userWritableHint": "When off, only the keys written by your backend or the admin are injected. The ones the user edits from their profile stay in <code>/me</code>.",
+      "userWritableRisk": "A user can write whatever they want in those keys (for example <code>{example}</code>) and it will appear signed in their access_token. If your backend trusts those claims to authorize, turn it off and read that data from <code>/me</code>.",
+      "offWithFieldsOne": "There is 1 field marked for the access_token, but the JWT policy is off: it won't be included until you turn it on.",
+      "offWithFieldsMany": "There are {count} fields marked for the access_token, but the JWT policy is off: they won't be included until you turn it on.",
+      "userWritableRiskTitle": "Risk: the user controls those keys"
+    },
+    "pro": {
+      "title": "Pro feature",
+      "body": "Granular inclusion in the access_token requires the Pro edition of Accounts. The schema is still editable."
+    },
+    "sensitive": {
+      "title": "You're exposing sensitive data in the JWT:",
+      "hint": "The access_token usually travels as a bearer and lives in client logs/cache. Consider leaving them only in <code>/me</code>."
+    },
+    "fields": {
+      "hint": "The fields the schema defines and which ones travel in the access_token.",
+      "empty": "Add the first one to allow <code>user_metadata</code> in signup.",
+      "namePlaceholder": "e.g. plan",
+      "inToken": "In access_token",
+      "hideAdvanced": "Hide advanced",
+      "showAdvanced": "Show advanced",
+      "noAdvanced": "Boolean fields have no advanced rules.",
+      "format": "Format (regex)",
+      "formatPlaceholder": "e.g. [0-9]{10}",
+      "enumPlaceholder": "MX, US, ES"
+    },
+    "footer": "Save to apply both the validation schema and the claims policy.",
+    "confirm": {
+      "title": "Confirm sensitive data",
+      "description": "You're about to include a field whose name suggests sensitive information in the access_token. It will be visible wherever the token is persisted or logged.",
+      "include": "Include anyway"
+    },
+    "preview": {
+      "notObject": "The payload must be a JSON object",
+      "invalidJson": "Invalid JSON",
+      "title": "Test payload",
+      "description": "Simulates the evaluation against the saved policy. Returns exactly the claims that would be injected into the access_token for this <code>user_metadata</code>.",
+      "claimsAdded": "Claims that will be added",
+      "noClaims": "No claims are added",
+      "reason": "Reason: {reason}",
+      "dropped": "Configured but dropped: <code>{keys}</code>",
+      "evaluate": "Evaluate",
+      "inputLabel": "user_metadata"
+    }
+  },
+  "policies": {
+    "withStatus": "{message} ({status})",
+    "effect": {
+      "allow": "Allow",
+      "deny": "Deny"
+    },
+    "columns": {
+      "name": "Name",
+      "target": "Resource : action",
+      "effect": "Effect",
+      "description": "Description"
+    },
+    "loadFailed": "Could not load policies",
+    "roleLoadFailed": "Could not load the role's policies",
+    "saveFailed": "Could not save the policy",
+    "createFailed": "Could not create the policy",
+    "updated": "Policy updated",
+    "created": "Policy created",
+    "deleteFailed": "Could not delete the policy",
+    "deleted": "Policy deleted",
+    "assignFailed": "Could not assign the policy",
+    "assigned": "Policy assigned",
+    "unassignFailed": "Could not remove the policy",
+    "unassigned": "Policy removed from the role",
+    "title": "Permissions",
+    "subtitle": "Authorization policies (which action is allowed or denied on which resource) and which policies each role has.",
+    "newPolicy": "New policy",
+    "rules": {
+      "what": "Each policy allows or denies an <strong>action</strong> on a <strong>resource</strong> (for example <code>users:read</code>). A user has the policies of their roles.",
+      "denyWins": "<strong>Deny wins over allow</strong>: if a matching policy denies, access is denied even if another allows it.",
+      "noMatchDenies": "<strong>No match means deny</strong>: anything no policy allows is forbidden."
+    },
+    "section": {
+      "policies": "Policies"
+    },
+    "searchPlaceholder": "Search by name, resource or action...",
+    "actions": {
+      "edit": "Edit policy",
+      "delete": "Delete policy"
+    },
+    "empty": {
+      "title": "No policies yet",
+      "description": "Without policies, any permission check is denied. Create the first one."
+    },
+    "noResults": {
+      "title": "No matches",
+      "description": "No policy matches the search."
+    },
+    "byRole": {
+      "title": "Policies by role",
+      "description": "Assign policies to a role; all users with that role receive them.",
+      "noRoles": "There are no roles yet. <link>Create a role</link> to assign policies to it.",
+      "roleAria": "Role",
+      "loading": "Loading the role's policies…",
+      "noPolicies": "{name} has no policies: everything is denied.",
+      "thisRole": "This role",
+      "remove": "Remove {name}",
+      "assignAria": "Policy to assign",
+      "noneLeft": "No policies left to assign",
+      "choose": "Choose a policy",
+      "assign": "Assign"
+    },
+    "dialog": {
+      "editTitle": "Edit policy",
+      "newTitle": "New policy",
+      "name": "Name",
+      "namePlaceholder": "e.g. read_users",
+      "resource": "Resource",
+      "resourcePlaceholder": "e.g. users",
+      "action": "Action",
+      "actionPlaceholder": "e.g. read",
+      "effect": "Effect",
+      "effectOption": {
+        "allow": {
+          "label": "Allow (allow)",
+          "description": "Allows the action unless another policy denies it."
+        },
+        "deny": {
+          "label": "Deny (deny)",
+          "description": "Wins over any matching allow."
+        }
+      },
+      "description": "Description",
+      "descriptionPlaceholder": "What does it allow or deny?"
+    },
+    "create": "Create",
+    "deleteDialog": {
+      "title": "Delete policy",
+      "body": "Delete the policy <strong>{name}</strong>? It will be removed from all roles that have it. This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "duplicate": "A policy with that resource, action and effect already exists.",
+    "entity": "policies",
+    "nameRequired": "Name is required",
+    "resourceRequired": "Resource is required",
+    "actionRequired": "Action is required"
+  },
+  "mcpConnect": {
+    "title": "MCP Connect",
+    "subtitle": "Let your users connect Claude, ChatGPT and other assistants to your MCP server with your app's login, without copying tokens. Register your server's URL and the scopes it offers.",
+    "entity": "MCP servers",
+    "checks": {
+      "reachable": "The server responds",
+      "challenge_401": "Without a key it responds 401 and points to its document",
+      "metadata_fetched": "It publishes its metadata document",
+      "resource_matches": "The document names this same URL",
+      "authorization_server_matches": "The document names Accounts as the issuer"
+    },
+    "columns": {
+      "name": "Name",
+      "url": "MCP server URL",
+      "status": "Status",
+      "scopes": "Scopes",
+      "created": "Created"
+    },
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "loadFailed": "Couldn't load the MCP servers ({status})",
+    "exported": "Scopes exported",
+    "copied": "{label} copied",
+    "copyFailed": "Couldn't copy",
+    "register": "Register MCP server",
+    "searchPlaceholder": "Search by name or URL...",
+    "actions": {
+      "view": "View details and connections"
+    },
+    "empty": {
+      "title": "No MCP servers yet",
+      "description": "Register your MCP server's URL so your users can connect it from their assistant."
+    },
+    "noResults": {
+      "title": "No matches",
+      "description": "No MCP server matches the search."
+    },
+    "import": {
+      "readFailed": "Couldn't read the file.",
+      "button": "Import",
+      "hint": "Paste the scopes JSON (the same one a server's details export), upload the file or copy them from another server. It replaces the rows below.",
+      "jsonLabel": "Scopes JSON",
+      "apply": "Apply JSON",
+      "upload": "Upload file",
+      "fileLabel": "Scopes JSON file",
+      "copyFromLabel": "Copy scopes from another server",
+      "copyFromPlaceholder": "Copy from another server…",
+      "loadedOne": "1 scope loaded into the form",
+      "loadedMany": "{count} scopes loaded into the form",
+      "copiedOne": "1 scope copied from {source}",
+      "copiedMany": "{count} scopes copied from {source}",
+      "jsonPlaceholder": "{ \"scopes\": [ { \"key\": \"orders:read\", \"label\": \"See your orders\", \"is_write\": false } ] }"
+    },
+    "form": {
+      "urlsRequired": "The MCP server URL and your connection page URL are required",
+      "ttlRange": "The key lifetime goes from 300 to 86400 seconds",
+      "scopeRequired": "Each scope needs a key and the text the person will see",
+      "updateFailed": "Couldn't update the MCP server",
+      "scopesSaveFailed": "Couldn't save the scopes",
+      "updated": "MCP server updated",
+      "registerFailed": "Couldn't register the MCP server",
+      "registered": "MCP server registered",
+      "titleEdit": "Edit MCP server",
+      "description": "Accounts publishes this data so assistants configure themselves. You don't need your own domain.",
+      "url": "Your MCP server URL",
+      "urlHint": "It's the one your users paste into their assistant. Keys only work for it.",
+      "loginUrl": "Your connection page URL",
+      "loginUrlHint": "Accounts sends the person there. Your app identifies them with their usual login and asks them to approve.",
+      "displayName": "Display name",
+      "optional": "Optional",
+      "ttl": "Key lifetime (seconds)",
+      "scopesTitle": "Scopes it offers",
+      "scopesHint": "You declare them: Accounts can't read them from the URL. With none, a single one is created, “Access your account”.",
+      "addScope": "Add scope",
+      "scopeKey": "Scope {n} key",
+      "scopeText": "Scope {n} text",
+      "scopeTextPlaceholder": "What the person will see",
+      "scopeRemove": "Remove scope {n}",
+      "scopeDescription": "Scope {n} description",
+      "scopeDescriptionPlaceholder": "Description (optional): what exactly it includes",
+      "scopeRoles": "Scope {n} roles",
+      "scopeRolesPlaceholder": "Roles that can receive it (empty = any)",
+      "writes": "Modifies data",
+      "clientsTitle": "How assistants introduce themselves",
+      "cimd": "Assistant public profile (CIMD), recommended",
+      "dcr": "Automatic registration (DCR), for compatibility",
+      "domains": "Domains it can return to",
+      "domainsHint": "Comma-separated. localhost is always allowed (Claude Code, Codex).",
+      "submitRegister": "Register",
+      "urlPlaceholder": "https://api.yourapp.com/mcp",
+      "loginUrlPlaceholder": "https://app.yourapp.com/connect",
+      "scopeKeyPlaceholder": "orders:read"
+    },
+    "detail": {
+      "verifyFailed": "Couldn't verify the MCP server",
+      "verifyOk": "Your MCP server now points to Accounts",
+      "verifyMissing": "Your MCP server is still missing something",
+      "revokeFailed": "Couldn't revoke the connection",
+      "revoked": "Connection revoked",
+      "fallbackTitle": "MCP server",
+      "description": "Your server is what tells assistants to come to Accounts. It needs these two values for that.",
+      "values": "Values for your server",
+      "issuer": "Issuer",
+      "issuerShort": "Issuer",
+      "resource": "Resource",
+      "valuesHint": "With them, your server responds 401 to anyone arriving without a key, publishes its document at <code>{url}</code> and validates each key with Accounts' public keys.",
+      "checks": "Checks",
+      "verify": "Verify",
+      "notVerified": "It hasn't been verified yet. Deploy your server with the two values and press Verify.",
+      "found": "Found: {value}",
+      "scopes": "Scopes",
+      "exportJson": "Export JSON",
+      "connections": "Connections",
+      "searchLabel": "Search connections by email",
+      "searchPlaceholder": "Person's email",
+      "statusLabel": "Connection status",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterRevoked": "Revoked",
+      "search": "Search",
+      "loadingConnections": "Loading connections…",
+      "noConnections": "Nobody has connected an assistant to this server yet.",
+      "testUser": "Test",
+      "connectionMeta": "{client} · {scopes} · connected {granted} · last used {lastUsed}",
+      "viewUser": "View user",
+      "active": "Active",
+      "revokedDefault": "Revoked",
+      "revokedReasons": {
+        "owner": "Revoked from the panel",
+        "user": "Closed by the person",
+        "client": "Closed by the assistant",
+        "code_replay": "Code reused",
+        "refresh_reuse": "Refresh key reused",
+        "session_revoked": "Session closed"
+      },
+      "revoke": "Revoke",
+      "check": {
+        "passed": "OK",
+        "failed": "Fails",
+        "skipped": "Not tested"
+      }
+    },
+    "delete": {
+      "failed": "Couldn't delete the MCP server",
+      "deleted": "MCP server deleted",
+      "title": "Delete MCP server",
+      "body": "Delete <strong>{name}</strong>? Assistants will no longer be able to request new keys for <code>{url}</code>. This action can't be undone."
+    },
+    "copy": "Copy {label}",
+    "unavailable": {
+      "title": "MCP Connect isn't enabled",
+      "body": "This Accounts instance doesn't mount its routes: OAUTH_PUBLIC_URL must be configured."
+    },
+    "scopes": {
+      "invalidJson": "This isn't valid JSON.",
+      "expectedShape": "Expected { \"scopes\": [ … ] } or an array of permissions.",
+      "empty": "The document doesn't contain any permissions.",
+      "tooMany": "At most 50 permissions per server.",
+      "notObject": "Permission {row}: it isn't an object.",
+      "missingKey": "Permission {row}: \"key\" is missing.",
+      "invalidKey": "Permission {row}: the key \"{key}\" only allows lowercase letters, digits and : . _ - (up to 64).",
+      "duplicateKey": "Permission {row}: the key \"{key}\" is duplicated.",
+      "missingLabel": "Permission {row}: \"label\" is missing, the text people will see.",
+      "invalidRoles": "Permission {row}: \"roles\" must be a list of names.",
+      "invalidBoolean": "Permission {row}: \"{field}\" must be true or false."
+    }
+  },
+  "identityLinking": {
+    "recommendedLabel": "{label} (recommended)",
+    "modes": {
+      "link_with_proof": {
+        "label": "Link with proof",
+        "description": "If a user with the same email already exists, they are linked only when the provider verified the email or the person confirms a code we send to that email."
+      },
+      "separate": {
+        "label": "Separate",
+        "description": "People who sign in with OAuth and people who use email and password are always different users, even if they share an email."
+      }
+    },
+    "summary": {
+      "separate": "The same person can end up with two accounts: one through OAuth and another through email and password.",
+      "linkWithProof": "A person who already has an email and password account can also sign in with OAuth and remains the same user, without anyone taking over someone else's account."
+    },
+    "loadFailed": "Couldn't load identity linking ({status})",
+    "saveFailed": "Couldn't save ({status})",
+    "unsupportedInstance": "This Accounts instance doesn't have identity linking.",
+    "title": "Identity linking",
+    "description": "What happens when someone signs in with an OAuth provider (Google, Apple, GitHub…) and a user with the same email already exists.",
+    "upgrade": {
+      "title": "Update Accounts",
+      "body": "This Accounts instance doesn't support choosing how identities are linked yet. It's available in Community and Pro from the version that includes it."
+    },
+    "mode": {
+      "title": "Same email, different method",
+      "description": "Applies when signing in or signing up with OAuth. It doesn't change existing users."
+    },
+    "notes": {
+      "proof": "The proof prevents someone from creating an OAuth account with your email and taking over your user: without an email verified by the provider or a confirmed code, there's no linking.",
+      "separate": "With “Separate”, the person will always have to sign in with the same method to see the same data."
     }
   },
   "settings": {
@@ -1270,14 +2211,23 @@
   "tooltips": {
     "dashboard": "Application stats and quick insights",
     "users": "Manage registered users, identities and login methods",
+    "usermetadata": "user_metadata fields and what goes into the access_token",
     "rolespolicies": "Define access roles and permission policies",
+    "policies": "Resource and action rules, and what each role has",
     "webhooks": "Configure real-time event notifications",
     "apikeys": "Manage public and secret keys for integrations",
     "oauthproviders": "Configure Google, Apple, Microsoft and other providers",
+    "mcpconnect": "Connect assistants to your MCP server with your app login",
     "behaviors": "Customize authentication workflows and logic",
     "emailtemplates": "Design and manage localized system emails",
     "emailaccess": "Control which emails and domains can sign up (allowlist/blocklist)",
     "embeddedauth": "Embedded login components for your website (Pro)",
+    "mfa": "When the authenticator app is requested and in which flows",
+    "sessionsecurity": "Token delivery after OAuth, rotation and closing sessions",
+    "securitylimits": "Request limits, account lockout and second factor",
+    "geoaccess": "Decide which countries can sign in (Pro)",
+    "accesslog": "Who signed in, from where and with which method",
+    "identitylinking": "What happens when OAuth and email share an address",
     "tokens": "Debug, validate and refresh authentication tokens",
     "settings": "System configuration and environment variables",
     "registerUser": "Create a new user account manually",

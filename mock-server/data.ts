@@ -131,10 +131,25 @@ export const oauthAudiences: Record<string, Record<string, unknown>[]> = {
 };
 
 export const appBehaviors: Record<string, unknown>[] = [
-  { id: 'beh_8001', app_id: APP_ID, behavior_code: 'email_auth', is_active: true, config: { require_verification: true }, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
+  { id: 'beh_8001', app_id: APP_ID, behavior_code: 'email_auth', is_active: true, config: {
+    require_verification: true,
+    identifier: 'email',
+    metadata_schema: {
+      enabled: true,
+      additional_properties: true,
+      scheme: [
+        { name: 'plan', type: 'string', required: false, enum: ['free', 'pro', 'enterprise'] },
+        { name: 'seats', type: 'number', required: false, minimum: 1, maximum: 500 },
+        { name: 'phone', type: 'string', required: false, format: '[0-9]{10}' },
+      ],
+    },
+  }, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
   { id: 'beh_8002', app_id: APP_ID, behavior_code: 'magic_link', is_active: false, config: {}, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
   { id: 'beh_8003', app_id: APP_ID, behavior_code: 'metadata_schema', is_active: false, config: { schema: {} }, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
 ];
+
+// The access_token policy of user_metadata (Pro): `plan` and `seats` go in the token.
+export const userMetadataPolicy = { enabled: true, allowed_keys: ['plan', 'seats'], include_user_writable: false };
 
 export const emailAccessSettings = {
   mode: 'allowlist_and_blocklist',
@@ -153,3 +168,166 @@ export function paginate<T>(items: T[], page: number, size: number): { slice: T[
   const start = page * size;
   return { slice: items.slice(start, start + size), total: items.length };
 }
+
+// ---- security behaviors ----
+// Each one has its own endpoint in the backend (the generic /app-behaviors
+// routes refuse them), so they live apart from `appBehaviors`.
+
+export const mfaBehavior = {
+  mode: 'optional',
+  flows: ['password', 'oauth', 'native', 'magic_link', 'email_code'],
+  updated_at: '2026-09-12T10:30:00Z',
+};
+
+export const identityLinkingBehavior = { mode: 'link_with_proof', updated_at: '2026-09-12T10:30:00Z' };
+
+// An app that predates the setting: it keeps the legacy values and still gets
+// tokens in the URL, so the screen shows what is pending to migrate.
+export const sessionSecurityBehavior = {
+  oauth_token_delivery: 'query',
+  refresh_rotation: false,
+  revoke_sessions_on_password_change: true,
+  updated_at: '2026-08-02T16:05:00Z',
+};
+
+export const queryDeliveryUsage = { last_used_at: '2026-11-03T17:42:10Z', uses_last_30d: 412, window_days: 30 };
+
+export const sessionSecurityDefaults = {
+  oauth_token_delivery: 'code',
+  refresh_rotation: true,
+  revoke_sessions_on_password_change: true,
+};
+
+// The instance's defaults (AUTH_RATE_LIMIT_*, AUTH_LOCKOUT_*, API_KEY_FAILURE_*,
+// MFA_*); `securityLimitsOverrides` is what the app set (null = inherit).
+export const securityLimitsDefaults = {
+  rate_limit: { ip_max: 60, ip_window_sec: 60, account_max: 10, account_window_sec: 900 },
+  lockout: { threshold: 10, window_sec: 900, durations_sec: [60, 300, 900], reset_sec: 86400 },
+  api_keys: { failure_max: 10, failure_window_sec: 300 },
+  mfa: { token_ttl_sec: 300, max_attempts: 5, failure_max: 10, failure_window_sec: 900 },
+};
+
+export const securityLimitsOverrides: Record<string, Record<string, number | number[] | null>> = {
+  rate_limit: { ip_max: 120, ip_window_sec: null, account_max: null, account_window_sec: null },
+  lockout: { threshold: 8, window_sec: null, durations_sec: null, reset_sec: null },
+  api_keys: { failure_max: null, failure_window_sec: null },
+  mfa: { token_ttl_sec: null, max_attempts: null, failure_max: null, failure_window_sec: null },
+};
+
+export const securityLimitsMeta = { updated_at: '2026-10-21T09:15:00Z' };
+
+// Same table as securitylimits.Ranges in the backend.
+export const securityLimitsRanges: Record<string, { min: number; max: number; min_items?: number; max_items?: number }> = {
+  'rate_limit.ip_max': { min: 5, max: 1000 },
+  'rate_limit.ip_window_sec': { min: 10, max: 3600 },
+  'rate_limit.account_max': { min: 3, max: 100 },
+  'rate_limit.account_window_sec': { min: 60, max: 86400 },
+  'lockout.threshold': { min: 3, max: 100 },
+  'lockout.window_sec': { min: 60, max: 86400 },
+  'lockout.reset_sec': { min: 3600, max: 604800 },
+  'lockout.durations_sec': { min: 10, max: 86400, min_items: 1, max_items: 5 },
+  'api_keys.failure_max': { min: 3, max: 100 },
+  'api_keys.failure_window_sec': { min: 60, max: 3600 },
+  'mfa.token_ttl_sec': { min: 60, max: 900 },
+  'mfa.max_attempts': { min: 1, max: 10 },
+  'mfa.failure_max': { min: 3, max: 50 },
+  'mfa.failure_window_sec': { min: 60, max: 86400 },
+};
+
+export const geoAccessBehavior = {
+  id: 'beh_8101',
+  created_at: '2026-10-01T12:00:00Z',
+  updated_at: '2026-10-01T12:00:00Z',
+  config: { mode: 'blocklist', countries: ['KP', 'RU'], unknown_country: 'allow' },
+};
+
+// ---- login events: a realistic 90-day history (Community and Pro) ----
+
+const LOGIN_PLACES = [
+  { country_code: 'MX', country_name: 'Mexico', region: 'Jalisco', city: 'Guadalajara', ip: '187.190.14.22', geo_source: 'database' },
+  { country_code: 'MX', country_name: 'Mexico', region: 'Ciudad de México', city: 'Ciudad de México', ip: '201.141.8.77', geo_source: 'database' },
+  { country_code: 'ES', country_name: 'Spain', region: 'Madrid', city: 'Madrid', ip: '83.46.120.9', geo_source: 'database' },
+  { country_code: 'US', country_name: 'United States', region: 'California', city: 'San Francisco', ip: '104.28.3.41', geo_source: 'headers' },
+  { country_code: 'XX', country_name: '', region: '', city: '', ip: '10.0.4.18', geo_source: 'none' },
+];
+const LOGIN_DEVICES = [
+  { device_name: 'Chrome en macOS', user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36' },
+  { device_name: 'Safari en iPhone', user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' },
+  { device_name: 'Firefox en Windows', user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0' },
+];
+const FAILURE_REASONS = ['bad_password', 'unknown_account', 'rate_limited', 'mfa_failed', 'code_invalid'];
+const LOGIN_USERS = ['user_3001', 'user_3002', 'user_3003'];
+
+/** Recent first. Fixed spacing, so the same history comes back on every restart. */
+export const loginEvents: Record<string, unknown>[] = Array.from({ length: 64 }, (_, i) => {
+  const place = LOGIN_PLACES[i % LOGIN_PLACES.length]!;
+  const device = LOGIN_DEVICES[i % LOGIN_DEVICES.length]!;
+  const userId = LOGIN_USERS[i % LOGIN_USERS.length]!;
+  const createdAt = new Date(Date.now() - i * 33 * 60 * 60 * 1000).toISOString();
+  const base = { id: `evt_${10000 + i}`, app_id: APP_ID, ...place, ...device, created_at: createdAt };
+  if (i % 11 === 7) return { ...base, type: 'login_blocked', method: 'password', block_reason: place.country_code === 'XX' ? 'unknown_country' : 'country_not_allowed' };
+  if (i % 7 === 3) {
+    const reason = FAILURE_REASONS[i % FAILURE_REASONS.length]!;
+    return { ...base, type: 'login_failed', method: 'password', block_reason: reason, ...(reason === 'unknown_account' ? {} : { user_id: userId }) };
+  }
+  if (i % 9 === 5) return { ...base, type: 'ip_changed', user_id: userId, session_id: `ses_${20000 + i}` };
+  const oauth = i % 5 === 1;
+  return {
+    ...base, type: 'login_succeeded', user_id: userId, session_id: `ses_${20000 + i}`,
+    method: oauth ? 'oauth' : i % 5 === 2 ? 'magic_link' : 'password', ...(oauth ? { provider: 'google' } : {}),
+  };
+});
+
+// ---- MCP Connect: both editions (the backend only asks for OAUTH_PUBLIC_URL) ----
+
+const MCP_ISSUER = `https://auth.example.com/o/${APP_ID}`;
+
+export function mcpResourceUrls(resourceUrl: string) {
+  return {
+    issuer: MCP_ISSUER,
+    metadata_url: `${MCP_ISSUER}/.well-known/oauth-authorization-server`,
+    jwks_url: `${MCP_ISSUER}/.well-known/jwks.json`,
+    protected_resource_metadata_url: `${new URL(resourceUrl).origin}/.well-known/oauth-protected-resource`,
+  };
+}
+
+function mcpScope(resourceId: string, key: string, label: string, is_write = false, is_default = true) {
+  return { id: `${resourceId}_${key}`, resource_id: resourceId, key, label, description: '', is_write, is_default, roles: [] };
+}
+
+export const mcpResources: Record<string, unknown>[] = [
+  {
+    id: 'mcp_11001', app_id: APP_ID, name: 'Pedidos MCP', resource_url: 'https://api.example.com/mcp', login_url: 'https://app.example.com/conectar',
+    access_ttl_seconds: 3600, cimd_enabled: true, dcr_enabled: true, allowed_redirect_domains: ['claude.ai', 'chatgpt.com'], allowed_client_domains: [],
+    scopes: [mcpScope('mcp_11001', 'orders:read', 'Ver tus pedidos'), mcpScope('mcp_11001', 'orders:write', 'Crear y cancelar pedidos', true, false)],
+    ...mcpResourceUrls('https://api.example.com/mcp'),
+    verified_at: '2026-10-20T09:12:00Z',
+    verify_report: {
+      verified: true, at: '2026-10-20T09:12:00Z',
+      checks: ['reachable', 'challenge_401', 'metadata_fetched', 'resource_matches', 'authorization_server_matches'].map((name) => ({ name, status: 'passed' })),
+    },
+    created_at: '2026-10-18T15:40:00Z', updated_at: '2026-10-20T09:12:00Z',
+  },
+  {
+    id: 'mcp_11002', app_id: APP_ID, name: 'Soporte MCP', resource_url: 'https://support.example.com/mcp', login_url: 'https://app.example.com/conectar-soporte',
+    access_ttl_seconds: 7200, cimd_enabled: true, dcr_enabled: false, allowed_redirect_domains: ['claude.ai'], allowed_client_domains: [],
+    scopes: [mcpScope('mcp_11002', 'tickets:read', 'Ver tus tickets')],
+    ...mcpResourceUrls('https://support.example.com/mcp'),
+    verified_at: null, created_at: '2026-10-29T11:05:00Z', updated_at: '2026-10-29T11:05:00Z',
+  },
+];
+
+export const mcpConnections: Record<string, unknown>[] = [
+  {
+    id: 'mcpc_12001', resource: { id: 'mcp_11001', name: 'Pedidos MCP', resource_url: 'https://api.example.com/mcp' },
+    client: { client_id: 'https://claude.ai/oauth/mcp-client', kind: 'cimd', name: 'Claude' }, user_id: 'user_3001',
+    user: { id: 'user_3001', email: 'ada@example.com', name: 'Ada Lovelace' }, session_id: 'ses_30001', scope: ['orders:read', 'orders:write'], status: 'active',
+    granted_at: '2026-10-21T10:00:00Z', last_used_at: '2026-11-04T18:22:00Z', revoked_at: null,
+  },
+  {
+    id: 'mcpc_12002', resource: { id: 'mcp_11001', name: 'Pedidos MCP', resource_url: 'https://api.example.com/mcp' },
+    client: { client_id: 'mcp_c_chatgpt', kind: 'dcr', name: 'ChatGPT' }, user_id: 'user_3002',
+    user: { id: 'user_3002', email: 'grace@example.com', name: 'Grace Hopper' }, session_id: 'ses_30002', scope: ['orders:read'], status: 'revoked',
+    granted_at: '2026-10-22T08:30:00Z', last_used_at: '2026-10-25T12:00:00Z', revoked_at: '2026-10-26T09:00:00Z', revoked_reason: 'user',
+  },
+];
