@@ -4,7 +4,7 @@ Bun HTTP server that mirrors the Go accounts API. Runs on `http://localhost:8099
 
 ## Layout
 
-- [`server.ts`](server.ts) — request router (uses `URLPattern`), 98 registered routes (some only in Pro, see below).
+- [`server.ts`](server.ts) — request router (uses `URLPattern`), 117 registered routes (some only in Pro, see below).
 - [`data.ts`](data.ts) — in-memory arrays (`APP_ID`, users, roles, webhooks, oauth-configs, etc.) and helpers (`nextId`, `paginate`). **State resets on restart.**
 - [`urlpattern.d.ts`](urlpattern.d.ts) — ambient types for `URLPattern`.
 - [`tsconfig.json`](tsconfig.json) — Bun-typed, separate from root (`../tsconfig.json` excludes this folder on purpose).
@@ -36,3 +36,9 @@ Bun HTTP server that mirrors the Go accounts API. Runs on `http://localhost:8099
 - `GET /health` mirrors the backend's public health envelope; the admin reads only `data.edition`.
 - Embedded Auth (`GET`/`PUT /api/v1/app-behaviors/embedded-auth`) is registered BEFORE the generic `/api/v1/app-behaviors/:id` routes (first match wins). It validates with the admin's own mirror of the backend contract (`src/lib/embedded-auth.ts`, imported by relative path) and answers `422 app_behaviors.embedded_auth.invalid_config` with `"field: msg; field: msg"`, like the Go use case. Availability comes from the seeds: `email_auth` active → password; its `email_code` / `magic_link` nodes → those strategies (magic link also when the mock's own `magic_link` row is active, which is what its magic-link toggle flips); enabled oauth configs → providers. Like the backend, there is no `embedded_auth` row until the first PUT creates it (GET answers the defaults), so the seeded lists are unchanged.
 - In Pro the generic `PUT /api/v1/app-behaviors/:id` refuses the `embedded_auth` row (`app_behaviors.update.use_embedded_auth_endpoint`), as the backend does.
+
+## Email templates
+
+- `/api/v1/email-templates/*` (app) and `/v1/email-templates/*` (global) exist in both editions and share one set of handlers. As in the Go use cases, only Pro writes per-app rows and only Community writes the global row: the other family answers `403 email_templates.pro_required` (`email_templates.themes.pro_required` for the theme). Reads, previews and tests answer everywhere.
+- The catalog and the themes in `data.ts` are the backend's. The rendered HTML is an approximation built from the same tokens and branding. Branding is validated with the admin's own mirror (`src/lib/email-templates.ts`).
+- Seeds: an override of `welcome` in the edition's scope, a global override of `password_changed_notice` (in Pro, the template an app inherits and cannot edit) and an active theme with branding.

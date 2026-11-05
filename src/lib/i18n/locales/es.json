@@ -2165,24 +2165,172 @@
   },
   "emailTemplates": {
     "title": "Templates de Email",
-    "subtitle": "Plantillas configuradas en las variables de entorno. Rellena los campos para previsualizar el correo.",
-    "noTemplates": "Sin templates configurados",
-    "noTemplatesDesc": "Configura EMAIL_TEMPLATE_ACTIVATION_URL, EMAIL_TEMPLATE_RESET_URL y EMAIL_TEMPLATE_WELCOME_URL en las variables de entorno.",
-    "urlNotConfigured": "URL no configurada",
-    "fillVariables": "Rellena las variables",
-    "preview": "Previsualizar",
-    "previewTitle": "Vista previa del correo",
-    "previewHint": "Rellena las variables y haz clic en Previsualizar para ver el resultado.",
-    "errorLoad": "Error al cargar templates",
-    "errorPreview": "Error al generar la previsualización",
-    "errorConnection": "Error de conexión",
-    "sendEmail": "Enviar email de prueba",
-    "sendEmailComingSoon": "Función de envío de email próximamente",
-    "sendTestDialogTitle": "Enviar email de prueba",
-    "sendTestDialogDescription": "Introduce el correo al que quieres enviar la plantilla de prueba.",
-    "sendTestDialogEmailLabel": "Email",
-    "sendTestDialogCancel": "Cancelar",
-    "sendTestDialogSend": "Enviar"
+    "subtitle": "Personaliza cada email que envía Accounts (verificación, inicio de sesión, restablecer contraseña y más) con un tema, tu logo y tus colores. ¿Necesitas control total? Sube tu propio HTML para cada email.",
+    "subtitlePro": "Personaliza los emails que envía esta app (verificación, inicio de sesión, restablecer contraseña y más) con un tema, tu logo y tus colores. ¿Necesitas control total? Sube tu propio HTML para cada email.",
+    "loadFailed": "No se pudo cargar el catálogo de plantillas",
+    "editionUnknown": "No se pudo saber qué edición de Accounts está en uso. Comprueba que la API responde.",
+    "unavailable": {
+      "title": "Plantillas no disponibles",
+      "body": "Esta versión de Accounts no tiene plantillas de email editables. Actualízala para usar esta pantalla."
+    },
+    "community": {
+      "title": "Estos cambios se aplican a toda la instancia",
+      "body": "En Community hay un solo aspecto y un solo juego de plantillas para todas las apps. Las plantillas por app son de Accounts Pro."
+    },
+    "tabs": {
+      "branding": "Marca",
+      "templates": "Plantillas"
+    },
+    "previewFrame": {
+      "updating": "Actualizando la vista previa",
+      "title": "Vista previa del email",
+      "generating": "Generando la vista previa…"
+    },
+    "provider": {
+      "ok": "Todos los emails se envían desde <code>{sender}</code>, el remitente de la instancia.",
+      "missing": "El envío de emails aún no está configurado en la instancia. <strong>Enviar prueba</strong> seguirá deshabilitado hasta entonces.",
+      "error": "No se pudo comprobar el remitente de la instancia"
+    },
+    "catalog": {
+      "available": "{count} disponibles",
+      "custom": "Personalizada"
+    },
+    "templates": {
+      "loadFailed": "No se pudo cargar la plantilla",
+      "customHtml": "HTML personalizado",
+      "customHtmlDisabled": "HTML personalizado desactivado",
+      "inheritedHtml": "HTML global",
+      "inheritedNotice": "Este email usa una plantilla global de la instancia, que aquí no se puede editar. Sube HTML para reemplazarla en esta app.",
+      "themeBrand": "Tema y marca",
+      "select": "Selecciona una plantilla de la lista."
+    },
+    "upload": {
+      "description": "Sube un archivo <code>.html</code> para reemplazar el tema en este email específico. El asunto y el remitente se mantienen. Máx. 200 KB.",
+      "prompt": "Suelta tu archivo HTML aquí o haz clic para buscarlo",
+      "hint": "Formato admitido: .html · hasta 200 KB",
+      "tooLarge": "El HTML es demasiado grande: el límite es 200 KB.",
+      "notHtml": "Sube un archivo .html.",
+      "failed": "No se pudo subir el archivo: no cumple los requisitos de la plantilla.",
+      "withWarningsOne": "Plantilla subida con {count} advertencia.",
+      "withWarningsMany": "Plantilla subida con {count} advertencias.",
+      "success": "Plantilla personalizada subida.",
+      "retry": "Reintentar {file}",
+      "remove": "Quitar {file}"
+    },
+    "reset": {
+      "title": "Restaurar la plantilla predeterminada",
+      "confirm": "Se eliminará el HTML personalizado de «{name}». No se puede deshacer.",
+      "button": "Restaurar predeterminada",
+      "failed": "No se pudo restaurar la plantilla predeterminada",
+      "success": "Plantilla predeterminada restaurada."
+    },
+    "test": {
+      "failed": "No se pudo enviar el email de prueba",
+      "sent": "Email de prueba enviado a {email}",
+      "buttonHintOk": "Envía un email real con el remitente de la instancia",
+      "buttonHintMissing": "El envío de emails aún no está configurado en la instancia",
+      "button": "Enviar prueba",
+      "dialogTitle": "Enviar un email de prueba",
+      "dialogDescription": "Envía la plantilla que ves en la vista previa al email indicado.",
+      "emailLabel": "Email de destino",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "sendingFrom": "Enviando desde <code>{sender}</code>.",
+      "send": "Enviar"
+    },
+    "branding": {
+      "loadFailed": "No se pudieron cargar los temas",
+      "previewFailed": "Falló la vista previa",
+      "saveFailed": "No se pudo guardar el aspecto de los emails",
+      "saved": "Guardado. Todos los emails usan ahora este aspecto.",
+      "active": "Activo",
+      "customize": {
+        "title": "Personalizar",
+        "description": "La vista previa se actualiza mientras editas. Nada cambia hasta que guardes."
+      },
+      "resetBrandHint": "Quita toda la personalización de marca y conserva solo el tema",
+      "resetBrand": "Restablecer marca",
+      "theme": {
+        "title": "Tema",
+        "description": "La paleta, la tipografía y el diseño base."
+      },
+      "logoName": {
+        "title": "Logo y nombre",
+        "description": "Se muestra en la parte superior de cada email."
+      },
+      "logo": {
+        "label": "URL del logo",
+        "hint": "Un PNG o JPG por https, se muestra a 40 px de alto. Déjalo vacío para usar la marca de Foundathyon con el nombre de tu app.",
+        "noImage": "Sin imagen"
+      },
+      "displayName": {
+        "label": "Nombre visible",
+        "hintWithLogo": "Se usa como texto alternativo del logo.",
+        "hintNoLogo": "Se muestra junto a la marca. Déjalo vacío para usar el nombre de la app.",
+        "placeholder": "El nombre de tu app"
+      },
+      "accent": {
+        "title": "Color de acento",
+        "description": "Botones, códigos y enlaces. El texto de los botones se ajusta para mantener el contraste.",
+        "themeAccent": "Acento del tema",
+        "custom": "Color personalizado",
+        "hex": "Hex"
+      },
+      "shape": {
+        "title": "Forma y tipografía",
+        "corners": "Esquinas",
+        "font": "Fuente",
+        "options": {
+          "theme": "Tema",
+          "sharp": "Rectas",
+          "soft": "Suaves",
+          "round": "Redondas",
+          "sans": "Sans",
+          "serif": "Serif",
+          "mono": "Mono"
+        }
+      },
+      "footer": {
+        "title": "Pie de página",
+        "description": "Cada email también indica por qué se envió y da crédito a Foundathyon.",
+        "label": "Texto del pie",
+        "hint": "Nombre de la empresa, dirección o una línea legal. Texto plano, hasta 6 líneas."
+      },
+      "support": {
+        "label": "Email de soporte",
+        "hint": "Añade \"¿Necesitas ayuda?\" con un enlace mailto."
+      },
+      "previewEmail": "Email para la vista previa",
+      "previewWidth": "Ancho de la vista previa",
+      "desktop": "Escritorio",
+      "mobile": "Móvil",
+      "draftPreview": "Vista previa del borrador",
+      "customHtmlNotice": "Este email usa HTML personalizado, así que el tema y la marca no se aplican. Restaura la plantilla predeterminada en la pestaña Plantillas para usarlos.",
+      "inheritedHtmlNotice": "Este email usa una plantilla global de la instancia, así que el tema y la marca no se aplican.",
+      "errors": {
+        "logoUrl": "Usa una URL https:// a un PNG o JPG.",
+        "displayNameLength": "Usa 80 caracteres o menos.",
+        "accentHex": "Usa un color hexadecimal como #3bc7cb.",
+        "footerLength": "Usa 300 caracteres o menos.",
+        "footerLines": "Usa 6 líneas o menos.",
+        "supportEmail": "Ingresa un email válido."
+      }
+    },
+    "errors": {
+      "editionRejected": "Esta edición de Accounts no permite editar este ámbito.",
+      "unknownTemplate": "Accounts no conoce esta plantilla.",
+      "unknownTheme": "Accounts no conoce este tema.",
+      "htmlRequired": "El archivo HTML está vacío.",
+      "htmlTooLarge": "El HTML es demasiado grande: el límite es 200 KB.",
+      "sanitization": "El HTML contiene marcado no permitido (script, iframe o manejadores de eventos).",
+      "missingVariables": "Al HTML le faltan estas variables obligatorias: {variables}.",
+      "forbiddenVariables": "El HTML usa variables prohibidas: {variables}.",
+      "invalidBranding": "Accounts rechazó la marca: {details}",
+      "notInPlan": "El plan de esta app no incluye la marca personalizada en los emails.",
+      "testEmailRequired": "Ingresa un email de destino",
+      "noEmailConfig": "La instancia no tiene remitente configurado (EMAIL_SENDER).",
+      "sendFailed": "No se pudo enviar el email de prueba: revisa la configuración de correo de la instancia.",
+      "rateLimited": "Demasiados emails de prueba. Inténtalo más tarde."
+    }
   },
   "onboarding": {
     "branding": "Autenticación y gestión de usuarios para tus aplicaciones.",
@@ -2239,7 +2387,6 @@
     "getToken": "Genera un token de acceso temporal a partir de un refresh token",
     "validateToken": "Verifica si el token sigue siendo válido con el servidor",
     "clearInput": "Limpia todo el texto del campo",
-    "sendTestEmail": "Envía una previsualización de esta plantilla a tu bandeja de entrada",
     "saveSettings": "Guarda los cambios en la configuración del sistema",
     "clearKey": "Elimina la clave guardada del almacenamiento local",
     "exportCsv": "Exporta los datos visibles a un archivo CSV",

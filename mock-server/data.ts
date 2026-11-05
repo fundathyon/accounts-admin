@@ -331,3 +331,69 @@ export const mcpConnections: Record<string, unknown>[] = [
     granted_at: '2026-10-22T08:30:00Z', last_used_at: '2026-10-25T12:00:00Z', revoked_at: '2026-10-26T09:00:00Z', revoked_reason: 'user',
   },
 ];
+
+// ---- Email templates: same catalog and themes as templates/catalog in the backend ----
+export const emailCatalogMeta = {
+  version: '3.0.0',
+  channel: 'stable',
+  allowed_globals: ['app_name', 'logo_url', 'support_email', 'year', 'current_date', 'unsubscribe_url'],
+  forbidden_variables: ['password', 'secret_key', 'refresh_token', 'jwt', 'api_key', 'access_token', 'private_key', 'pepper', 'token_hash'],
+};
+
+function emailEntry(id: string, name: string, description: string, category: string, subject: string, required: string[], optional: string[], safe?: string[]) {
+  return {
+    id, name, description, category,
+    subject_default: subject,
+    from_name_default: '{app_name}',
+    required_variables: required,
+    optional_variables: optional,
+    ...(safe ? { safe_html_variables: safe } : {}),
+    baseline_ref: `embedded:${id}@${emailCatalogMeta.version}`,
+  };
+}
+
+export type EmailCatalogEntry = ReturnType<typeof emailEntry>;
+
+export const emailCatalog = [
+  emailEntry('signup_activation_code', 'Sign-up: activation code', 'Sends a numeric verification code to confirm a new email registration.', 'auth', 'Verify your account at {app_name}', ['activation_code', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url', 'support_email']),
+  emailEntry('signup_activation_link', 'Sign-up: activation link', 'Sends a one-tap verification link instead of a numeric code.', 'auth', 'Activate your account at {app_name}', ['activation_url', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url', 'support_email', 'button_color'], ['activation_url']),
+  emailEntry('passwordless_otp', 'Passwordless OTP', 'One-time login code for passwordless authentication.', 'auth', 'Your one-time code for {app_name}', ['otp_code', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url']),
+  emailEntry('password_reset_code', 'Password reset: code', 'Sends a numeric reset code to recover an account password.', 'reset', 'Reset your {app_name} password', ['reset_password_code', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url', 'support_email']),
+  emailEntry('password_reset_link', 'Password reset: link', 'Sends a one-tap link to set a new password.', 'reset', 'Reset your {app_name} password', ['reset_url', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url', 'support_email', 'button_color'], ['reset_url']),
+  emailEntry('change_email_code', 'Change email: verification code', 'Verifies the new email address before swapping it on the account.', 'account', 'Confirm your new email at {app_name}', ['activation_code', 'new_email', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url', 'support_email']),
+  emailEntry('welcome', 'Welcome', 'Greets the user right after they verify their account.', 'account', 'Welcome to {app_name}', ['app_name'], ['user_name', 'logo_url', 'support_email']),
+  emailEntry('magic_link', 'Magic link sign-in', 'Passwordless login link with optional per-app branding.', 'auth', 'Your sign-in link for {app_name}', ['magic_url', 'expiry_minutes', 'app_name'], ['user_name', 'logo_url', 'button_color', 'support_email'], ['magic_url']),
+  emailEntry('totp_enabled_notice', 'Security: 2FA enabled', 'Notifies the user that two-factor authentication was just enabled.', 'security', 'Two-factor authentication enabled on your {app_name} account', ['app_name', 'event_at', 'ip'], ['user_name', 'user_agent', 'support_url', 'logo_url']),
+  emailEntry('password_changed_notice', 'Security: password changed', 'Notifies the user that their account password was just changed.', 'security', 'Your {app_name} password was changed', ['app_name', 'event_at', 'ip'], ['user_name', 'user_agent', 'support_url', 'logo_url']),
+];
+
+function emailTheme(
+  id: string, name: string, description: string, palette: [string, string, string, string, string, string, string],
+  options: { headingFont?: string; corners: string; align: string; topBar?: boolean; dark?: boolean },
+) {
+  const [canvas, surface, border, heading, text, muted, accent] = palette;
+  return {
+    id, name, description,
+    bg_color: surface, accent_color: accent, text_color: heading, is_dark: !!options.dark,
+    tokens: {
+      canvas, surface, border, heading, text, muted, accent,
+      font: 'sans', heading_font: options.headingFont ?? 'sans', corners: options.corners, align: options.align,
+      top_bar: !!options.topBar, dark: !!options.dark,
+    },
+  };
+}
+
+export type EmailThemeEntry = ReturnType<typeof emailTheme>;
+
+export const DEFAULT_EMAIL_THEME = 'midnight';
+
+// Default first, then by id, like catalog.ListThemes.
+export const emailThemes = [
+  emailTheme('midnight', 'Midnight Cyan', 'Near-black canvas with a cyan accent. Crisp and technical, made for developer tools.', ['#0a0c0f', '#12161b', '#232a33', '#f5f7fa', '#c3cad3', '#828c98', '#3bc7cb'], { corners: 'soft', align: 'left', dark: true }),
+  emailTheme('daylight', 'Daylight Minimal', 'White card on a soft grey canvas with a confident blue accent. A safe default for B2B SaaS.', ['#f3f4f6', '#ffffff', '#e5e7eb', '#0f172a', '#374151', '#6b7280', '#2563eb'], { corners: 'soft', align: 'left' }),
+  emailTheme('forest', 'Forest', 'Deep green and dark with a bright lime accent. Calm and grounded.', ['#07130d', '#0d1d15', '#1d3427', '#ecfdf3', '#bcd5c4', '#7f9c8a', '#84cc16'], { corners: 'soft', align: 'center', dark: true }),
+  emailTheme('ocean_teal', 'Ocean Teal', 'Mint canvas, white card and a teal accent. Friendly, light and calm.', ['#e8f6f3', '#ffffff', '#cde8e2', '#0b3b36', '#2c5a54', '#5f817b', '#0d9488'], { corners: 'round', align: 'center' }),
+  emailTheme('royal_purple', 'Royal Purple', 'Cream paper, serif headings and a deep purple accent. Premium and editorial.', ['#f6f1e8', '#fffdf8', '#e7ddcb', '#23103d', '#4a3b5f', '#8a7d9c', '#6d28d9'], { headingFont: 'serif', corners: 'sharp', align: 'center', topBar: true }),
+  emailTheme('slate_mono', 'Slate Mono', "Monochrome and corporate. Sharp edges and no colour but your brand's.", ['#fafafa', '#ffffff', '#e4e4e7', '#09090b', '#3f3f46', '#71717a', '#18181b'], { corners: 'sharp', align: 'left' }),
+  emailTheme('sunrise', 'Sunrise Warm', 'Warm peach canvas, rounded shapes and an orange accent. Great for consumer apps.', ['#fff4ea', '#ffffff', '#fbdcc4', '#3b1d08', '#5f3b22', '#9b7458', '#ea580c'], { corners: 'round', align: 'center', topBar: true }),
+];

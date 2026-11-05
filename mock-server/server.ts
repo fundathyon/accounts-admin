@@ -13,11 +13,12 @@
 // before a request ever reaches here.
 
 import {
-  APP_ID, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist, geoAccessBehavior,
+  APP_ID, DEFAULT_EMAIL_THEME, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist, emailCatalog, emailCatalogMeta, emailThemes, geoAccessBehavior,
   identityLinkingBehavior, loginEvents, mcpConnections, mcpResources, mcpResourceUrls, mfaBehavior, nextId, oauthAudiences, oauthConfigs, paginate, policies, queryDeliveryUsage,
   rolePolicies, roles, securityLimitsDefaults, securityLimitsMeta, securityLimitsOverrides, securityLimitsRanges, sessionSecurityBehavior,
   sessionSecurityDefaults, userMetadataPolicy, users, webhookEvents, webhooks,
 } from './data';
+import type { EmailCatalogEntry } from './data';
 // Embedded Auth mirrors the backend contract with the admin's own client-side
 // model (no `@/` alias here: Bun resolves this file's relative imports only).
 import {
@@ -27,6 +28,7 @@ import {
 import type { EmbeddedAuthAccent, EmbeddedAuthConfig, EmbeddedAuthStrategies } from '../src/lib/admin-types';
 import { isIsoCountryCode } from '../src/lib/countries';
 import { RESERVED_KEYS as RESERVED_METADATA_CLAIMS } from '../src/lib/user-metadata';
+import { brandingErrors, compactBranding, type BrandingErrorKey, type EmailBranding } from '../src/lib/email-templates';
 
 const PORT = Number(process.env.MOCK_PORT || 8099);
 // Edition reported by GET /health. Pro by default so `make dev-mock` shows the
@@ -835,6 +837,301 @@ route('POST', '/api/v1/system/email-templates/preview', async (req) => {
   return ok({ html: `<html><body>Mock preview for ${body.name ?? 'template'}</body></html>` });
 });
 route('GET', '/api/v1/system/env', () => ok({ environment: 'local', reveal_sensitive: false }));
+
+// ---- email templates ----
+// Two route families, like internal/api/v1/email_templates/setup.go: per-app with
+// the secret key and global with the admin key. `appId` is '' on the global ones.
+// As in the use cases: only Pro writes per-app rows, only Community writes the
+// global row, and reads, previews and tests answer in both editions.
+type EmailOverride = { id: string; app_id: string; template_id: string; locale: string; enabled: boolean; subject: string; from_name: string; html: string; text: string; html_baseline_ref: string; created_at: string; updated_at: string };
+type EmailSelection = { themeId: string; branding: EmailBranding };
+
+const emailOverrides = new Map<string, EmailOverride>();
+const emailSelections = new Map<string, EmailSelection>();
+const emailTestSends = new Map<string, number[]>();
+
+const emailOverrideKey = (appId: string, templateId: string, locale: string) => `${appId}|${templateId}|${locale}`;
+
+function seedEmailOverride(appId: string, templateId: string, heading: string) {
+  const entry = emailCatalog.find((e) => e.id === templateId)!;
+  const now = new Date().toISOString();
+  emailOverrides.set(emailOverrideKey(appId, templateId, 'en'), {
+    id: nextId('tpl'), app_id: appId, template_id: templateId, locale: 'en', enabled: true,
+    subject: entry.subject_default, from_name: entry.from_name_default,
+    html: `<!doctype html><html><body style="margin:0;padding:32px;background:#f8fafc;font-family:Georgia,serif;color:#1f2937"><h1 style="font-size:24px">${heading}</h1><p>Hello {user_name}, this is the custom HTML of <strong>{app_name}</strong>.</p><p>Sent {event_at} from {ip}.</p></body></html>`,
+    text: '', html_baseline_ref: entry.baseline_ref, created_at: now, updated_at: now,
+  });
+}
+
+// Seeds: an override of the edition's own scope and a global one, which in Pro
+// is the case of an app inheriting a template it cannot edit.
+seedEmailOverride(EDITION === 'pro' ? APP_ID : '', 'welcome', 'Welcome aboard');
+seedEmailOverride('', 'password_changed_notice', 'Your password changed');
+emailSelections.set(EDITION === 'pro' ? APP_ID : '', {
+  themeId: 'daylight',
+  branding: { display_name: 'Acme', accent_color: '#7c3aed', support_email: 'help@acme.example' },
+});
+
+function emailEditionRejects(appId: string) {
+  return appId === '' ? EDITION !== 'community' : EDITION !== 'pro';
+}
+
+function emailProRequired() {
+  return fail(403, 'per-app email templates require Pro edition; this deploy can only edit the global override', 'email_templates.pro_required');
+}
+
+function activeEmailSelection(appId: string): { selection: EmailSelection; scope: 'app' | 'global' | 'default' } {
+  const own = EDITION === 'pro' && appId ? emailSelections.get(appId) : undefined;
+  if (own) return { selection: own, scope: 'app' };
+  const global = emailSelections.get('');
+  if (global) return { selection: global, scope: 'global' };
+  return { selection: { themeId: DEFAULT_EMAIL_THEME, branding: {} }, scope: 'default' };
+}
+
+const EMAIL_SAMPLE_VARS: Record<string, string> = {
+  user_name: 'Ada Lovelace', activation_code: '123456', otp_code: '987654', reset_password_code: '654321',
+  expiry_minutes: '10', app_name: 'My App', new_email: 'ada@example.com',
+  magic_url: 'https://example.com/auth/verify?token=preview', activation_url: 'https://example.com/auth/activate?token=preview',
+  reset_url: 'https://example.com/auth/reset?token=preview', support_email: 'support@example.com',
+  support_url: 'https://example.com/support', event_at: '2026-06-19 12:34:56 UTC', ip: '203.0.113.42',
+  user_agent: 'Mozilla/5.0 (preview)', year: '2026', current_date: '2026-06-19',
+};
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const fillEmailVars = (body: string, vars: Record<string, string>) =>
+  body.replace(/\{([a-z_]+)\}/g, (raw, name: string) => (name in vars ? vars[name] : raw));
+
+/** An approximation of catalog.RenderHTML: same tokens and branding, simpler markup. */
+function renderEmailTheme({ themeId, branding }: EmailSelection, entry: EmailCatalogEntry) {
+  const theme = emailThemes.find((th) => th.id === themeId) ?? emailThemes[0];
+  const t = theme.tokens;
+  const accent = branding.accent_color ?? t.accent;
+  const corners = branding.corners ?? t.corners;
+  const radius = corners === 'sharp' ? 0 : corners === 'round' ? 16 : 8;
+  const families: Record<string, string> = { sans: 'Helvetica,Arial,sans-serif', serif: 'Georgia,serif', mono: 'Menlo,monospace' };
+  const font = families[branding.font ?? t.font];
+  const code = entry.required_variables.find((v) => v.endsWith('_code'));
+  const link = entry.required_variables.find((v) => v.endsWith('_url'));
+  const action = code
+    ? `<p style="font-size:28px;font-weight:700;letter-spacing:4px;color:${accent}">{${code}}</p>`
+    : link
+      ? `<p><a href="{${link}}" style="display:inline-block;padding:10px 20px;background:${accent};color:#fff;text-decoration:none;border-radius:${radius}px">${entry.name}</a></p>`
+      : '';
+  const logo = branding.logo_url
+    ? `<img src="${escapeHtml(branding.logo_url)}" alt="${escapeHtml(branding.display_name ?? '{app_name}')}" height="40">`
+    : `<strong style="color:${t.heading}">${escapeHtml(branding.display_name ?? '{app_name}')}</strong>`;
+  const footer = [
+    branding.footer_text ? escapeHtml(branding.footer_text).replace(/\n/g, '<br>') : '',
+    branding.support_email ? `Need help? <a href="mailto:${escapeHtml(branding.support_email)}" style="color:${accent}">${escapeHtml(branding.support_email)}</a>` : '',
+    'You received this email because of your {app_name} account.',
+  ].filter(Boolean).join('<br>');
+  return `<!doctype html><html><body style="margin:0;padding:32px 16px;background:${t.canvas};font-family:${font};color:${t.text};text-align:${t.align}">
+<div style="max-width:520px;margin:0 auto">
+<div style="margin-bottom:16px">${logo}</div>
+<div style="background:${t.surface};border:1px solid ${t.border};border-radius:${radius}px;overflow:hidden">
+${t.top_bar ? `<div style="height:4px;background:${accent}"></div>` : ''}
+<div style="padding:32px">
+<h1 style="margin:0 0 12px;font-size:22px;color:${t.heading};font-family:${families[branding.font ?? t.heading_font]}">${entry.subject_default}</h1>
+<p>Hello {user_name}, ${entry.description}</p>
+${action}
+</div></div>
+<p style="margin-top:16px;font-size:12px;color:${t.muted}">${footer}</p>
+</div></body></html>`;
+}
+
+/** resolver.ResolveChain for one locale: the app's override, the global one, the theme. */
+function resolveEmail(appId: string, entry: EmailCatalogEntry, locale: string, selection: EmailSelection, sample: Record<string, string>) {
+  const vars = { ...EMAIL_SAMPLE_VARS, ...sample };
+  const passes = EDITION === 'pro' && appId ? [{ appId, source: 'per_app_db' }, { appId: '', source: 'global_db' }] : [{ appId: '', source: 'global_db' }];
+  for (const pass of passes) {
+    const row = emailOverrides.get(emailOverrideKey(pass.appId, entry.id, locale));
+    if (row?.enabled) {
+      return { subject: fillEmailVars(row.subject, vars), from_name: fillEmailVars(row.from_name, vars), html: fillEmailVars(row.html, vars), source: pass.source, warnings: [] };
+    }
+  }
+  return {
+    subject: fillEmailVars(entry.subject_default, vars),
+    from_name: fillEmailVars(entry.from_name_default, vars),
+    html: fillEmailVars(renderEmailTheme(selection, entry), vars),
+    source: `theme:${selection.themeId}`,
+    warnings: [],
+  };
+}
+
+const BRANDING_PROBLEMS: Record<BrandingErrorKey, string> = {
+  logoUrl: 'must be a valid https URL',
+  displayNameLength: 'must be at most 80 characters',
+  accentHex: 'must be a hex colour like #3bc7cb',
+  footerLength: 'must be at most 300 characters',
+  footerLines: 'must be plain text of at most 6 lines',
+  supportEmail: 'must be a valid email address',
+};
+
+function brandingProblems(branding: EmailBranding) {
+  const problems = Object.entries(brandingErrors(branding)).map(([field, key]) => `${field}: ${BRANDING_PROBLEMS[key]}`);
+  return problems.length ? problems.join('; ') : null;
+}
+
+const EMAIL_PLACEHOLDER = /\{([a-z_]+)\}/g;
+
+function upsertEmailTemplate(appId: string, templateId: string, body: Record<string, unknown>) {
+  if (emailEditionRejects(appId)) return emailProRequired();
+  const entry = emailCatalog.find((e) => e.id === templateId);
+  if (!entry) return fail(404, 'unknown email template id', 'email_templates.unknown_template');
+  const locale = String(body.locale ?? '').trim().toLowerCase() || 'en';
+  const subject = String(body.subject ?? '').trim();
+  if (!subject) return fail(422, 'subject is required', 'email_templates.subject_required');
+  if (/[\r\n]/.test(subject) || subject.length > 200) {
+    return fail(422, 'subject must not contain line breaks and be under 200 characters', 'email_templates.subject_invalid');
+  }
+  const rawHtml = String(body.html ?? '');
+  if (!rawHtml.trim()) return fail(422, 'html body is required', 'email_templates.html_required');
+  if (new TextEncoder().encode(rawHtml).length > 200 * 1024) return fail(422, 'html body exceeds the 200 KB limit', 'email_templates.html_too_large');
+
+  // The real sanitizer strips what it does not allow and reports it.
+  const html = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
+  const warnings = html === rawHtml ? [] : ['removed: script'];
+  const found = [...html.matchAll(EMAIL_PLACEHOLDER)].map((m) => m[1]);
+  const missing = entry.required_variables.filter((v) => !found.includes(v));
+  if (missing.length) return fail(422, 'html body is missing required placeholders for this template', 'email_templates.missing_required_variables', { missing });
+  const forbidden = found.filter((v) => emailCatalogMeta.forbidden_variables.includes(v));
+  if (forbidden.length) return fail(422, 'html body references forbidden placeholders (password, api_key, etc.)', 'email_templates.forbidden_variables', { forbidden });
+  const allowed = [...entry.required_variables, ...entry.optional_variables, ...emailCatalogMeta.allowed_globals];
+  for (const name of new Set(found)) if (!allowed.includes(name)) warnings.push(`unknown placeholder: ${name}`);
+
+  const key = emailOverrideKey(appId, templateId, locale);
+  const existing = emailOverrides.get(key);
+  const now = new Date().toISOString();
+  const row: EmailOverride = {
+    id: existing?.id ?? nextId('tpl'), app_id: appId, template_id: templateId, locale,
+    enabled: body.enabled === undefined ? true : !!body.enabled,
+    subject, from_name: String(body.from_name ?? ''), html, text: String(body.text ?? ''),
+    html_baseline_ref: entry.baseline_ref, created_at: existing?.created_at ?? now, updated_at: now,
+  };
+  emailOverrides.set(key, row);
+  return ok({ template: row, ...(warnings.length ? { warnings } : {}) });
+}
+
+function emailTemplateRoutes(base: string, appId: string) {
+  route('GET', `${base}/catalog`, () => {
+    const rows = [...emailOverrides.values()].filter((r) => r.app_id === appId);
+    const items = emailCatalog.map((entry) => {
+      const own = rows.filter((r) => r.template_id === entry.id);
+      return {
+        ...entry,
+        has_override: own.length > 0,
+        override_enabled: own[0]?.enabled ?? false,
+        ...(own.length ? { override_locales: own.map((r) => r.locale) } : {}),
+      };
+    });
+    return ok({ ...emailCatalogMeta, items });
+  });
+
+  route('GET', `${base}/themes`, () => {
+    const { selection, scope } = activeEmailSelection(appId);
+    const preview = emailCatalog.find((e) => e.id === 'signup_activation_code')!;
+    return ok({
+      default_theme_id: DEFAULT_EMAIL_THEME,
+      active_theme_id: selection.themeId,
+      scope,
+      branding: selection.branding,
+      themes: emailThemes.map((theme) => ({
+        ...theme,
+        preview_html: fillEmailVars(renderEmailTheme({ themeId: theme.id, branding: selection.branding }, preview), EMAIL_SAMPLE_VARS),
+        preview_template_id: preview.id,
+      })),
+    });
+  });
+
+  route('GET', `${base}/themes/active`, () => {
+    const { selection, scope } = activeEmailSelection(appId);
+    return ok({ theme_id: selection.themeId, scope, branding: selection.branding });
+  });
+
+  route('PUT', `${base}/themes/active`, async (req) => {
+    const body = await readBody(req);
+    if (emailEditionRejects(appId)) return fail(403, 'Per-app theme selection requires Pro edition', 'email_templates.themes.pro_required');
+    const themeId = String(body.theme_id ?? '');
+    if (!emailThemes.some((th) => th.id === themeId)) return fail(422, 'unknown theme id', 'email_templates.themes.unknown_theme');
+    let branding = emailSelections.get(appId)?.branding ?? {};
+    if (body.branding !== undefined) {
+      branding = compactBranding(body.branding as EmailBranding);
+      const problems = brandingProblems(branding);
+      if (problems) return fail(422, problems, 'email_templates.themes.invalid_branding');
+    }
+    emailSelections.set(appId, { themeId, branding });
+    return ok({ theme_id: themeId, scope: appId ? 'app' : 'global', branding });
+  });
+
+  route('GET', `${base}/:id`, (_req, { id }, url) => {
+    const entry = emailCatalog.find((e) => e.id === id);
+    if (!entry) return fail(404, 'unknown email template id', 'email_templates.unknown_template');
+    const locale = url.searchParams.get('locale') || 'en';
+    const row = emailOverrides.get(emailOverrideKey(appId, id, locale));
+    if (row) {
+      return ok({
+        source: 'override', baseline_ref: row.html_baseline_ref, template_id: id, locale, enabled: row.enabled,
+        subject: row.subject, from_name: row.from_name, html: row.html, ...(row.text ? { text: row.text } : {}),
+        baseline: entry, override: row,
+      });
+    }
+    const { selection } = activeEmailSelection(appId);
+    return ok({
+      source: 'baseline', baseline_ref: `${entry.baseline_ref}+theme:${selection.themeId}`, template_id: id, locale, enabled: true,
+      subject: entry.subject_default, from_name: entry.from_name_default, html: renderEmailTheme(selection, entry), baseline: entry,
+    });
+  });
+
+  route('PUT', `${base}/:id`, async (req, { id }) => upsertEmailTemplate(appId, id, await readBody(req)));
+
+  route('DELETE', `${base}/:id`, (_req, { id }, url) => {
+    if (emailEditionRejects(appId)) return emailProRequired();
+    emailOverrides.delete(emailOverrideKey(appId, id, url.searchParams.get('locale') ?? ''));
+    return new Response(null, { status: 204 });
+  });
+
+  route('POST', `${base}/:id/preview`, async (req, { id }) => {
+    const body = await readBody(req);
+    let { selection } = activeEmailSelection(appId);
+    if (body.theme_id || body.branding) {
+      const themeId = String(body.theme_id ?? '') || selection.themeId;
+      if (!emailThemes.some((th) => th.id === themeId)) return fail(422, 'unknown theme id', 'email_templates.themes.unknown_theme');
+      const branding = body.branding ? compactBranding(body.branding as EmailBranding) : selection.branding;
+      const problems = brandingProblems(branding);
+      if (problems) return fail(422, problems, 'email_templates.themes.invalid_branding');
+      selection = { themeId, branding };
+    }
+    const entry = emailCatalog.find((e) => e.id === id);
+    if (!entry) return fail(404, 'unknown email template id', 'email_templates.preview.unknown_template');
+    return ok(resolveEmail(appId, entry, String(body.locale || 'en'), selection, (body.sample_variables ?? {}) as Record<string, string>));
+  });
+
+  route('POST', `${base}/:id/test`, async (req, { id }) => {
+    const body = await readBody(req);
+    const to = String(body.to_email ?? '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return fail(422, 'to_email must be a valid email', 'dto.validate.TestEmailTemplateDTO');
+    const scope = appId || '__global__';
+    const recent = (emailTestSends.get(scope) ?? []).filter((at) => Date.now() - at < 60_000);
+    if (recent.length >= 10) return fail(429, 'too many test emails — try again later', 'email_templates.test.rate_limited');
+    const entry = emailCatalog.find((e) => e.id === id);
+    if (!entry) return fail(404, 'unknown email template id', 'email_templates.unknown_template');
+    emailTestSends.set(scope, [...recent, Date.now()]);
+    const { selection } = activeEmailSelection(appId);
+    const resolved = resolveEmail(appId, entry, String(body.locale || 'en'), selection, (body.sample_variables ?? {}) as Record<string, string>);
+    return ok({
+      message_id: nextId('msg'), provider: 'smtp', source: resolved.source,
+      rendered_html_preview: resolved.html.slice(0, 4096), warnings: resolved.warnings,
+    });
+  });
+}
+
+emailTemplateRoutes('/api/v1/email-templates', APP_ID);
+emailTemplateRoutes('/v1/email-templates', '');
+
+// Every email goes out with the instance's sender, in both editions.
+route('GET', '/api/v1/email-config', () => ok({ client: 'smtp', sender: 'no-reply@accounts.mock', source: 'instance' }));
 
 // ---- email-access ----
 route('GET', '/api/v1/email-access/settings', () => ok(emailAccessSettings));
