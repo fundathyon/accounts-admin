@@ -2033,7 +2033,169 @@
     "magicLinkActivated": "Magic Link activado",
     "errorLoadDetails": "Error al cargar detalles",
     "errorUpdate": "Error al actualizar",
-    "errorServer": "Error al contactar el servidor"
+    "errorServer": "Error al contactar el servidor",
+    "emailCodeActivated": "Código por correo activado",
+    "emailCodeDeactivated": "Código por correo desactivado",
+    "testersActivated": "Testers activados",
+    "testersDeactivated": "Testers desactivados",
+    "openScreen": "Abrir su pantalla",
+    "jsonEditorHelp": "Accounts fusiona este JSON con la configuración guardada: una clave que quites no se borra. El campo identifier debe seguir igual.",
+    "invalidJson": "Debe ser un objeto JSON válido.",
+    "list": {
+      "statusTitle": "Estado de los behaviors",
+      "activeCount": "{count} de {total} activos",
+      "newBehavior": "Nuevo behavior",
+      "newBehaviorDesc": "Créalo desde el catálogo de Accounts, con su configuración predefinida, o con una configuración propia.",
+      "searchPlaceholder": "Buscar por identificador o ID…",
+      "noMatches": "No hay behaviors que coincidan con la búsqueda.",
+      "columnBehavior": "Behavior",
+      "columnStatus": "Estado",
+      "columnUpdated": "Último cambio",
+      "identifier": "Identificador:",
+      "noConfig": "Sin configuración",
+      "configKeysOne": "1 clave en config",
+      "configKeysMany": "{count} claves en config",
+      "notConfigured": "Sin configurar todavía: usan sus valores por defecto y se crean al guardar en su pantalla.",
+      "type": "Tipo",
+      "custom": "Personalizado",
+      "code": "Código del behavior",
+      "noneAvailable": "Nada que crear: el catálogo ya está en uso",
+      "create": "Crear",
+      "created": "Behavior creado",
+      "createFailed": "No se pudo crear el behavior",
+      "alreadyExists": "Esta app ya tiene ese behavior.",
+      "catalogError": "No se pudo cargar el catálogo de behaviors"
+    },
+    "emailLocale": {
+      "title": "Idioma de los correos",
+      "label": "Idioma por defecto (BCP 47)",
+      "help": "Se usa cuando ni la petición ni el usuario traen idioma. Vacío vuelve a en. Ahora se aplica: {locale}.",
+      "invalid": "Debe ser un idioma BCP 47, como es, es-MX o pt-BR.",
+      "loadFailed": "No se pudo cargar el idioma de los correos",
+      "saveFailed": "No se pudo guardar el idioma de los correos",
+      "unavailable": "Este Accounts no tiene el idioma por defecto de los correos."
+    },
+    "tokens": {
+      "title": "tokens",
+      "subtitle": "Vida de los tokens, sesiones, sesiones simultáneas y revocación al cambiar credenciales. Este behavior siempre está activo: solo se configura.",
+      "proOnly": "El behavior tokens solo existe en Accounts Pro. En Community las vidas salen de JWT_EXPIRE y REFRESH_EXPIRE, y las sesiones del behavior email_auth.",
+      "unavailable": {
+        "title": "Este Accounts no tiene el behavior tokens",
+        "body": "Actualiza Accounts para configurarlo desde aquí."
+      },
+      "templates": {
+        "default": "Valores por defecto",
+        "web": "Web estándar",
+        "mobile": "Móvil (sesiones largas)",
+        "strict": "Alta seguridad"
+      },
+      "units": {
+        "min": "minutos",
+        "h": "horas",
+        "d": "días"
+      },
+      "duration": {
+        "minOne": "{value} minuto",
+        "minMany": "{value} minutos",
+        "hOne": "{value} hora",
+        "hMany": "{value} horas",
+        "dOne": "{value} día",
+        "dMany": "{value} días"
+      },
+      "errors": {
+        "between": "Entre {min} y {max}.",
+        "longerThanAccess": "Tiene que durar más que el access token.",
+        "reuse": "Entre 0 y {max} segundos.",
+        "idleMin": "Mínimo {min} (2 vidas del access token).",
+        "idleMax": "Máximo {max}.",
+        "idleNoEffect": "No tiene efecto: la sesión vence antes por su duración máxima.",
+        "maxSessions": "Entre 1 y {max}."
+      },
+      "inherited": "heredado",
+      "revoke": {
+        "short": {
+          "all": "Todas",
+          "others": "Todas menos la actual",
+          "none": "Ninguna"
+        },
+        "label": {
+          "all": "Cerrar todas las sesiones",
+          "others": "Cerrar todas menos la actual",
+          "none": "No cerrar ninguna"
+        }
+      },
+      "loadFailed": "Error al cargar el behavior tokens",
+      "saveFailed": "No se pudo guardar",
+      "templateApplied": "Plantilla aplicada: {name}. Revisa las pestañas antes de guardar.",
+      "lifetimes": {
+        "title": "Vida de los tokens",
+        "access": "Access token",
+        "maxSession": "Duración máxima de la sesión",
+        "activation": "Token de activación",
+        "reset": "Token de reset de contraseña",
+        "meaning": "Un usuario activo recibe un access token nuevo cada {access} y vuelve a iniciar sesión a los {refresh}, aunque la use a diario.",
+        "edit": "Editar vidas"
+      },
+      "sessions": {
+        "title": "Sesiones",
+        "rotate": "Rotar el refresh token",
+        "reuseGrace": "Gracia de reuso",
+        "idleClose": "Cierre por inactividad",
+        "idleMeaning": "Si no usa la app durante {time}, la sesión se cierra.",
+        "noIdleMeaning": "La inactividad no cierra la sesión.",
+        "reuseMeaning": "Reusar un refresh token viejo cierra la sesión.",
+        "edit": "Editar sesiones"
+      },
+      "limits": {
+        "title": "Sesiones simultáneas",
+        "limitPerUser": "Limitar por usuario",
+        "max": "Máximo",
+        "onExceed": "Al superarlo",
+        "rejectLogin": "Rechazar login",
+        "closeOldest": "Cerrar la más antigua",
+        "meaningLimitedOne": "Un usuario puede tener 1 dispositivo con sesión abierta. Los testers no tienen límite.",
+        "meaningLimitedMany": "Un usuario puede tener hasta {count} dispositivos con sesión abierta. Los testers no tienen límite.",
+        "meaningUnlimited": "Un usuario puede abrir sesión en todos los dispositivos que quiera.",
+        "edit": "Editar límite"
+      },
+      "revocation": {
+        "title": "Revocar al cambiar credenciales",
+        "passwordChange": "Cambio de contraseña",
+        "passwordReset": "Reset de contraseña",
+        "emailChange": "Cambio de correo",
+        "meaning": "Qué sesiones se cierran al cambiar las credenciales. Los access tokens ya emitidos valen hasta su vencimiento.",
+        "edit": "Editar revocación"
+      },
+      "dialog": {
+        "title": "Editar tokens",
+        "description": "Vida de los tokens y de las sesiones de esta app.",
+        "startFromTemplate": "Partir de una plantilla",
+        "choose": "Elegir…",
+        "tabLifetimes": "Vidas",
+        "tabSessions": "Sesiones",
+        "tabLimit": "Límite",
+        "tabRevocation": "Revocación",
+        "accessHint": "El token que tu backend verifica en cada petición. Corto: si se filtra, sirve poco tiempo.",
+        "refreshHint": "Vida del refresh token. Refrescar no la alarga: pasado este tiempo hay que volver a iniciar sesión.",
+        "activationHint": "Termina un alta tras validar el código del correo.",
+        "resetToken": "Token de reset",
+        "resetHint": "Autoriza fijar la contraseña nueva tras validar el código.",
+        "inheritedNote": "Una vida que no cambies y hoy se hereda sigue heredándose.",
+        "rotateDesc": "Cada refresh entrega uno nuevo; reusar uno viejo cierra la sesión.",
+        "reuseHint": "Dos pestañas o un reintento de red pueden refrescar a la vez con el mismo token. Dentro de esta gracia no se considera robo.",
+        "reuseSeconds": "Gracia de reuso (segundos)",
+        "idleTitle": "Cerrar por inactividad",
+        "idleDesc": "La sesión se cierra si pasa este tiempo sin refrescar.",
+        "idleMax": "Inactividad máxima",
+        "limitTitle": "Limitar sesiones por usuario",
+        "limitDesc": "Cuántos dispositivos puede tener abiertos. Los testers no cuentan.",
+        "maxSessions": "Máximo de sesiones",
+        "rejectNewLogin": "Rechazar el nuevo login",
+        "passwordChangeDesc": "El usuario la cambia estando dentro.",
+        "passwordResetDesc": "La olvidó y la fijó con un código: no hay sesión actual que conservar.",
+        "emailChangeDesc": "Al confirmar el correo nuevo."
+      }
+    }
   },
   "userDetail": {
     "backToUsers": "Volver a usuarios",
@@ -2107,7 +2269,16 @@
       "rateLimit": "El rate-limit aplica por (app_id, email_id), no por IP. Para anti-bot por IP usa CDN/WAF antes del Accounts API.",
       "bindToIp": "Si se activa, el link sólo funciona desde la misma IP que lo solicitó. Rompe el caso 'pido en laptop, abro en teléfono'.",
       "bindToUserAgent": "Vincula el link al User-Agent del solicitante. Default off para flujos cross-device.",
-      "branding": "Personaliza el email que recibe el usuario. Si lo dejas vacío se usan defaults globales."
+      "branding": "Personaliza el email que recibe el usuario. Si lo dejas vacío se usan defaults globales.",
+      "emailActive": "Habilita el inicio de sesión con email",
+      "allowPlusAlias": "Permitir alias con el signo + (ej: user+test@gmail.com)",
+      "passwordActive": "Permite autenticación por contraseña",
+      "denyCommon": "Bloquea contraseñas comunes (123456, password, etc)",
+      "singleUse": "El link solo sirve para un uso",
+      "verificationActive": "Obliga a verificar el email antes de entrar",
+      "specialChars": "Lista separada por comas (ej: *, &, $)",
+      "checkBreached": "Al registrarse o restablecer la contraseña, Accounts comprueba si aparece en filtraciones conocidas (Have I Been Pwned) y la rechaza. Solo consulta un prefijo de su hash: la contraseña nunca sale de Accounts.",
+      "checkBreachedUpdate": "Actualiza Accounts para poder rechazar contraseñas filtradas (Have I Been Pwned)."
     },
     "codeStrategy": "Estrategia del código",
     "fixedCode": "Código fijo",
@@ -2126,11 +2297,11 @@
       "fixedCode": "Valor que se devolverá literalmente como código de verificación. Debe respetar el tamaño y alfabeto configurados arriba. Solo se permite cuando ENVIRONMENT es local, development, staging, qa o test. En producción el backend rechaza la activación con HTTP 422.",
       "autoSignup": "Cuando está activo, un magic link a un email desconocido crea la cuenta. Cuando está apagado, sólo loguea cuentas existentes.",
       "redirectBaseUrl": "Origen del link enviado por email (ej. https://lyron.lat). El path final se concatena en el server.",
-      "defaultRedirectPath": "Debe empezar con '/'. No se permite '//', no se permite ':' (esquemas), máximo 512 caracteres."
+      "defaultRedirectPath": "Debe empezar con '/' y no con '//'."
     },
     "confirmFixed": {
       "title": "¿Cambiar a código FIJO?",
-      "warning": "Estás a punto de hacer que TODOS los usuarios de esta app reciban siempre el mismo código de verificación. Esto es un riesgo de seguridad — solo úsalo para testing.",
+      "warning": "Estás a punto de hacer que TODOS los usuarios de esta app reciban siempre el mismo código. Esto es un riesgo de seguridad — solo úsalo para testing.",
       "allowedEnvs": "Solo se permite en los ambientes:",
       "typeToConfirm": "Para confirmar, escribe la siguiente frase tal cual:",
       "confirm": "Sí, usar código fijo"
@@ -2140,8 +2311,13 @@
       "fixedCodeRequired": "El campo 'Código fijo' es obligatorio cuando la estrategia es 'fixed'.",
       "fixedCodeLengthMismatch": "El 'Código fijo' debe tener la misma longitud que 'Tamaño del código'.",
       "fixedCodeCharClassMismatch": "El 'Código fijo' contiene caracteres no permitidos por el tipo de código seleccionado.",
-      "invalidBaseUrl": "Debe ser una URL https:// sin path (ej. https://lyron.lat).",
-      "invalidRedirectPath": "Debe empezar con '/', sin '//' ni ':', máximo 512 caracteres."
+      "invalidBaseUrl": "Debe ser una URL http:// o https:// con host (ej. https://app.example.com).",
+      "invalidRedirectPath": "Debe empezar con '/' y no con '//'.",
+      "between": "Entre {min} y {max}.",
+      "positive": "Debe ser mayor que 0.",
+      "invalidOption": "Valor no admitido.",
+      "idleRange": "0 (sin límite) o entre {min} y {max} segundos.",
+      "idleTooShort": "La inactividad debe ser al menos el doble de la vida del access token de la app."
     },
     "metadataSchema": "Metadata Schema",
     "metadataSchemaHelp": "Si está activo, valida que los datos extra del usuario sigan el esquema definido al registrarse.",
@@ -2161,7 +2337,65 @@
     "metadataEnum": "Valores permitidos (enum)",
     "metadataEnumHelp": "Separados por coma. Deja vacío para no restringir.",
     "configureMetadataSchema": "Configurar esquema",
-    "configureMetadataSchemaTooltip": "Abre el formulario de edición en la pestaña Metadata Schema."
+    "configureMetadataSchemaTooltip": "Abre el formulario de edición en la pestaña Metadata Schema.",
+    "checkBreached": "Rechazar contraseñas filtradas",
+    "updateAccounts": "Actualiza Accounts",
+    "lowercase": "Minúsculas",
+    "trim": "Recortar espacios",
+    "placeholders": {
+      "fromName": "Mi App",
+      "subject": "Tu acceso a Mi App",
+      "codeSubject": "Tu código de acceso"
+    },
+    "metadataFormat": "Formato (regex)",
+    "metadataFormatHelp": "Se ancla solo. Deja vacío para no restringir.",
+    "emailCode": {
+      "title": "Código por correo",
+      "tab": "Código",
+      "activate": "Activar código por correo",
+      "deactivate": "Desactivar código por correo",
+      "codeLength": "Largo del código",
+      "validity": "Vigencia (seg)",
+      "attemptsPerCode": "Intentos por código",
+      "resendCooldown": "Cooldown de reenvío (seg)",
+      "maxSendsWindow": "Envíos máx. por ventana",
+      "singleActiveCode": "Un solo código activo",
+      "activeHelp": "Entrar y crear la cuenta con un código que llega por correo y se teclea en la misma pantalla. Hermano del magic link: el código para la misma pestaña, el link para otro dispositivo.",
+      "autoSignupHelp": "Si el email no existe al pedir un código, se crea la cuenta automáticamente. Si está apagado, la API sigue respondiendo 200 (anti-enumeration) pero no envía email.",
+      "codeLengthRange": "Largo del código ({min}–{max})",
+      "typeNumeric": "numeric (solo dígitos)",
+      "typeAlphanumeric": "alphanumeric (mayúsculas y dígitos)",
+      "typeSpecial": "alphanumeric_special (con símbolos)",
+      "defaultNote": "El default es 6 dígitos, que es lo que recomiendan NIST y OWASP. El alfanumérico omite los caracteres que se confunden (0/O, 1/I/L) y el canje acepta minúsculas.",
+      "validityRange": "Vigencia (seg, {min}–{max})",
+      "attemptsRange": "Intentos por código ({min}–{max})",
+      "cooldownRange": "Cooldown de reenvío (seg, 0–{max})",
+      "attemptsNote": "Al agotar los intentos el código queda invalidado y el usuario debe pedir otro.",
+      "fixedWarning": "Solo para entornos de prueba: Accounts rechaza el código fijo en producción y exige que mida el largo y use el alfabeto configurados.",
+      "singleActiveCodeHelp": "Pedir un código nuevo deja sin efecto el anterior, así los intentos no se multiplican con cada reenvío.",
+      "bindToIpHelp": "El código sólo se canjea desde la misma IP que lo pidió. No sirve si tu backend llama a Accounts por el usuario.",
+      "bindToUserAgentHelp": "El código sólo se canjea desde el mismo navegador/dispositivo que lo pidió."
+    },
+    "testers": {
+      "title": "Testers",
+      "activate": "Activar testers",
+      "deactivate": "Desactivar testers",
+      "info": "Usuarios de prueba que el servicio crea con la secret key, con correo @{domain} y vigencia. Apagarlo detiene la creación; los testers existentes siguen entrando."
+    },
+    "sessions": {
+      "title": "Sesiones",
+      "edit": "Editar sesiones",
+      "rotation": "Rotar el refresh token",
+      "reuseInterval": "Gracia de reuso (seg)",
+      "idleTimeout": "Cierre por inactividad (seg)",
+      "noLimit": "Sin límite",
+      "note": "La rotación está apagada por defecto porque rompe a los clientes que no guardan el refresh token de cada respuesta. Seguridad de sesiones puede exigirla aunque aquí esté apagada.",
+      "proNote": "En Pro estos valores se editan en el behavior tokens, que es el que se aplica.",
+      "openTokens": "Abrir behavior tokens",
+      "rotationHelp": "Cada refresh entrega un refresh token nuevo; reusar uno viejo cierra la sesión.",
+      "reuseIntervalHelp": "Dos pestañas o un reintento de red pueden refrescar a la vez. Entre 0 y {max}.",
+      "idleTimeoutHelp": "Cierra la sesión sin refrescos durante este tiempo. 0 = sin límite; si no, entre {min} y {max}, y al menos el doble de la vida del access token."
+    }
   },
   "emailTemplates": {
     "title": "Templates de Email",

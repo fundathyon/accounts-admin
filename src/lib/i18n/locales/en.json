@@ -2033,7 +2033,169 @@
     "magicLinkActivated": "Magic Link activated",
     "errorLoadDetails": "Error loading details",
     "errorUpdate": "Error updating",
-    "errorServer": "Error contacting server"
+    "errorServer": "Error contacting server",
+    "emailCodeActivated": "Email code enabled",
+    "emailCodeDeactivated": "Email code disabled",
+    "testersActivated": "Testers enabled",
+    "testersDeactivated": "Testers disabled",
+    "openScreen": "Open its screen",
+    "jsonEditorHelp": "Accounts merges this JSON into the stored config: a key you remove is not deleted. The identifier field must stay the same.",
+    "invalidJson": "It must be a valid JSON object.",
+    "list": {
+      "statusTitle": "Behavior status",
+      "activeCount": "{count} of {total} active",
+      "newBehavior": "New behavior",
+      "newBehaviorDesc": "Create it from the Accounts catalog, with its predefined config, or with a config of your own.",
+      "searchPlaceholder": "Search by identifier or ID…",
+      "noMatches": "No behaviors match the search.",
+      "columnBehavior": "Behavior",
+      "columnStatus": "Status",
+      "columnUpdated": "Last change",
+      "identifier": "Identifier:",
+      "noConfig": "No configuration",
+      "configKeysOne": "1 key in config",
+      "configKeysMany": "{count} keys in config",
+      "notConfigured": "Not configured yet: they run on their defaults and are created when you save on their screen.",
+      "type": "Type",
+      "custom": "Custom",
+      "code": "Behavior code",
+      "noneAvailable": "Nothing to create: the catalog is already in use",
+      "create": "Create",
+      "created": "Behavior created",
+      "createFailed": "Could not create the behavior",
+      "alreadyExists": "This app already has that behavior.",
+      "catalogError": "Could not load the behavior catalog"
+    },
+    "emailLocale": {
+      "title": "Email language",
+      "label": "Default language (BCP 47)",
+      "help": "Used when neither the request nor the user carry a language. Empty goes back to en. In force now: {locale}.",
+      "invalid": "It must be a BCP 47 language, such as es, es-MX or pt-BR.",
+      "loadFailed": "Could not load the email language",
+      "saveFailed": "Could not save the email language",
+      "unavailable": "This Accounts has no default email language."
+    },
+    "tokens": {
+      "title": "tokens",
+      "subtitle": "Token lifetimes, sessions, concurrent sessions and revocation when credentials change. This behavior is always active: it can only be configured.",
+      "proOnly": "The tokens behavior only exists in Accounts Pro. In Community the lifetimes come from JWT_EXPIRE and REFRESH_EXPIRE, and sessions from the email_auth behavior.",
+      "unavailable": {
+        "title": "This Accounts has no tokens behavior",
+        "body": "Update Accounts to configure it from here."
+      },
+      "templates": {
+        "default": "Default values",
+        "web": "Standard web",
+        "mobile": "Mobile (long sessions)",
+        "strict": "High security"
+      },
+      "units": {
+        "min": "minutes",
+        "h": "hours",
+        "d": "days"
+      },
+      "duration": {
+        "minOne": "{value} minute",
+        "minMany": "{value} minutes",
+        "hOne": "{value} hour",
+        "hMany": "{value} hours",
+        "dOne": "{value} day",
+        "dMany": "{value} days"
+      },
+      "errors": {
+        "between": "Between {min} and {max}.",
+        "longerThanAccess": "It must last longer than the access token.",
+        "reuse": "Between 0 and {max} seconds.",
+        "idleMin": "Minimum {min} (2 access token lifetimes).",
+        "idleMax": "Maximum {max}.",
+        "idleNoEffect": "It has no effect: the session expires earlier due to its maximum duration.",
+        "maxSessions": "Between 1 and {max}."
+      },
+      "inherited": "inherited",
+      "revoke": {
+        "short": {
+          "all": "All",
+          "others": "All except the current one",
+          "none": "None"
+        },
+        "label": {
+          "all": "Close all sessions",
+          "others": "Close all except the current one",
+          "none": "Close none"
+        }
+      },
+      "loadFailed": "Error loading the tokens behavior",
+      "saveFailed": "Could not save",
+      "templateApplied": "Template applied: {name}. Review the tabs before saving.",
+      "lifetimes": {
+        "title": "Token lifetimes",
+        "access": "Access token",
+        "maxSession": "Maximum session duration",
+        "activation": "Activation token",
+        "reset": "Password reset token",
+        "meaning": "An active user receives a new access token every {access} and has to sign in again after {refresh}, even if they use the app daily.",
+        "edit": "Edit lifetimes"
+      },
+      "sessions": {
+        "title": "Sessions",
+        "rotate": "Rotate the refresh token",
+        "reuseGrace": "Reuse grace",
+        "idleClose": "Close on inactivity",
+        "idleMeaning": "If they don't use the app for {time}, the session is closed.",
+        "noIdleMeaning": "Inactivity does not close the session.",
+        "reuseMeaning": "Reusing an old refresh token closes the session.",
+        "edit": "Edit sessions"
+      },
+      "limits": {
+        "title": "Concurrent sessions",
+        "limitPerUser": "Limit per user",
+        "max": "Maximum",
+        "onExceed": "When exceeded",
+        "rejectLogin": "Reject login",
+        "closeOldest": "Close the oldest",
+        "meaningLimitedOne": "A user can have 1 device signed in. Testers have no limit.",
+        "meaningLimitedMany": "A user can have up to {count} devices signed in. Testers have no limit.",
+        "meaningUnlimited": "A user can sign in on as many devices as they want.",
+        "edit": "Edit limit"
+      },
+      "revocation": {
+        "title": "Revoke on credential change",
+        "passwordChange": "Password change",
+        "passwordReset": "Password reset",
+        "emailChange": "Email change",
+        "meaning": "Which sessions are closed when credentials change. Access tokens already issued remain valid until they expire.",
+        "edit": "Edit revocation"
+      },
+      "dialog": {
+        "title": "Edit tokens",
+        "description": "Lifetime of the tokens and sessions of this app.",
+        "startFromTemplate": "Start from a template",
+        "choose": "Choose…",
+        "tabLifetimes": "Lifetimes",
+        "tabSessions": "Sessions",
+        "tabLimit": "Limit",
+        "tabRevocation": "Revocation",
+        "accessHint": "The token your backend verifies on every request. Short: if it leaks, it's only useful for a short time.",
+        "refreshHint": "Lifetime of the refresh token. Refreshing doesn't extend it: after this time the user has to sign in again.",
+        "activationHint": "Completes a sign-up after validating the email code.",
+        "resetToken": "Reset token",
+        "resetHint": "Authorizes setting the new password after validating the code.",
+        "inheritedNote": "A lifetime you don't change and is inherited today stays inherited.",
+        "rotateDesc": "Each refresh returns a new one; reusing an old one closes the session.",
+        "reuseHint": "Two tabs or a network retry may refresh at the same time with the same token. Within this grace period it is not considered theft.",
+        "reuseSeconds": "Reuse grace (seconds)",
+        "idleTitle": "Close on inactivity",
+        "idleDesc": "The session is closed if this time passes without refreshing.",
+        "idleMax": "Maximum inactivity",
+        "limitTitle": "Limit sessions per user",
+        "limitDesc": "How many devices they can have signed in. Testers don't count.",
+        "maxSessions": "Maximum sessions",
+        "rejectNewLogin": "Reject the new login",
+        "passwordChangeDesc": "The user changes it while signed in.",
+        "passwordResetDesc": "They forgot it and set it with a code: there is no current session to keep.",
+        "emailChangeDesc": "When the new email is confirmed."
+      }
+    }
   },
   "userDetail": {
     "backToUsers": "Back to users",
@@ -2107,7 +2269,16 @@
       "rateLimit": "Rate-limit applies per (app_id, email_id), not per IP. For per-IP anti-bot, use a CDN/WAF in front of the Accounts API.",
       "bindToIp": "If on, the link only works from the same IP that requested it. Breaks the 'request on laptop, open on phone' flow.",
       "bindToUserAgent": "Binds the link to the requesting User-Agent. Default off for cross-device flows.",
-      "branding": "Customize the email the user receives. Leave fields empty to fall back to global defaults."
+      "branding": "Customize the email the user receives. Leave fields empty to fall back to global defaults.",
+      "emailActive": "Enables signing in with email",
+      "allowPlusAlias": "Allow aliases with the + sign (e.g. user+test@gmail.com)",
+      "passwordActive": "Allows password authentication",
+      "denyCommon": "Blocks common passwords (123456, password, etc)",
+      "singleUse": "The link can only be used once",
+      "verificationActive": "Requires verifying the email before signing in",
+      "specialChars": "Comma-separated list (e.g. *, &, $)",
+      "checkBreached": "When signing up or resetting the password, Accounts checks whether it appears in known breaches (Have I Been Pwned) and rejects it. It only queries a prefix of its hash: the password never leaves Accounts.",
+      "checkBreachedUpdate": "Update Accounts to be able to reject breached passwords (Have I Been Pwned)."
     },
     "codeStrategy": "Code strategy",
     "fixedCode": "Fixed code",
@@ -2126,11 +2297,11 @@
       "fixedCode": "Value returned literally as the verification code. Must match the configured size and alphabet. Only allowed when ENVIRONMENT is local, development, staging, qa, or test. In production the backend rejects activation with HTTP 422.",
       "autoSignup": "When on, a magic link to an unknown email creates the account. When off, only existing accounts can sign in.",
       "redirectBaseUrl": "Origin of the email link (e.g. https://lyron.lat). The final path is concatenated server-side.",
-      "defaultRedirectPath": "Must start with '/'. No '//', no ':' (schemes), max 512 chars."
+      "defaultRedirectPath": "Must start with '/' and not with '//'."
     },
     "confirmFixed": {
       "title": "Switch to FIXED code?",
-      "warning": "You are about to make EVERY user of this app receive the same verification code. This is a security risk — only use it for testing.",
+      "warning": "You are about to make EVERY user of this app receive the same code. This is a security risk — only use it for testing.",
       "allowedEnvs": "Only allowed in environments:",
       "typeToConfirm": "To confirm, type the following phrase exactly:",
       "confirm": "Yes, use fixed code"
@@ -2140,8 +2311,13 @@
       "fixedCodeRequired": "'Fixed code' is required when strategy is 'fixed'.",
       "fixedCodeLengthMismatch": "'Fixed code' must have the same length as 'Code size'.",
       "fixedCodeCharClassMismatch": "'Fixed code' contains characters not allowed by the selected code type.",
-      "invalidBaseUrl": "Must be an https:// URL with no path (e.g. https://lyron.lat).",
-      "invalidRedirectPath": "Must start with '/', without '//' or ':', max 512 chars."
+      "invalidBaseUrl": "Must be an http:// or https:// URL with a host (e.g. https://app.example.com).",
+      "invalidRedirectPath": "Must start with '/' and not with '//'.",
+      "between": "Between {min} and {max}.",
+      "positive": "It must be greater than 0.",
+      "invalidOption": "Value not allowed.",
+      "idleRange": "0 (no limit) or between {min} and {max} seconds.",
+      "idleTooShort": "Inactivity must be at least twice the app's access token lifetime."
     },
     "metadataSchema": "Metadata Schema",
     "metadataSchemaHelp": "If enabled, validates extra user data against the defined schema at signup.",
@@ -2161,7 +2337,65 @@
     "metadataEnum": "Allowed values (enum)",
     "metadataEnumHelp": "Comma-separated. Leave empty to allow any value.",
     "configureMetadataSchema": "Configure schema",
-    "configureMetadataSchemaTooltip": "Opens the edit form on the Metadata Schema tab."
+    "configureMetadataSchemaTooltip": "Opens the edit form on the Metadata Schema tab.",
+    "checkBreached": "Reject breached passwords",
+    "updateAccounts": "Update Accounts",
+    "lowercase": "Lowercase",
+    "trim": "Trim spaces",
+    "placeholders": {
+      "fromName": "My App",
+      "subject": "Your access to My App",
+      "codeSubject": "Your access code"
+    },
+    "metadataFormat": "Format (regex)",
+    "metadataFormatHelp": "Anchored automatically. Leave empty for no restriction.",
+    "emailCode": {
+      "title": "Email code",
+      "tab": "Code",
+      "activate": "Enable email code",
+      "deactivate": "Disable email code",
+      "codeLength": "Code length",
+      "validity": "Validity (sec)",
+      "attemptsPerCode": "Attempts per code",
+      "resendCooldown": "Resend cooldown (sec)",
+      "maxSendsWindow": "Max. sends per window",
+      "singleActiveCode": "Single active code",
+      "activeHelp": "Sign in and create the account with a code that arrives by email and is typed on the same screen. Sibling of the magic link: the code for the same tab, the link for another device.",
+      "autoSignupHelp": "If the email does not exist when requesting a code, the account is created automatically. If turned off, the API still responds 200 (anti-enumeration) but does not send an email.",
+      "codeLengthRange": "Code length ({min}–{max})",
+      "typeNumeric": "numeric (digits only)",
+      "typeAlphanumeric": "alphanumeric (uppercase and digits)",
+      "typeSpecial": "alphanumeric_special (with symbols)",
+      "defaultNote": "The default is 6 digits, which is what NIST and OWASP recommend. The alphanumeric option omits confusable characters (0/O, 1/I/L) and redemption accepts lowercase.",
+      "validityRange": "Validity (sec, {min}–{max})",
+      "attemptsRange": "Attempts per code ({min}–{max})",
+      "cooldownRange": "Resend cooldown (sec, 0–{max})",
+      "attemptsNote": "When attempts run out the code is invalidated and the user must request another.",
+      "fixedWarning": "For test environments only: Accounts rejects the fixed code in production and requires it to match the configured length and alphabet.",
+      "singleActiveCodeHelp": "Requesting a new code invalidates the previous one, so attempts don't multiply with each resend.",
+      "bindToIpHelp": "The code can only be redeemed from the same IP that requested it. It doesn't work if your backend calls Accounts on behalf of the user.",
+      "bindToUserAgentHelp": "The code can only be redeemed from the same browser/device that requested it."
+    },
+    "testers": {
+      "title": "Testers",
+      "activate": "Enable testers",
+      "deactivate": "Disable testers",
+      "info": "Test users that the service creates with the secret key, with an @{domain} email and an expiry. Turning it off stops creation; existing testers can still sign in."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "edit": "Edit sessions",
+      "rotation": "Rotate the refresh token",
+      "reuseInterval": "Reuse grace (sec)",
+      "idleTimeout": "Close on inactivity (sec)",
+      "noLimit": "No limit",
+      "note": "Rotation is off by default because it breaks clients that don't store the refresh token of each response. Session security can require it even if it is off here.",
+      "proNote": "In Pro these values are edited in the tokens behavior, which is the one that applies.",
+      "openTokens": "Open tokens behavior",
+      "rotationHelp": "Each refresh returns a new refresh token; reusing an old one closes the session.",
+      "reuseIntervalHelp": "Two tabs or a network retry may refresh at the same time. Between 0 and {max}.",
+      "idleTimeoutHelp": "Closes a session with no refresh for this long. 0 = no limit; otherwise between {min} and {max}, and at least twice the access token lifetime."
+    }
   },
   "emailTemplates": {
     "title": "Email Templates",

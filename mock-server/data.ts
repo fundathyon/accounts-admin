@@ -4,7 +4,7 @@
 
 // Starts well above every hardcoded seed id below (roles 1001-1003, policies 2001-2003,
 // users 3001-3003, keys 4001-4002, webhooks 5001-5002, oauth 6001-6002, audiences 7001,
-// behaviors 8001-8003, blocklist/allowlist 9001/9101) so generated ids can never collide
+// behaviors 8001-8102, blocklist/allowlist 9001/9101) so generated ids can never collide
 // with a seed — a shared counter starting at 1000 previously handed out "role_1001",
 // silently colliding with the seeded "default" role's id.
 let seq = 100000;
@@ -131,9 +131,56 @@ export const oauthAudiences: Record<string, Record<string, unknown>[]> = {
 };
 
 export const appBehaviors: Record<string, unknown>[] = [
+  // The config of a new app (`getBehaviorExampleConfig`), with a few things on.
   { id: 'beh_8001', app_id: APP_ID, behavior_code: 'email_auth', is_active: true, config: {
-    require_verification: true,
     identifier: 'email',
+    email: { enabled: true, allow_plus_alias: true, normalize: { trim: true, lowercase: true } },
+    password: {
+      enabled: true,
+      policy: {
+        min_length: 8,
+        max_length: 72,
+        min_uppercase: 2,
+        min_lowercase: 1,
+        min_digits: 1,
+        min_special_char: 1,
+        special_chars: ['*', '&', '$'],
+        deny_common_passwords: true,
+        check_breached: true,
+      },
+    },
+    magic_link: {
+      enabled: true,
+      auto_signup: true,
+      ttl_seconds: 900,
+      window_seconds: 900,
+      max_attempts_per_window: 5,
+      single_use: true,
+      bind_to_ip: false,
+      bind_to_user_agent: false,
+      redirect_base_url: 'https://app.example.com',
+      default_redirect_path: '/',
+      email_branding: { from_name: 'Mock App', subject: 'Tu acceso a Mock App' },
+    },
+    email_code: {
+      enabled: true,
+      auto_signup: true,
+      code_size: 6,
+      code_type: 'numeric',
+      code_strategy: 'random',
+      ttl_seconds: 600,
+      max_verify_attempts: 5,
+      window_seconds: 600,
+      max_attempts_per_window: 5,
+      resend_cooldown_seconds: 60,
+      single_active_code: true,
+      bind_to_ip: false,
+      bind_to_user_agent: false,
+      email_branding: {},
+    },
+    testers: { enabled: false },
+    sessions: { refresh_rotation: false, reuse_interval_seconds: 30, idle_timeout_seconds: 0 },
+    verification: { enabled: true, mode: 'email_code', code_type: 'numeric', code_size: 6, ttl_seconds: 900, code_strategy: 'random' },
     metadata_schema: {
       enabled: true,
       additional_properties: true,
@@ -143,10 +190,84 @@ export const appBehaviors: Record<string, unknown>[] = [
         { name: 'phone', type: 'string', required: false, format: '[0-9]{10}' },
       ],
     },
-  }, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
-  { id: 'beh_8002', app_id: APP_ID, behavior_code: 'magic_link', is_active: false, config: {}, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
-  { id: 'beh_8003', app_id: APP_ID, behavior_code: 'metadata_schema', is_active: false, config: { schema: {} }, created_by: 'system', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
+  }, created_by: APP_ID, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-10-28T11:20:00Z' },
+  // Their config comes from the state of their own endpoints (see server.ts).
+  { id: 'beh_8002', app_id: APP_ID, behavior_code: 'session_security', is_active: true, config: {}, created_by: APP_ID, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-08-02T16:05:00Z' },
+  { id: 'beh_8003', app_id: APP_ID, behavior_code: 'identity_linking', is_active: true, config: {}, created_by: APP_ID, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-09-12T10:30:00Z' },
+  { id: 'beh_8004', app_id: APP_ID, behavior_code: 'mfa', is_active: true, config: {}, created_by: APP_ID, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-09-12T10:30:00Z' },
+  { id: 'beh_8005', app_id: APP_ID, behavior_code: 'security_limits', is_active: true, config: {}, created_by: APP_ID, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-10-21T09:15:00Z' },
+  { id: 'beh_8006', app_id: APP_ID, behavior_code: 'email_locale', is_active: true, config: { default_locale: 'es' }, created_by: APP_ID, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-09-30T08:00:00Z' },
 ];
+
+/** `getBehaviorExampleConfig('email_auth')`: what `POST /simple` creates. */
+export const NEW_EMAIL_AUTH_CONFIG: Record<string, unknown> = {
+  identifier: 'email',
+  email: { enabled: true, allow_plus_alias: true, normalize: { trim: true, lowercase: true } },
+  password: {
+    enabled: true,
+    policy: {
+      min_length: 8,
+      max_length: 72,
+      min_uppercase: 2,
+      min_lowercase: 1,
+      min_digits: 1,
+      min_special_char: 1,
+      special_chars: ['*', '&', '$'],
+      deny_common_passwords: true,
+      check_breached: true,
+    },
+  },
+  magic_link: {
+    enabled: false,
+    auto_signup: true,
+    ttl_seconds: 900,
+    window_seconds: 900,
+    max_attempts_per_window: 5,
+    single_use: true,
+    bind_to_ip: false,
+    bind_to_user_agent: false,
+    redirect_base_url: '',
+    default_redirect_path: '/',
+    email_branding: {},
+  },
+  email_code: {
+    enabled: false,
+    auto_signup: true,
+    code_size: 6,
+    code_type: 'numeric',
+    code_strategy: 'random',
+    ttl_seconds: 600,
+    max_verify_attempts: 5,
+    window_seconds: 600,
+    max_attempts_per_window: 5,
+    resend_cooldown_seconds: 60,
+    single_active_code: true,
+    bind_to_ip: false,
+    bind_to_user_agent: false,
+    email_branding: {},
+  },
+  testers: { enabled: false },
+  sessions: { refresh_rotation: false, reuse_interval_seconds: 30, idle_timeout_seconds: 0 },
+  verification: { enabled: false, mode: 'email_code', code_type: 'numeric', code_size: 6, ttl_seconds: 900, code_strategy: 'random' },
+  metadata_schema: { enabled: false, scheme: [], additional_properties: true },
+};
+
+/** Only registered in Pro, next to its routes. */
+export const tokensBehaviorRow: Record<string, unknown> = {
+  id: 'beh_8102',
+  app_id: APP_ID,
+  behavior_code: 'tokens',
+  is_active: true,
+  config: {
+    lifetimes: { access_token_seconds: 0, refresh_token_seconds: 604800, activation_token_seconds: 0, password_reset_token_seconds: 0 },
+    sessions: { refresh_rotation: true, reuse_interval_seconds: 30, idle_timeout_seconds: 1209600 },
+    limits: { max_sessions_per_user: 5, on_limit: 'revoke_oldest' },
+    revocation: { on_password_change: 'others', on_password_reset: 'all', on_email_change: 'none' },
+  },
+  created_by: APP_ID,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-10-14T14:40:00Z',
+};
 
 // The access_token policy of user_metadata (Pro): `plan` and `seats` go in the token.
 export const userMetadataPolicy = { enabled: true, allowed_keys: ['plan', 'seats'], include_user_writable: false };
@@ -171,7 +292,7 @@ export function paginate<T>(items: T[], page: number, size: number): { slice: T[
 
 // ---- security behaviors ----
 // Each one has its own endpoint in the backend (the generic /app-behaviors
-// routes refuse them), so they live apart from `appBehaviors`.
+// routes refuse them): the state lives here and `appBehaviors` has their rows.
 
 export const mfaBehavior = {
   mode: 'optional',

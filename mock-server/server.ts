@@ -13,10 +13,10 @@
 // before a request ever reaches here.
 
 import {
-  APP_ID, DEFAULT_EMAIL_THEME, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist, emailCatalog, emailCatalogMeta, emailThemes, geoAccessBehavior,
+  APP_ID, DEFAULT_EMAIL_THEME, NEW_EMAIL_AUTH_CONFIG, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist, emailCatalog, emailCatalogMeta, emailThemes, geoAccessBehavior,
   identityLinkingBehavior, loginEvents, mcpConnections, mcpResources, mcpResourceUrls, mfaBehavior, nextId, oauthAudiences, oauthConfigs, paginate, policies, queryDeliveryUsage,
   rolePolicies, roles, securityLimitsDefaults, securityLimitsMeta, securityLimitsOverrides, securityLimitsRanges, sessionSecurityBehavior,
-  sessionSecurityDefaults, userMetadataPolicy, users, webhookEvents, webhooks,
+  sessionSecurityDefaults, tokensBehaviorRow, userMetadataPolicy, users, webhookEvents, webhooks,
 } from './data';
 import type { EmailCatalogEntry } from './data';
 // Embedded Auth mirrors the backend contract with the admin's own client-side
@@ -29,6 +29,8 @@ import type { EmbeddedAuthAccent, EmbeddedAuthConfig, EmbeddedAuthStrategies } f
 import { isIsoCountryCode } from '../src/lib/countries';
 import { RESERVED_KEYS as RESERVED_METADATA_CLAIMS } from '../src/lib/user-metadata';
 import { brandingErrors, compactBranding, type BrandingErrorKey, type EmailBranding } from '../src/lib/email-templates';
+import { SESSIONS_DEFAULTS, validateEmailCode, validateMagicLink, validateSessions, type EmailAuthConfig } from '../src/lib/behaviors';
+import { TOKENS_LIMITS, type TokensConfig } from '../src/lib/tokens-behavior';
 
 const PORT = Number(process.env.MOCK_PORT || 8099);
 // Edition reported by GET /health. Pro by default so `make dev-mock` shows the
@@ -335,17 +337,13 @@ function embeddedAuthAvailability(): EmbeddedAuthStrategies {
   const emailAuth = appBehaviors.find((b) => b.behavior_code === 'email_auth' && b.is_active === true && b.is_removed !== true);
   const config = (emailAuth?.config ?? {}) as Record<string, unknown>;
   const nodeEnabled = (key: string) => (config[key] as { enabled?: unknown } | undefined)?.enabled === true;
-  // The backend reads email_auth.config.magic_link.enabled; this mock's own
-  // magic-link toggle (POST /email/magic-link/activate) flips the separate
-  // `magic_link` seed row instead, so either one counts here.
-  const magicLinkRow = appBehaviors.some((b) => b.behavior_code === 'magic_link' && b.is_active === true);
   const oauth = [...new Set(oauthConfigs.filter((c) => c.enabled === true).map((c) => normalizeProvider(String(c.provider ?? ''))))]
     .filter(Boolean)
     .sort();
   return {
     password: !!emailAuth,
     email_code: !!emailAuth && nodeEnabled('email_code'),
-    magic_link: !!emailAuth && (nodeEnabled('magic_link') || magicLinkRow),
+    magic_link: !!emailAuth && nodeEnabled('magic_link'),
     oauth,
   };
 }
@@ -413,9 +411,13 @@ function describeEmbeddedAuth() {
 }
 
 if (EDITION === 'pro') {
-  // Like the backend, no row exists until the first PUT: GET answers the
-  // defaults (not configured, disabled) and the seeded behavior lists stay
-  // exactly as before.
+  // An app that went through the screen once: the row exists, with no origin
+  // yet, so the behavior shows in the lists and stays disabled.
+  appBehaviors.push({
+    id: 'beh_8103', app_id: APP_ID, behavior_code: EMBEDDED_AUTH_CODE, is_active: true,
+    config: canonicalEmbeddedAuthConfig(defaultEmbeddedAuthConfig()),
+    created_by: APP_ID, created_at: '2026-10-05T09:00:00Z', updated_at: '2026-10-05T09:00:00Z',
+  });
   route('GET', '/api/v1/app-behaviors/embedded-auth', () => ok(describeEmbeddedAuth()));
   route('PUT', '/api/v1/app-behaviors/embedded-auth', async (req) => {
     const body = await readBody(req);
@@ -607,46 +609,349 @@ if (EDITION === 'pro') {
   });
 }
 
+// ---- email locale (both editions) ----
+// Registered BEFORE the generic /app-behaviors/:id routes, like the others.
+const LOCALE_SHAPE = /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/;
+
+function describeEmailLocale() {
+  const row = appBehaviors.find((b) => b.behavior_code === 'email_locale');
+  const stored = row?.is_active === true ? String((row.config as { default_locale?: unknown }).default_locale ?? '') : '';
+  return {
+    app_id: APP_ID,
+    default_locale: stored,
+    effective_default_locale: stored || 'en',
+    ...(row ? { updated_at: row.updated_at } : {}),
+  };
+}
+
+route('GET', '/api/v1/app-behaviors/email-locale', () => ok(describeEmailLocale()));
+route('PUT', '/api/v1/app-behaviors/email-locale', async (req) => {
+  const body = await readBody(req);
+  const raw = String(body.default_locale ?? '').trim();
+  const locale = raw.toLowerCase().replaceAll('_', '-');
+  if (raw && (locale.length > 35 || !LOCALE_SHAPE.test(locale))) {
+    return fail(400, 'default_locale must be a BCP 47 language tag such as "es" or "es-MX", or empty', 'email_locale.invalid_locale');
+  }
+  const now = new Date().toISOString();
+  const row = appBehaviors.find((b) => b.behavior_code === 'email_locale');
+  if (row) Object.assign(row, { config: { default_locale: locale }, is_active: true, updated_at: now });
+  else {
+    appBehaviors.push({
+      id: nextId('beh'), app_id: APP_ID, behavior_code: 'email_locale', is_active: true, config: { default_locale: locale },
+      created_by: APP_ID, created_at: now, updated_at: now,
+    });
+  }
+  return ok(describeEmailLocale());
+});
+
+// ---- tokens (Pro): in Community the path falls into /:id and answers 404 ----
+// What an app inherits from JWT_EXPIRE / REFRESH_EXPIRE.
+const INHERITED_ACCESS_SECONDS = 900;
+const INHERITED_REFRESH_SECONDS = 30 * 86400;
+const SHORT_TOKEN_SECONDS = 900;
+
+function describeTokens() {
+  const config = tokensBehaviorRow.config as TokensConfig;
+  const { lifetimes } = config;
+  const effective: TokensConfig = {
+    ...config,
+    lifetimes: {
+      access_token_seconds: lifetimes.access_token_seconds || INHERITED_ACCESS_SECONDS,
+      refresh_token_seconds: lifetimes.refresh_token_seconds || INHERITED_REFRESH_SECONDS,
+      activation_token_seconds: lifetimes.activation_token_seconds || SHORT_TOKEN_SECONDS,
+      password_reset_token_seconds: lifetimes.password_reset_token_seconds || SHORT_TOKEN_SECONDS,
+    },
+    sessions: { ...config.sessions },
+    revocation: { ...config.revocation },
+  };
+  // withSessionSecurityMinimum: session_security is also part of what applies.
+  if (sessionSecurityBehavior.refresh_rotation) effective.sessions.refresh_rotation = true;
+  if (sessionSecurityBehavior.revoke_sessions_on_password_change) {
+    if (effective.revocation.on_password_change === 'none') effective.revocation.on_password_change = 'others';
+    effective.revocation.on_password_reset = 'all';
+  }
+  const { id, created_at, updated_at } = tokensBehaviorRow;
+  return { id, app_id: APP_ID, config, effective, created_at, updated_at };
+}
+
+/** `Settings.Validate`. */
+function tokensIssues(c: TokensConfig): string[] {
+  const issues: string[] = [];
+  const range = (field: string, value: number, { min, max }: { min: number; max: number }) => {
+    if (value !== 0 && (value < min || value > max)) issues.push(`${field}: must be 0 (inherit) or between ${min} and ${max} seconds`);
+  };
+  const { lifetimes: l, sessions: s, limits, revocation: r } = c;
+  range('lifetimes.access_token_seconds', l.access_token_seconds, TOKENS_LIMITS.access);
+  range('lifetimes.refresh_token_seconds', l.refresh_token_seconds, TOKENS_LIMITS.refresh);
+  range('lifetimes.activation_token_seconds', l.activation_token_seconds, TOKENS_LIMITS.activation);
+  range('lifetimes.password_reset_token_seconds', l.password_reset_token_seconds, TOKENS_LIMITS.reset);
+  const access = l.access_token_seconds || INHERITED_ACCESS_SECONDS;
+  const refresh = l.refresh_token_seconds || INHERITED_REFRESH_SECONDS;
+  if (refresh <= access) {
+    issues.push(`lifetimes.refresh_token_seconds: the session (${refresh} s) must last longer than the access token (${access} s)`);
+  }
+  if (s.reuse_interval_seconds < 0 || s.reuse_interval_seconds > TOKENS_LIMITS.reuseMax) {
+    issues.push(`sessions.reuse_interval_seconds: must be between 0 and ${TOKENS_LIMITS.reuseMax} seconds`);
+  }
+  const idle = s.idle_timeout_seconds;
+  if (idle !== 0) {
+    const minIdle = Math.max(TOKENS_LIMITS.idle.min, 2 * access);
+    if (idle < minIdle) issues.push(`sessions.idle_timeout_seconds: must be 0 or at least ${minIdle} seconds: twice the access token lifetime, and never under one hour`);
+    else if (idle > TOKENS_LIMITS.idle.max) issues.push(`sessions.idle_timeout_seconds: must be at most ${TOKENS_LIMITS.idle.max} seconds`);
+    else if (idle >= refresh) issues.push(`sessions.idle_timeout_seconds: has no effect: the session (${refresh} s) ends before by its maximum lifetime`);
+  }
+  if (limits.max_sessions_per_user < 0 || limits.max_sessions_per_user > TOKENS_LIMITS.maxSessions) {
+    issues.push(`limits.max_sessions_per_user: must be 0 (no limit) or between 1 and ${TOKENS_LIMITS.maxSessions}`);
+  }
+  if (limits.max_sessions_per_user > 0 && limits.on_limit !== 'revoke_oldest' && limits.on_limit !== 'reject') {
+    issues.push('limits.on_limit: must be "revoke_oldest" or "reject"');
+  }
+  for (const [field, value] of [['revocation.on_password_change', r.on_password_change], ['revocation.on_email_change', r.on_email_change]]) {
+    if (value && !['all', 'others', 'none'].includes(value)) issues.push(`${field}: must be "all", "others" or "none"`);
+  }
+  if (r.on_password_reset && !['all', 'none'].includes(r.on_password_reset)) {
+    issues.push('revocation.on_password_reset: must be "all" or "none": a reset has no current session to keep');
+  }
+  return issues;
+}
+
+if (EDITION === 'pro') {
+  appBehaviors.push(tokensBehaviorRow);
+  appBehaviors.push({
+    id: geoAccessBehavior.id, app_id: APP_ID, behavior_code: 'geo_access', is_active: true, config: {},
+    created_by: APP_ID, created_at: geoAccessBehavior.created_at, updated_at: geoAccessBehavior.updated_at,
+  });
+  route('GET', '/api/v1/app-behaviors/tokens', () => ok(describeTokens()));
+  route('PUT', '/api/v1/app-behaviors/tokens', async (req) => {
+    const body = (await readBody(req)) as unknown as TokensConfig;
+    const issues = tokensIssues(body);
+    if (issues.length > 0) return fail(422, issues.join('; '), 'app_behaviors.tokens.invalid_config');
+    Object.assign(tokensBehaviorRow, { config: body, updated_at: new Date().toISOString() });
+    // The `sessions` node is mirrored into email_auth, for an older binary.
+    const emailAuth = emailAuthRow();
+    if (emailAuth) emailAuthConfig(emailAuth).sessions = body.sessions;
+    return ok(describeTokens());
+  });
+}
+
 // ---- app-behaviors ----
-route('GET', '/api/v1/app-behaviors', () => ok(appBehaviors.map(({ config: _c, ...rest }) => rest)));
+// `/available` is public and the catalog has email_auth only.
+const AVAILABLE_BEHAVIORS: Record<string, { name: string; description: string }> = {
+  es: {
+    name: 'Autenticación por Email',
+    description: 'Autenticación por email y contraseña con opción de magic link y verificación de email. Soporta normalización de email, políticas de contraseña y códigos de verificación configurables.',
+  },
+  en: {
+    name: 'Email Authentication',
+    description: 'Email and password authentication with optional magic link and email verification. Supports email normalization, password policies, and configurable verification codes.',
+  },
+};
+
+route('GET', '/api/v1/app-behaviors/available', (req) => {
+  const raw = (req.headers.get('Accept-Language') ?? 'en').trim().toLowerCase().split('-')[0];
+  const language = raw === 'es' ? 'es' : 'en';
+  return ok({
+    behaviors: [{
+      code: 'email_auth',
+      ...AVAILABLE_BEHAVIORS[language],
+      example_endpoint: `http://localhost:${PORT}${PREFIX}/api/v1/app-behaviors/examples/email_auth`,
+    }],
+    language,
+  });
+});
+
+/** The config of the rows whose state lives with their own endpoint. */
+function refreshBehaviorRows() {
+  const { updated_at: sessionUpdated, ...sessionSecurity } = sessionSecurityBehavior;
+  const live: Record<string, { config: unknown; updated_at: string }> = {
+    mfa: { config: { mode: mfaBehavior.mode, flows: mfaBehavior.flows }, updated_at: mfaBehavior.updated_at },
+    identity_linking: { config: { mode: identityLinkingBehavior.mode }, updated_at: identityLinkingBehavior.updated_at },
+    session_security: { config: sessionSecurity, updated_at: sessionUpdated },
+    security_limits: { config: securityLimitsOverrides, updated_at: securityLimitsMeta.updated_at },
+    geo_access: { config: geoAccessBehavior.config, updated_at: geoAccessBehavior.updated_at },
+  };
+  for (const row of appBehaviors) {
+    const state = live[String(row.behavior_code)];
+    if (state) Object.assign(row, state);
+  }
+}
+
+route('GET', '/api/v1/app-behaviors', (_req, _params, url) => {
+  refreshBehaviorRows();
+  const { page, size } = pageParams(url);
+  const capped = Math.min(size, 100);
+  const rows = appBehaviors.map(({ config: _config, created_by: _createdBy, ...rest }) => rest);
+  return paginatedResponse(rows.slice(page * capped, (page + 1) * capped), page, capped, rows.length, '/api/v1/app-behaviors');
+});
 route('GET', '/api/v1/app-behaviors/:id', (_req, { id }) => {
+  refreshBehaviorRows();
   const behavior = appBehaviors.find((b) => b.id === id);
-  if (!behavior) return fail(404, 'Behavior not found', 'app_behaviors.get.not_found');
+  if (!behavior) return fail(404, 'App behavior not found', 'app_behavior_not_found');
   return ok(behavior);
+});
+
+/** Behaviors the generic routes refuse: each one has an endpoint that validates its config. */
+function endpointOnly(code: string): boolean {
+  return ['identity_linking', 'mfa', 'security_limits', 'session_security'].includes(code)
+    || (EDITION === 'pro' && (code === EMBEDDED_AUTH_CODE || code === 'geo_access'));
+}
+
+function deepMerge(current: Record<string, unknown>, incoming: Record<string, unknown>): Record<string, unknown> {
+  const merged = { ...current };
+  const isNode = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+  for (const [key, value] of Object.entries(incoming)) {
+    const stored = merged[key];
+    merged[key] = isNode(stored) && isNode(value) ? deepMerge(stored, value) : value;
+  }
+  return merged;
+}
+
+function createBehavior(code: string, config: Record<string, unknown>, isActive: boolean, createdBy: string) {
+  if (endpointOnly(code)) {
+    return fail(422, `the ${code} behavior is configured with its own endpoint`, `app_behaviors.create.use_${code}_endpoint`);
+  }
+  if (appBehaviors.some((b) => b.behavior_code === code && b.is_active === true)) {
+    return fail(409, 'Error creating app behavior: duplicate key', 'app_behaviors.create.error_creating_app_behavior');
+  }
+  const now = new Date().toISOString();
+  const row = {
+    id: nextId('beh'), app_id: APP_ID, behavior_code: code, is_active: isActive, config, created_by: createdBy,
+    created_at: now, updated_at: now,
+  };
+  appBehaviors.push(row);
+  return ok(row);
+}
+
+route('POST', '/api/v1/app-behaviors', async (req) => {
+  const body = await readBody(req);
+  // The backend asks for a UUID; the mock's app id, which the admin sends, is not one.
+  if (!body.created_by) return fail(422, 'created_by must be a valid UUID', 'dto.validate.CreateAppBehaviorsDTO');
+  return createBehavior(String(body.behavior_code ?? ''), (body.config ?? {}) as Record<string, unknown>, body.is_active === true, String(body.created_by));
+});
+route('POST', '/api/v1/app-behaviors/simple', async (req) => {
+  const body = await readBody(req);
+  const code = String(body.behavior_code ?? '');
+  if (!code) return fail(422, 'behavior_code is required', 'dto.validate.SimpleCreateAppBehaviorDTO');
+  if (endpointOnly(code)) return createBehavior(code, {}, true, APP_ID);
+  if (code !== 'email_auth') return fail(400, `Unknown behavior code: ${code}`, 'app_behaviors.simple_create.unknown_behavior_code');
+  return createBehavior(code, structuredClone(NEW_EMAIL_AUTH_CONFIG), true, APP_ID);
 });
 route('PUT', '/api/v1/app-behaviors/:id', async (req, { id }) => {
   const behavior = appBehaviors.find((b) => b.id === id);
-  if (!behavior) return fail(404, 'Behavior not found', 'app_behaviors.update.not_found');
+  if (!behavior) return fail(404, 'App behavior not found', 'app_behaviors.update.not_found');
+  const code = String(behavior.behavior_code);
+  if (code === 'tokens') {
+    return fail(422, 'the tokens behavior is configured with PUT /api/v1/app-behaviors/tokens', 'app_behaviors.update.use_tokens_endpoint');
+  }
   // Pro: the generic route refuses the embedded_auth row (its config opens CORS
   // to other origins, so it only goes through the validated endpoint).
-  if (EDITION === 'pro' && behavior.behavior_code === EMBEDDED_AUTH_CODE) {
-    return fail(422, 'the embedded_auth behavior is configured with PUT /api/v1/app-behaviors/embedded-auth', 'app_behaviors.update.use_embedded_auth_endpoint');
+  if (endpointOnly(code)) {
+    return fail(422, `the ${code} behavior is configured with its own endpoint`, `app_behaviors.update.use_${code}_endpoint`);
   }
-  // Like the backend, `config` merges over the stored one.
   const body = await readBody(req);
-  const config = { ...(behavior.config as object), ...(body.config as object) };
-  Object.assign(behavior, body, { config, updated_at: new Date().toISOString() });
+  if (!body.config) return fail(422, 'config is required', 'dto.validate.UpdateAppBehaviorDTO');
+  const incoming = body.config as Record<string, unknown>;
+  const current = behavior.config as Record<string, unknown>;
+  if ((incoming.identifier ?? '') !== (current.identifier ?? '')) {
+    return fail(400, `identifier in request (${JSON.stringify(incoming.identifier ?? '')}) must match the behavior's identifier (${JSON.stringify(current.identifier ?? '')})`, 'app_behaviors.update.identifier_mismatch');
+  }
+  // Like the backend, `config` merges over the stored one, node by node.
+  Object.assign(behavior, { config: deepMerge(current, incoming), updated_at: new Date().toISOString() });
   return ok(behavior);
 });
-function setBehaviorActive(code: string, active: boolean) {
-  const behavior = appBehaviors.find((b) => b.behavior_code === code);
-  if (behavior) behavior.is_active = active;
-  return behavior ?? null;
+
+function emailAuthRow() {
+  return appBehaviors.find((b) => b.behavior_code === 'email_auth');
 }
-route('POST', '/api/v1/app-behaviors/email/magic-link/activate', () => ok(setBehaviorActive('magic_link', true)));
-route('POST', '/api/v1/app-behaviors/email/magic-link/deactivate', () => ok(setBehaviorActive('magic_link', false)));
-route('POST', '/api/v1/app-behaviors/email/verification/activate', () => ok(setBehaviorActive('email_auth', true)));
-route('POST', '/api/v1/app-behaviors/email/verification/deactivate', () => ok(setBehaviorActive('email_auth', false)));
+
+function emailAuthConfig(row: Record<string, unknown>): EmailAuthConfig & Record<string, unknown> {
+  return row.config as EmailAuthConfig & Record<string, unknown>;
+}
+
+/** Writes a node of email_auth, as the activation endpoints do. */
+function saveEmailNode(row: Record<string, unknown>, node: string, value: unknown) {
+  emailAuthConfig(row)[node] = value;
+  row.updated_at = new Date().toISOString();
+  return ok(row);
+}
+
+function emailAuthMissing(scope: string) {
+  return fail(404, 'email_auth behavior not found for this app', `app_behaviors.${scope}.behavior_not_found`);
+}
+
+// The backend has no deactivate route for magic link: `{ enabled: false }` does it.
+route('POST', '/api/v1/app-behaviors/email/magic-link/activate', async (req) => {
+  const row = emailAuthRow();
+  if (!row) return emailAuthMissing('activate_magic_link');
+  const body = await readBody(req);
+  if (body.redirect_base_url === '') return fail(422, 'redirect_base_url cannot be empty when provided', 'dto.validate.ActivateEmailAuthMagicLinkDTO');
+  if (body.default_redirect_path === '') return fail(422, 'default_redirect_path cannot be empty when provided', 'dto.validate.ActivateEmailAuthMagicLinkDTO');
+  const issues = validateMagicLink(body);
+  if (issues.length > 0) return fail(422, issues[0].message, 'dto.validate.ActivateEmailAuthMagicLinkDTO');
+  const node = emailAuthConfig(row).magic_link ?? {};
+  return saveEmailNode(row, 'magic_link', { ...node, ...body, enabled: body.enabled !== false, email_branding: { ...node.email_branding, ...(body.email_branding as object) } });
+});
+route('POST', '/api/v1/app-behaviors/email/email-code/activate', async (req) => {
+  const row = emailAuthRow();
+  if (!row) return emailAuthMissing('activate_email_code');
+  const body = await readBody(req);
+  const node = emailAuthConfig(row).email_code ?? {};
+  const merged = { ...node, ...body, enabled: body.enabled !== false, email_branding: { ...node.email_branding, ...(body.email_branding as object) } };
+  const issues = validateEmailCode(merged);
+  if (issues.length > 0) return fail(422, issues[0].message, issues[0].scope ?? 'dto.validate.ActivateEmailAuthEmailCodeDTO');
+  return saveEmailNode(row, 'email_code', merged);
+});
+route('POST', '/api/v1/app-behaviors/email/testers/activate', async (req) => {
+  const row = emailAuthRow();
+  if (!row) return emailAuthMissing('activate_testers');
+  const body = await readBody(req);
+  return saveEmailNode(row, 'testers', { enabled: body.enabled ?? true });
+});
+route('POST', '/api/v1/app-behaviors/email/sessions/activate', async (req) => {
+  const row = emailAuthRow();
+  if (!row) return emailAuthMissing('activate_sessions');
+  const body = await readBody(req);
+  const issues = validateSessions(body);
+  if (issues.length > 0) return fail(422, issues[0].message, 'dto.validate.ActivateEmailAuthSessionsDTO');
+  const idle = Number(body.idle_timeout_seconds ?? 0);
+  if (idle > 0 && idle < 2 * INHERITED_ACCESS_SECONDS) {
+    return fail(422, `idle_timeout_seconds must be at least ${2 * INHERITED_ACCESS_SECONDS}: twice the access token lifetime of the app`, 'app_behaviors.activate_sessions.idle_timeout_too_short');
+  }
+  // An empty body turns rotation on; nothing else ever does on its own.
+  const rotation = Object.keys(body).length === 0 ? { refresh_rotation: true } : {};
+  return saveEmailNode(row, 'sessions', { ...SESSIONS_DEFAULTS, ...emailAuthConfig(row).sessions, ...body, ...rotation });
+});
+route('POST', '/api/v1/app-behaviors/email/verification/activate', async (req) => {
+  const row = emailAuthRow();
+  if (!row) return emailAuthMissing('activate_verification');
+  const body = await readBody(req);
+  const merged = { ...emailAuthConfig(row).verification, ...body, enabled: true };
+  if (merged.code_strategy === 'fixed') {
+    const fixed = String(merged.fixed_code ?? '');
+    if (!fixed) return fail(422, 'fixed_code is required when code_strategy is "fixed"', 'app_behaviors.activate_verification.fixed_code_required');
+    if (fixed.length !== merged.code_size) {
+      return fail(422, 'fixed_code length does not match code_size', 'app_behaviors.activate_verification.fixed_code_length_mismatch');
+    }
+    if (!(merged.code_type === 'alphanumeric' ? /^[0-9A-Za-z]+$/ : /^[0-9]+$/).test(fixed)) {
+      return fail(422, 'fixed_code contains characters not allowed', 'app_behaviors.activate_verification.fixed_code_character_class_mismatch');
+    }
+  }
+  return saveEmailNode(row, 'verification', merged);
+});
+route('POST', '/api/v1/app-behaviors/email/verification/deactivate', () => {
+  const row = emailAuthRow();
+  if (!row) return emailAuthMissing('deactivate_verification');
+  return saveEmailNode(row, 'verification', { ...emailAuthConfig(row).verification, enabled: false });
+});
 route('POST', '/api/v1/app-behaviors/email/metadata-schema/activate', async (req) => {
   // Like the backend, the schema lives in the email_auth behavior.
-  const behavior = appBehaviors.find((b) => b.behavior_code === 'email_auth');
-  if (!behavior) return fail(404, 'App behavior not found', 'app_behaviors.email.not_found');
+  const row = emailAuthRow();
+  if (!row) return fail(404, 'App behavior not found', 'app_behaviors.email.not_found');
   const body = await readBody(req);
-  behavior.config = {
-    ...(behavior.config as object),
-    metadata_schema: { enabled: true, scheme: body.scheme ?? [], additional_properties: body.additional_properties ?? true },
-  };
-  return ok(behavior);
+  if (!Array.isArray(body.scheme) || body.scheme.length === 0) {
+    return fail(422, 'scheme must contain at least one field', 'dto.validate.ActivateEmailAuthMetadataSchemaDTO');
+  }
+  return saveEmailNode(row, 'metadata_schema', { enabled: true, scheme: body.scheme, additional_properties: body.additional_properties ?? true });
 });
 
 // ---- user-metadata-policy (Pro): in Community the routes do not exist ----

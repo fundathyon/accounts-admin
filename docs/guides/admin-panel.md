@@ -108,13 +108,17 @@ Sin clave o sin publishable donde aplique: avisos y enlaces a Ajustes.
 
 ## `/behaviors` — Comportamientos
 
-Lista en **tarjetas** de comportamientos de la app (`behavior_code`), estado activo/inactivo, fechas. Cada tarjeta enlaza al detalle `/behaviors/[id]`.
+Resumen «N de N activos», tabla con estado y último cambio, buscador y **tarjetas** con identificador y claves de config. Un behavior con pantalla propia (`/mfa`, `/session-security`, `/behaviors/tokens`…) enlaza a ella; el resto al detalle `/behaviors/[id]`. **Nuevo behavior** crea desde el catálogo de Accounts (`POST /simple`) o con una config propia (`POST /`).
 
 ---
 
+## `/behaviors/tokens` — Behavior tokens (solo Pro)
+
+Vida de los tokens, sesiones, sesiones simultáneas y revocación al cambiar credenciales (`GET`/`PUT /api/v1/app-behaviors/tokens`).
+
 ## `/behaviors/[id]` — Detalle de comportamiento
 
-Muestra la configuración del comportamiento según su tipo. Para **`email_auth`** incluye vista de configuración de autenticación por email, posibilidad de **activar/desactivar verificación por email** y **editar** la configuración (formulario dedicado).
+Muestra la configuración del comportamiento según su tipo. Para **`email_auth`** incluye Email, Password, Magic Link, Verificación, Código por correo, Testers, Sesiones, Metadata Schema e idioma de los correos, con acciones para activar y desactivar cada estrategia y **editar** la configuración (formulario dedicado).
 
 ---
 
