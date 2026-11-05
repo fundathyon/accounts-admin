@@ -33,4 +33,4 @@ Everything under this route group is behind the `admin_session` cookie (see [`..
 
 ## Which routes exist today
 
-Read [`../admin-sidebar.tsx`](admin-sidebar.tsx) `navItems` — it's the single source of truth for the visible nav. Items with `proOnly: true` (today `/embedded-auth` and `/geo-access`) render only when `useEdition().isPro` (backend `GET /health` → `edition: "pro"`); mirror the flag in the command palette's `DESTINATIONS`. Additional routes not in the sidebar: `/notifications`, `/release-notes`, `/users/[id]`, `/webhooks/[id]/test`, `/behaviors/[id]`.
+Read [`../admin-sidebar.tsx`](admin-sidebar.tsx) `navItems` — it's the single source of truth for the visible nav. Items with `proOnly: true` (today `/embedded-auth` and `/geo-access`) render only when `useEdition().isPro` (backend `GET /health` → `edition: "pro"`); mirror the flag in the command palette's `DESTINATIONS`. Additional routes not in the sidebar: `/notifications`, `/release-notes`, `/users/[id]`, `/webhooks/[id]/test`, `/behaviors/[id]`, `/behaviors/tokens` (Pro only, gated with `SecurityScreen`; the `/tokens` route is an unrelated JWT validator).

@@ -11,7 +11,7 @@
 
 - `src/components/` — feature-level components composed for a specific admin flow (data tables, brand panel, provider logos, migration notifier, session/onboarding guards).
 - `src/components/ui/` — local shadcn-style primitives that don't yet live in `@foundathyon/community-ui` (`collapsible`, `field-hint`, `sonner`, `tooltip`). If the DS gets one of these, delete the local copy.
-- `src/components/behaviors/` — the behavior-configuration forms (`email-auth-config-form.tsx` — 813 lines; `email-auth-config-view.tsx` — 363 lines). Don't split them mechanically; if you touch them, keep the change scoped to the field(s) at stake.
+- `src/components/behaviors/` — the behavior-configuration forms (`email-auth-config-form.tsx`, `email-auth-config-view.tsx`, `email-locale-card.tsx`, `json-config-form.tsx`). Don't split them mechanically; if you touch them, keep the change scoped to the field(s) at stake.
 
 ## Design-system boundary
 

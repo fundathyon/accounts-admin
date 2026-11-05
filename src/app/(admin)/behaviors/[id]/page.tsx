@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Puzzle, Settings, Pencil } from 'lucide-react';
+import { ChevronLeft, Settings, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   Card,
@@ -12,8 +12,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Heading,
   JsonViewer,
-  Spinner,
   Tooltip,
 } from '@foundathyon/community-ui';
 import { Button, buttonVariants } from '@/components/fdn/button';
@@ -21,25 +21,30 @@ import { Badge } from '@/components/fdn/badge';
 import { useAdmin } from '@/context/admin-context';
 import { useI18n } from '@/context/i18n-context';
 import { useEdition } from '@/context/edition-context';
-import { BASE_PATH } from '@/lib/utils';
-import { EmailAuthConfigView, type EmailAuthConfig } from '@/components/behaviors/email-auth-config-view';
-import { EmailAuthConfigForm } from '@/components/behaviors/email-auth-config-form';
-import { cn } from '@/lib/utils';
+import { apiError, type Envelope } from '@/lib/api-envelope';
+import {
+  BEHAVIOR_SCOPE_TO_I18N,
+  behaviorScreen,
+  genericUpdateRefused,
+  withEmailCodeDefaults,
+  withSessionsDefaults,
+  type EmailAuthConfig,
+} from '@/lib/behaviors';
+import { buildAdminHref, cn } from '@/lib/utils';
+import { EmailAuthConfigView } from '@/components/behaviors/email-auth-config-view';
+import { EmailAuthConfigForm, type EmailAuthTab } from '@/components/behaviors/email-auth-config-form';
+import { EmailLocaleCard } from '@/components/behaviors/email-locale-card';
+import { JsonConfigForm } from '@/components/behaviors/json-config-form';
+import { ScreenLoading, ScreenUnavailable } from '@/components/security-screen/screen-states';
 import type { AppBehaviorDetail } from '@/lib/admin-types';
 
-const SCOPE_TO_I18N: Record<string, string> = {
-  'app_behaviors.activate_verification.code_strategy_fixed_not_allowed_in_environment':
-    'emailAuth.errors.fixedNotAllowedHere',
-  'app_behaviors.activate_verification.fixed_code_required':
-    'emailAuth.errors.fixedCodeRequired',
-  'app_behaviors.activate_verification.fixed_code_length_mismatch':
-    'emailAuth.errors.fixedCodeLengthMismatch',
-  'app_behaviors.activate_verification.fixed_code_character_class_mismatch':
-    'emailAuth.errors.fixedCodeCharClassMismatch',
-};
+type EmailNode = 'verification' | 'magic_link' | 'email_code' | 'testers';
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 export default function BehaviorDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const { apiUrl, showNotification, savedSecretKey } = useAdmin();
   const { t } = useI18n();
   const { isPro } = useEdition();
@@ -47,11 +52,17 @@ export default function BehaviorDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const id = params.id as string;
-  const behaviorsHref = `${BASE_PATH}/behaviors`.replace(/\/+/g, '/') || '/behaviors';
-  const [toggling, setToggling] = useState(false);
-  const [togglingMagicLink, setTogglingMagicLink] = useState(false);
+  const behaviorsHref = buildAdminHref('/behaviors');
+  const [toggling, setToggling] = useState<EmailNode | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editorTab, setEditorTab] = useState<EmailAuthTab>('email');
   const [updating, setUpdating] = useState(false);
+
+  const errorText = (json: Envelope | null, fallback: string) => {
+    const error = apiError(json);
+    const scopeKey = error?.scope ? BEHAVIOR_SCOPE_TO_I18N[error.scope] : undefined;
+    return scopeKey ? t(scopeKey) : (error?.message ?? fallback);
+  };
 
   const loadBehavior = useCallback(async () => {
     if (!savedSecretKey) return;
@@ -67,94 +78,149 @@ export default function BehaviorDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, id, savedSecretKey, showNotification]);
+  }, [apiUrl, id, savedSecretKey, showNotification, t]);
 
-  const toggleEmailVerification = async () => {
-    if (!savedSecretKey || behavior?.behavior_code !== 'email_auth') return;
-    const emailConfig = behavior.config as { verification?: { enabled?: boolean } };
-    const isEnabled = emailConfig?.verification?.enabled ?? false;
-    const endpoint = isEnabled ? '/api/behaviors/email/verification/deactivate' : '/api/behaviors/email/verification/activate';
-    setToggling(true);
-    try {
-      const res = await fetch(apiUrl(endpoint), {
-        method: 'POST',
-        headers: {
-          'X-Secret-API-Key': savedSecretKey,
-          ...(!isEnabled && { 'Content-Type': 'application/json' }),
-        },
-        ...(!isEnabled && { body: JSON.stringify({}) }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        showNotification(isEnabled ? t('behaviors.verificationDeactivated') : t('behaviors.verificationActivated'), 'success');
-        await loadBehavior();
-      } else {
-        showNotification(data.error?.message || t('behaviors.errorUpdate'), 'error');
-      }
-    } catch {
-      showNotification(t('behaviors.errorServer'), 'error');
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  const toggleMagicLink = async () => {
-    if (!savedSecretKey || behavior?.behavior_code !== 'email_auth') return;
-    const emailConfig = behavior.config as { magic_link?: { enabled?: boolean } };
-    const isEnabled = emailConfig?.magic_link?.enabled ?? false;
-    const endpoint = isEnabled ? '/api/behaviors/email/magic-link/deactivate' : '/api/behaviors/email/magic-link/activate';
-    setTogglingMagicLink(true);
-    try {
-      const res = await fetch(apiUrl(endpoint), {
-        method: 'POST',
-        headers: {
-          'X-Secret-API-Key': savedSecretKey,
-          ...(!isEnabled && { 'Content-Type': 'application/json' }),
-        },
-        ...(!isEnabled && { body: JSON.stringify({}) }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        showNotification(isEnabled ? t('behaviors.magicLinkDeactivated') : t('behaviors.magicLinkActivated'), 'success');
-        await loadBehavior();
-      } else {
-        showNotification(data.error?.message || t('behaviors.errorUpdate'), 'error');
-      }
-    } catch {
-      showNotification(t('behaviors.errorServer'), 'error');
-    } finally {
-      setTogglingMagicLink(false);
-    }
-  };
-
-  const handleSaveConfig = async (newConfig: EmailAuthConfig) => {
+  /** One-click switch of an `email_auth` node through its activation endpoint. */
+  const toggleNode = async (node: EmailNode, endpoint: string, body: unknown, success: string) => {
     if (!savedSecretKey) return;
+    setToggling(node);
+    try {
+      const res = await fetch(apiUrl(endpoint), {
+        method: 'POST',
+        headers: {
+          'X-Secret-API-Key': savedSecretKey,
+          ...(body !== undefined && { 'Content-Type': 'application/json' }),
+        },
+        ...(body !== undefined && { body: JSON.stringify(body) }),
+      });
+      const json = (await res.json().catch(() => null)) as Envelope | null;
+      if (res.ok) {
+        showNotification(success, 'success');
+        await loadBehavior();
+      } else {
+        showNotification(errorText(json, t('behaviors.errorUpdate')), 'error');
+      }
+    } catch {
+      showNotification(t('behaviors.errorServer'), 'error');
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  const emailConfig = (behavior?.config ?? {}) as EmailAuthConfig;
+
+  const toggleEmailVerification = () => {
+    const enabled = emailConfig.verification?.enabled ?? false;
+    return enabled
+      ? toggleNode('verification', '/api/behaviors/email/verification/deactivate', undefined, t('behaviors.verificationDeactivated'))
+      : toggleNode('verification', '/api/behaviors/email/verification/activate', {}, t('behaviors.verificationActivated'));
+  };
+
+  // The backend has no deactivate route for these three: the activation takes `enabled`.
+  const toggleMagicLink = () => {
+    const enabled = !(emailConfig.magic_link?.enabled ?? false);
+    return toggleNode(
+      'magic_link',
+      '/api/behaviors/email/magic-link/activate',
+      { enabled },
+      enabled ? t('behaviors.magicLinkActivated') : t('behaviors.magicLinkDeactivated'),
+    );
+  };
+
+  const toggleEmailCode = () => {
+    const enabled = !(emailConfig.email_code?.enabled ?? false);
+    return toggleNode(
+      'email_code',
+      '/api/behaviors/email/email-code/activate',
+      { enabled },
+      enabled ? t('behaviors.emailCodeActivated') : t('behaviors.emailCodeDeactivated'),
+    );
+  };
+
+  const toggleTesters = () => {
+    const enabled = !(emailConfig.testers?.enabled ?? false);
+    return toggleNode(
+      'testers',
+      '/api/behaviors/email/testers/activate',
+      { enabled },
+      enabled ? t('behaviors.testersActivated') : t('behaviors.testersDeactivated'),
+    );
+  };
+
+  /** POST or PUT with a JSON body; returns the error text, or null if it worked. */
+  const send = async (path: string, method: 'POST' | 'PUT', body: unknown): Promise<string | null> => {
+    const res = await fetch(apiUrl(path), {
+      method,
+      headers: { 'X-Secret-API-Key': savedSecretKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) return null;
+    const json = (await res.json().catch(() => null)) as Envelope | null;
+    return errorText(json, t('behaviors.updateError'));
+  };
+
+  /**
+   * The generic PUT does not validate the nodes, so whatever has a validating
+   * endpoint that can express it goes there first: email_code, sessions (not in
+   * Pro, where they are edited in `tokens`) and verification while enabled (its
+   * activation always leaves it on). The PUT, which merges, carries the rest.
+   */
+  const handleSaveConfig = async (next: EmailAuthConfig) => {
+    if (!savedSecretKey) return;
+    const current = (behavior?.config ?? {}) as EmailAuthConfig;
+    const { email_code: emailCode, sessions, ...rest } = next;
+    delete rest.testers;
     setUpdating(true);
     try {
-      const res = await fetch(apiUrl(`/api/behaviors/${id}`), {
-        method: 'PUT',
-        headers: {
-          'X-Secret-API-Key': savedSecretKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ config: newConfig }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      let failure: string | null = null;
+      if (!sameJson(withEmailCodeDefaults(current.email_code), emailCode)) {
+        failure = await send('/api/behaviors/email/email-code/activate', 'POST', emailCode);
+      }
+      if (!failure && !isPro && !sameJson(withSessionsDefaults(current.sessions), sessions)) {
+        failure = await send('/api/behaviors/email/sessions/activate', 'POST', sessions);
+      }
+      if (!failure && next.verification?.enabled && !sameJson(current.verification, next.verification)) {
+        const verification = { ...next.verification };
+        delete verification.enabled;
+        failure = await send('/api/behaviors/email/verification/activate', 'POST', verification);
+      }
+      if (!failure) failure = await send(`/api/behaviors/${id}`, 'PUT', { config: rest });
+
+      if (failure) {
+        showNotification(failure, 'error');
+      } else {
         showNotification(t('behaviors.updateSuccess'), 'success');
         setIsEditing(false);
-        await loadBehavior();
-      } else {
-        const scope: string | undefined = data?.error?.scope;
-        const scopeKey = scope && SCOPE_TO_I18N[scope];
-        const message = scopeKey ? t(scopeKey) : (data.error?.message || t('behaviors.updateError'));
-        showNotification(message, 'error');
       }
+      await loadBehavior();
     } catch {
       showNotification(t('behaviors.updateError'), 'error');
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleSaveJson = async (config: Record<string, unknown>) => {
+    setUpdating(true);
+    try {
+      const failure = await send(`/api/behaviors/${id}`, 'PUT', { config });
+      if (failure) {
+        showNotification(failure, 'error');
+        return;
+      }
+      showNotification(t('behaviors.updateSuccess'), 'success');
+      setIsEditing(false);
+      await loadBehavior();
+    } catch {
+      showNotification(t('behaviors.updateError'), 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const openEditor = (tab: EmailAuthTab = 'email') => {
+    setEditorTab(tab);
+    setIsEditing(true);
   };
 
   useEffect(() => {
@@ -166,12 +232,16 @@ export default function BehaviorDetailPage() {
     loadBehavior();
   }, [id, savedSecretKey, loadBehavior]);
 
-  if (loading) {
-    return (
-      <div className="py-20 flex justify-center">
-        <Spinner size={20} label={t('common.loading')} className="text-accent" />
-      </div>
-    );
+  // Pro: `tokens` is edited on its own page; in Community that page has nothing to show.
+  const code = behavior?.behavior_code ?? '';
+  useEffect(() => {
+    if (isPro && code === 'tokens') router.replace('/behaviors/tokens');
+  }, [code, isPro, router]);
+
+  if (loading) return <ScreenLoading />;
+
+  if (!savedSecretKey) {
+    return <ScreenUnavailable title={t('behaviors.secretKeyRequired')} body={t('behaviors.secretKeyRequiredDesc')} />;
   }
 
   if (!behavior) {
@@ -190,6 +260,11 @@ export default function BehaviorDetailPage() {
     );
   }
 
+  const isEmailAuth = code === 'email_auth';
+  const isEmailLocale = code === 'email_locale';
+  const screen = behaviorScreen(code, isPro);
+  const editable = !isEmailLocale && !genericUpdateRefused(code, isPro);
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Tooltip content={t('behaviors.backToBehaviors')} side="right">
@@ -202,45 +277,51 @@ export default function BehaviorDetailPage() {
       </Tooltip>
 
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-accent-bg flex items-center justify-center text-accent">
-              <Puzzle className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-h2 font-semibold tracking-tight">{behavior.behavior_code}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge
-                  variant="tonal"
-                  tone={behavior.is_active ? 'success' : 'neutral'}
-                >
-                  {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
-                </Badge>
-                <span className="text-xs text-text-muted font-mono">{behavior.id}</span>
-              </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <Heading level={1} visual="h2">{behavior.behavior_code}</Heading>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="tonal" tone={behavior.is_active ? 'success' : 'neutral'}>
+                {behavior.is_active ? t('common.active') : t('behaviors.inactive')}
+              </Badge>
+              <span className="text-xs text-text-muted font-mono truncate">{behavior.id}</span>
             </div>
           </div>
-          <Tooltip content={t('behaviors.editBehavior')}>
-            <Button variant="secondary" className="gap-2" onClick={() => setIsEditing(true)}>
-              <Pencil className="w-4 h-4" />
-              {t('common.edit')}
-            </Button>
-          </Tooltip>
+          {editable && (
+            <Tooltip content={t('behaviors.editBehavior')}>
+              <Button variant="secondary" className="gap-2 shrink-0" onClick={() => openEditor()}>
+                <Pencil className="w-4 h-4" />
+                {t('common.edit')}
+              </Button>
+            </Tooltip>
+          )}
         </div>
 
         <div>
           <h3 className="text-body font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            {behavior.behavior_code === 'email_auth' ? t('behaviors.config') : t('behaviors.configJson')}
+            {isEmailAuth ? t('behaviors.config') : t('behaviors.configJson')}
           </h3>
-          {behavior.behavior_code === 'email_auth' ? (
-            <EmailAuthConfigView
-              config={behavior.config as EmailAuthConfig}
-              onToggleVerification={toggleEmailVerification}
-              togglingVerification={toggling}
-              onToggleMagicLink={toggleMagicLink}
-              togglingMagicLink={togglingMagicLink}
-            />
+          {isEmailAuth ? (
+            <div className="space-y-6">
+              <EmailAuthConfigView
+                config={emailConfig}
+                isPro={isPro}
+                onToggleVerification={toggleEmailVerification}
+                togglingVerification={toggling === 'verification'}
+                onToggleMagicLink={toggleMagicLink}
+                togglingMagicLink={toggling === 'magic_link'}
+                onToggleEmailCode={toggleEmailCode}
+                togglingEmailCode={toggling === 'email_code'}
+                onToggleTesters={toggleTesters}
+                togglingTesters={toggling === 'testers'}
+                onEditSessions={() => openEditor('sessions')}
+                onActivateMetadataSchema={() => openEditor('metadata')}
+              />
+              <EmailLocaleCard secretKey={savedSecretKey} />
+            </div>
+          ) : isEmailLocale ? (
+            <EmailLocaleCard secretKey={savedSecretKey} />
           ) : (
             <JsonViewer
               data={behavior.config}
@@ -250,14 +331,12 @@ export default function BehaviorDetailPage() {
               copyPath
             />
           )}
-          {/* Pro: embedded_auth is edited only on its own validated page. In
-              Community that page does not exist, so nothing is added. */}
-          {isPro && behavior.behavior_code === 'embedded_auth' && (
+          {screen && (
             <Link
-              href={`${BASE_PATH}/embedded-auth`.replace(/\/+/g, '/')}
+              href={buildAdminHref(screen)}
               className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'mt-4')}
             >
-              {t('embeddedAuth.openEditor')}
+              {t('behaviors.openScreen')}
             </Link>
           )}
         </div>
@@ -288,7 +367,7 @@ export default function BehaviorDetailPage() {
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-accent" />
+              <Settings className="w-5 h-5 text-text-muted" />
               {t('behaviors.editBehavior')}
             </DialogTitle>
             <DialogDescription>
@@ -297,33 +376,22 @@ export default function BehaviorDetailPage() {
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden mt-4">
-            {behavior.behavior_code === 'email_auth' ? (
+            {isEmailAuth ? (
               <EmailAuthConfigForm
-                initialConfig={behavior.config as EmailAuthConfig}
+                initialConfig={emailConfig}
+                sessionsEditable={!isPro}
+                initialTab={editorTab}
                 onCancel={() => setIsEditing(false)}
                 onSave={handleSaveConfig}
                 isSubmitting={updating}
               />
             ) : (
-              <div className="space-y-4 h-full flex flex-col">
-                <div className="flex-1 overflow-auto">
-                  <JsonViewer
-                    data={behavior.config}
-                    defaultExpandDepth={2}
-                    expandable
-                    copyValue
-                    copyPath
-                  />
-                </div>
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="secondary" onClick={() => setIsEditing(false)}>
-                    {t('common.cancel')}
-                  </Button>
-                  <Button variant="primary" disabled>
-                    (Sólo email_auth es editable por ahora)
-                  </Button>
-                </div>
-              </div>
+              <JsonConfigForm
+                initialConfig={behavior.config}
+                onCancel={() => setIsEditing(false)}
+                onSave={handleSaveJson}
+                isSubmitting={updating}
+              />
             )}
           </div>
         </DialogContent>

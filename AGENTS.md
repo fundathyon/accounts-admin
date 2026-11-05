@@ -73,7 +73,7 @@ accounts-admin/
 ├── .github/workflows/                 ← CI (build+push Docker image only, no tests)
 ├── docker_images/app/Dockerfile.app   ← the Dockerfile CI actually uses
 │
-├── mock-server/                       ← Bun HTTP server, 117 routes, port 8099
+├── mock-server/                       ← Bun HTTP server, 126 routes, port 8099
 │   ├── server.ts · data.ts
 │   └── AGENTS.md                      ← how to add/edit a mocked endpoint
 │
