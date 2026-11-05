@@ -1,6 +1,6 @@
 {
   "sidebar": {
-    "nav": "Community Edition",
+    "edition": "{edition} Edition",
     "dashboard": "Dashboard",
     "users": "Usuarios",
     "roles": "Roles",
@@ -171,7 +171,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "badge": "API Accounts · Community",
+    "badge": "API Accounts · {edition}",
     "subtitle": "Vista general de tu instancia de Accounts.",
     "recentApps": "Aplicaciones Recientes",
     "noApps": "No hay aplicaciones aún",

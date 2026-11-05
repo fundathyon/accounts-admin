@@ -64,7 +64,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const { savedSecretKey } = useAdmin();
   const { t } = useI18n();
-  const { isPro } = useEdition();
+  const { isPro, name: editionName } = useEdition();
   const { collapsed, setCollapsed } = useSidebar();
   const isMobile = useIsMobile();
 
@@ -77,7 +77,10 @@ export function AdminSidebar() {
   const sidebar = (
     <Sidebar>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <SidebarSection label={t('sidebar.nav')} className={SECTION_LABEL}>
+        <SidebarSection
+          label={editionName ? t('sidebar.edition', { edition: editionName }) : t('sidebar.apiAccounts')}
+          className={SECTION_LABEL}
+        >
           {navItems.filter((item) => !item.proOnly || isPro).map((item) => {
             const href = buildHref(item.path);
             const isUsersSection = item.id === 'users';
