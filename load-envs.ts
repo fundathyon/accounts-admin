@@ -3,7 +3,8 @@
  * (apis/accounts/internal/core/settings/base.go).
  *
  * Order:
- * 1. Load .envs/.env.base (defines ENVIRONMENT)
+ * 1. Load .envs/.env.base if it exists (defines ENVIRONMENT; without it and
+ *    without ENVIRONMENT in the process, the environment is "local")
  * 2. Load environment-specific file based on ENVIRONMENT:
  *    - "" (empty) -> .envs/.env
  *    - "local" -> .envs/.env.local
@@ -29,15 +30,12 @@ const envFiles: Record<string, string> = {
 };
 
 export function loadDotEnv(): void {
-  // 1. Load .env.base first (sets ENVIRONMENT)
+  // 1. Load .env.base first (sets ENVIRONMENT). It is optional: a fresh clone
+  // only has the per-environment file, and `make dev-mock` sets ENVIRONMENT itself.
   const basePath = path.join(cwd, EnvDir, '.env.base');
-  const baseResult = config({ path: basePath });
-  if (baseResult.error) {
-    // No .env.base found - continue with system env
-    return;
-  }
+  const hasBase = !config({ path: basePath }).error;
 
-  const environment = process.env.ENVIRONMENT || '';
+  const environment = process.env.ENVIRONMENT || (hasBase ? '' : 'local');
   const envFile = envFiles[environment] ?? path.join(cwd, EnvDir, '.env.local');
 
   // 2. Load environment-specific file (override: true to take precedence)
