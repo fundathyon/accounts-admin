@@ -13,8 +13,10 @@
 // before a request ever reaches here.
 
 import {
-  APP_ID, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist,
-  nextId, oauthAudiences, oauthConfigs, paginate, policies, rolePolicies, roles, users, webhookEvents, webhooks,
+  APP_ID, apps, appBehaviors, apiKeys, emailAccessSettings, emailAllowlist, emailBlocklist, geoAccessBehavior,
+  identityLinkingBehavior, loginEvents, mcpConnections, mcpResources, mcpResourceUrls, mfaBehavior, nextId, oauthAudiences, oauthConfigs, paginate, policies, queryDeliveryUsage,
+  rolePolicies, roles, securityLimitsDefaults, securityLimitsMeta, securityLimitsOverrides, securityLimitsRanges, sessionSecurityBehavior,
+  sessionSecurityDefaults, userMetadataPolicy, users, webhookEvents, webhooks,
 } from './data';
 // Embedded Auth mirrors the backend contract with the admin's own client-side
 // model (no `@/` alias here: Bun resolves this file's relative imports only).
@@ -23,6 +25,8 @@ import {
   normalizeProvider, validateEmbeddedAuthConfig,
 } from '../src/lib/embedded-auth';
 import type { EmbeddedAuthAccent, EmbeddedAuthConfig, EmbeddedAuthStrategies } from '../src/lib/admin-types';
+import { isIsoCountryCode } from '../src/lib/countries';
+import { RESERVED_KEYS as RESERVED_METADATA_CLAIMS } from '../src/lib/user-metadata';
 
 const PORT = Number(process.env.MOCK_PORT || 8099);
 // Edition reported by GET /health. Pro by default so `make dev-mock` shows the
@@ -35,8 +39,8 @@ function ok(data: unknown, status = 200, meta?: Record<string, unknown>) {
   return Response.json({ success: true, status_code: status, data, ...(meta ? { meta } : {}) }, { status });
 }
 
-function fail(status: number, message: string, scope?: string) {
-  return Response.json({ success: false, status_code: status, error: { code: status, message, ...(scope ? { scope } : {}) } }, { status });
+function fail(status: number, message: string, scope?: string, meta?: Record<string, unknown>) {
+  return Response.json({ success: false, status_code: status, error: { code: status, message, ...(scope ? { scope } : {}), ...(meta ? { meta } : {}) } }, { status });
 }
 
 function paginatedResponse(items: unknown[], page: number, size: number, total: number, path: string) {
@@ -109,17 +113,39 @@ route('GET', '/api/v1/policies', (_req, _p, url) => {
   const { slice, total } = paginate(policies, page, size);
   return paginatedResponse(slice, page, size, total, '/api/v1/policies');
 });
+function policyExists(target: Record<string, unknown>, exceptId?: string) {
+  return policies.some((p) => p.id !== exceptId && p.resource === target.resource && p.action === target.action && p.effect === target.effect);
+}
 route('POST', '/api/v1/policies', async (req) => {
   const body = await readBody(req);
+  if (policyExists(body)) return fail(409, 'a policy with this resource, action and effect already exists', 'policies.create.already_exists');
   const policy = { id: nextId('policy'), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), app_id: APP_ID, ...body };
   policies.push(policy);
   return ok(policy, 201);
 });
 
+route('PATCH', '/api/v1/policies/:id', async (req, { id }) => {
+  const policy = policies.find((p) => p.id === id);
+  if (!policy) return fail(404, 'Policy not found', 'policies.update.not_found');
+  const next = { ...policy, ...(await readBody(req)), updated_at: new Date().toISOString() };
+  if (policyExists(next, id)) return fail(409, 'a policy with this resource, action and effect already exists', 'policies.update.already_exists');
+  Object.assign(policy, next);
+  return ok(policy);
+});
+route('DELETE', '/api/v1/policies/:id', (_req, { id }) => {
+  const idx = policies.findIndex((p) => p.id === id);
+  if (idx === -1) return fail(404, 'Policy not found', 'policies.delete.not_found');
+  const [removed] = policies.splice(idx, 1);
+  for (const roleId of Object.keys(rolePolicies)) rolePolicies[roleId] = rolePolicies[roleId]!.filter((p) => p !== id);
+  return ok({ ...removed, is_removed: true });
+});
+
 // ---- role_policies ----
 route('GET', '/api/v1/role_policies/:roleId', (_req, { roleId }) => {
+  const role = roles.find((r) => r.id === roleId);
+  if (!role) return fail(404, 'Role not found', 'role_policies.info.role_not_found');
   const ids = rolePolicies[roleId] ?? [];
-  return ok(policies.filter((p) => ids.includes(p.id as string)));
+  return ok({ role, policies: policies.filter((p) => ids.includes(p.id as string)) });
 });
 route('POST', '/api/v1/role_policies', async (req) => {
   const body = await readBody(req);
@@ -127,6 +153,11 @@ route('POST', '/api/v1/role_policies', async (req) => {
   const policyId = String(body.policy_id ?? '');
   rolePolicies[roleId] = [...new Set([...(rolePolicies[roleId] ?? []), policyId])];
   return ok({ role_id: roleId, policy_id: policyId }, 201);
+});
+route('DELETE', '/api/v1/role_policies/:roleId/:policyId', (_req, { roleId, policyId }) => {
+  if (!(rolePolicies[roleId] ?? []).includes(policyId)) return fail(404, 'The role does not have that policy', 'role_policies.remove.not_found');
+  rolePolicies[roleId] = rolePolicies[roleId]!.filter((p) => p !== policyId);
+  return ok({ role_id: roleId, policy_id: policyId, removed: true });
 });
 
 // ---- api-keys ----
@@ -420,6 +451,160 @@ if (EDITION === 'pro' && MOCK_UI_DIR) {
   });
 }
 
+// ---- security behaviors ----
+// Registered BEFORE the generic /app-behaviors/:id routes, for the same reason
+// as Embedded Auth. MFA, session security, limits and identity linking exist in
+// both editions; geo access only in Pro (in Community it falls into /:id: 404).
+const MFA_MODES = ['off', 'optional', 'required'];
+const MFA_FLOWS = ['password', 'oauth', 'native', 'magic_link', 'email_code'];
+
+function describeMfa() {
+  return { app_id: APP_ID, ...mfaBehavior };
+}
+
+route('GET', '/api/v1/app-behaviors/mfa', () => ok(describeMfa()));
+route('PUT', '/api/v1/app-behaviors/mfa', async (req) => {
+  const body = await readBody(req);
+  if (typeof body.mode !== 'string' || !MFA_MODES.includes(body.mode)) {
+    return fail(400, 'mode must be "off", "optional" or "required"', 'mfa.invalid_mode');
+  }
+  const flows = (body.flows ?? MFA_FLOWS) as unknown[];
+  if (!Array.isArray(flows) || flows.some((f) => typeof f !== 'string' || !MFA_FLOWS.includes(f))) {
+    return fail(400, 'flows must only contain "password", "oauth", "native", "magic_link" or "email_code"', 'mfa.invalid_flow');
+  }
+  Object.assign(mfaBehavior, { mode: body.mode, flows: MFA_FLOWS.filter((f) => flows.includes(f)), updated_at: new Date().toISOString() });
+  return ok(describeMfa());
+});
+
+function describeIdentityLinking() {
+  return { app_id: APP_ID, ...identityLinkingBehavior };
+}
+
+route('GET', '/api/v1/app-behaviors/identity-linking', () => ok(describeIdentityLinking()));
+route('PUT', '/api/v1/app-behaviors/identity-linking', async (req) => {
+  const { mode } = await readBody(req);
+  if (mode !== 'link_with_proof' && mode !== 'separate') {
+    return fail(400, 'mode must be "link_with_proof" or "separate"', 'identity_linking.invalid_mode');
+  }
+  Object.assign(identityLinkingBehavior, { mode, updated_at: new Date().toISOString() });
+  return ok(describeIdentityLinking());
+});
+
+function describeSessionSecurity() {
+  return {
+    app_id: APP_ID,
+    ...sessionSecurityBehavior,
+    defaults_for_new_apps: sessionSecurityDefaults,
+    query_delivery: { in_use: sessionSecurityBehavior.oauth_token_delivery === 'query', ...queryDeliveryUsage },
+    migration_guide_url: 'https://docs.foundathyon.com/accounts/oauth-code-delivery',
+  };
+}
+
+route('GET', '/api/v1/app-behaviors/session-security', () => ok(describeSessionSecurity()));
+route('PUT', '/api/v1/app-behaviors/session-security', async (req) => {
+  const body = await readBody(req);
+  const keys = Object.keys(body).sort();
+  for (const key of keys) {
+    if (!(key in sessionSecurityDefaults)) {
+      return fail(400, `unknown field ${key}`, 'session_security.invalid_field', { field: key });
+    }
+    const value = body[key];
+    const valid = key === 'oauth_token_delivery' ? value === 'query' || value === 'code' : typeof value === 'boolean';
+    if (!valid) return fail(400, `invalid value for ${key}`, 'session_security.invalid_value', { field: key });
+  }
+  if (keys.length > 0) Object.assign(sessionSecurityBehavior, body, { updated_at: new Date().toISOString() });
+  return ok(describeSessionSecurity());
+});
+
+type LimitSections = Record<string, Record<string, unknown>>;
+
+function effectiveLimits() {
+  const defaults = securityLimitsDefaults as unknown as LimitSections;
+  const out: LimitSections = {};
+  for (const section of Object.keys(defaults)) {
+    out[section] = { ...defaults[section] };
+    for (const [field, value] of Object.entries(securityLimitsOverrides[section])) if (value !== null) out[section][field] = value;
+  }
+  return out;
+}
+
+function describeSecurityLimits() {
+  return {
+    app_id: APP_ID,
+    ...securityLimitsOverrides,
+    ...securityLimitsMeta,
+    effective: effectiveLimits(),
+    defaults: securityLimitsDefaults,
+    ranges: securityLimitsRanges,
+  };
+}
+
+/** Mirrors securitylimits.ParsePatch: the first problem found answers the 400. */
+function limitsPatchError(body: Record<string, unknown>) {
+  for (const [section, fields] of Object.entries(body)) {
+    if (!fields || typeof fields !== 'object') {
+      return fail(400, `unknown field ${section}`, 'security_limits.invalid_field', { field: section });
+    }
+    for (const [field, value] of Object.entries(fields)) {
+      const path = `${section}.${field}`;
+      const range = securityLimitsRanges[path];
+      if (!range) return fail(400, `unknown field ${path}`, 'security_limits.invalid_field', { field: path });
+      if (value === null) continue;
+      if (path === 'lockout.durations_sec') {
+        const list = value as number[];
+        if (!Array.isArray(list) || list.length < 1 || list.length > 5) {
+          return fail(400, `${path} must have between 1 and 5 values`, 'security_limits.invalid_durations', { field: path, min_items: 1, max_items: 5 });
+        }
+        for (const [index, d] of list.entries()) {
+          if (!Number.isInteger(d) || d < range.min || d > range.max) {
+            return fail(400, `${path} is out of range`, 'security_limits.out_of_range', { field: path, min: range.min, max: range.max, index });
+          }
+          if (index > 0 && d < list[index - 1]) {
+            return fail(400, `${path} must not decrease`, 'security_limits.invalid_durations', { field: path, index });
+          }
+        }
+      } else if (!Number.isInteger(value) || (value as number) < range.min || (value as number) > range.max) {
+        return fail(400, `${path} is out of range`, 'security_limits.out_of_range', { field: path, min: range.min, max: range.max });
+      }
+    }
+  }
+  return null;
+}
+
+route('GET', '/api/v1/app-behaviors/security-limits', () => ok(describeSecurityLimits()));
+route('PUT', '/api/v1/app-behaviors/security-limits', async (req) => {
+  const body = await readBody(req);
+  const problem = limitsPatchError(body);
+  if (problem) return problem;
+  for (const [section, fields] of Object.entries(body)) Object.assign(securityLimitsOverrides[section], fields);
+  if (Object.keys(body).length > 0) securityLimitsMeta.updated_at = new Date().toISOString();
+  return ok(describeSecurityLimits());
+});
+
+if (EDITION === 'pro') {
+  const describeGeoAccess = () => ({ app_id: APP_ID, ...geoAccessBehavior });
+
+  route('GET', '/api/v1/app-behaviors/geo-access', () => ok(describeGeoAccess()));
+  route('PUT', '/api/v1/app-behaviors/geo-access', async (req) => {
+    const body = await readBody(req);
+    const mode = String(body.mode ?? '').trim().toLowerCase();
+    const unknownCountry = String(body.unknown_country ?? '').trim().toLowerCase() || 'allow';
+    const raw = Array.isArray(body.countries) ? (body.countries as unknown[]) : [];
+    // Canonical form of geoaccess.Settings.Normalize: uppercase, unique, sorted.
+    const countries = [...new Set(raw.map((c) => String(c).trim().toUpperCase()))].sort();
+    const issues: string[] = [];
+    if (!['off', 'allowlist', 'blocklist'].includes(mode)) issues.push('mode: must be "off", "allowlist" or "blocklist"');
+    if (unknownCountry !== 'allow' && unknownCountry !== 'deny') issues.push('unknown_country: must be "allow" or "deny"');
+    if (mode === 'allowlist' && countries.length === 0) issues.push('countries: must have at least one country when mode is allowlist');
+    countries.forEach((c, i) => {
+      if (!isIsoCountryCode(c) && c !== 'XK') issues.push(`countries[${i}]: "${c}" is not an ISO 3166-1 alpha-2 country code`);
+    });
+    if (issues.length > 0) return fail(422, issues.join('; '), 'app_behaviors.geo_access.invalid_config');
+    Object.assign(geoAccessBehavior, { config: { mode, countries, unknown_country: unknownCountry }, updated_at: new Date().toISOString() });
+    return ok(describeGeoAccess());
+  });
+}
+
 // ---- app-behaviors ----
 route('GET', '/api/v1/app-behaviors', () => ok(appBehaviors.map(({ config: _c, ...rest }) => rest)));
 route('GET', '/api/v1/app-behaviors/:id', (_req, { id }) => {
@@ -435,7 +620,10 @@ route('PUT', '/api/v1/app-behaviors/:id', async (req, { id }) => {
   if (EDITION === 'pro' && behavior.behavior_code === EMBEDDED_AUTH_CODE) {
     return fail(422, 'the embedded_auth behavior is configured with PUT /api/v1/app-behaviors/embedded-auth', 'app_behaviors.update.use_embedded_auth_endpoint');
   }
-  Object.assign(behavior, await readBody(req), { updated_at: new Date().toISOString() });
+  // Like the backend, `config` merges over the stored one.
+  const body = await readBody(req);
+  const config = { ...(behavior.config as object), ...(body.config as object) };
+  Object.assign(behavior, body, { config, updated_at: new Date().toISOString() });
   return ok(behavior);
 });
 function setBehaviorActive(code: string, active: boolean) {
@@ -448,9 +636,192 @@ route('POST', '/api/v1/app-behaviors/email/magic-link/deactivate', () => ok(setB
 route('POST', '/api/v1/app-behaviors/email/verification/activate', () => ok(setBehaviorActive('email_auth', true)));
 route('POST', '/api/v1/app-behaviors/email/verification/deactivate', () => ok(setBehaviorActive('email_auth', false)));
 route('POST', '/api/v1/app-behaviors/email/metadata-schema/activate', async (req) => {
-  const behavior = setBehaviorActive('metadata_schema', true);
-  if (behavior) behavior.config = { schema: (await readBody(req)).schema ?? {} };
+  // Like the backend, the schema lives in the email_auth behavior.
+  const behavior = appBehaviors.find((b) => b.behavior_code === 'email_auth');
+  if (!behavior) return fail(404, 'App behavior not found', 'app_behaviors.email.not_found');
+  const body = await readBody(req);
+  behavior.config = {
+    ...(behavior.config as object),
+    metadata_schema: { enabled: true, scheme: body.scheme ?? [], additional_properties: body.additional_properties ?? true },
+  };
   return ok(behavior);
+});
+
+// ---- user-metadata-policy (Pro): in Community the routes do not exist ----
+if (EDITION === 'pro') {
+  const policyView = () => ({ app_id: APP_ID, ...userMetadataPolicy });
+  route('GET', '/api/v1/user-metadata-policy', () => ok(policyView()));
+  route('PUT', '/api/v1/user-metadata-policy', async (req) => {
+    const body = await readBody(req);
+    const keys = Array.isArray(body.allowed_keys) ? body.allowed_keys.map((k) => String(k).trim()).filter(Boolean) : [];
+    const reserved = keys.find((k) => RESERVED_METADATA_CLAIMS.has(k));
+    if (reserved) return fail(400, `reserved claim cannot be in allowed_keys: ${reserved}`, 'user_metadata_policy.upsert.reserved_claim');
+    userMetadataPolicy.enabled = Boolean(body.enabled);
+    userMetadataPolicy.allowed_keys = [...new Set(keys)];
+    if (typeof body.include_user_writable === 'boolean') userMetadataPolicy.include_user_writable = body.include_user_writable;
+    return ok(policyView());
+  });
+  route('POST', '/api/v1/user-metadata-policy/preview', async (req) => {
+    const metadata = ((await readBody(req)).metadata ?? {}) as Record<string, unknown>;
+    const { enabled, allowed_keys: allowed } = userMetadataPolicy;
+    if (!enabled) return ok({ extra_claims: {}, reason: 'policy is disabled — access_token will not include any user_metadata' });
+    if (allowed.length === 0) return ok({ extra_claims: {}, reason: 'policy has no allowed_keys' });
+    const claims = Object.fromEntries(Object.entries(metadata).filter(([k]) => allowed.includes(k)));
+    const dropped = allowed.filter((k) => !(k in claims));
+    return ok({ extra_claims: claims, ...(dropped.length > 0 ? { dropped_keys: dropped } : {}) });
+  });
+}
+
+// ---- MCP Connect (Community and Pro) ----
+function mcpScopes(resourceId: string, list: unknown) {
+  return (Array.isArray(list) ? (list as Record<string, unknown>[]) : []).map((s) => ({
+    id: `${resourceId}_${s.key}`, resource_id: resourceId, key: s.key, label: s.label, description: s.description ?? '',
+    is_write: Boolean(s.is_write), is_default: s.is_default ?? true, roles: s.roles ?? [],
+  }));
+}
+function mcpScopeError(list: unknown) {
+  const keys = new Set<string>();
+  for (const s of (Array.isArray(list) ? list : []) as Record<string, unknown>[]) {
+    const key = String(s.key ?? '');
+    if (!/^[a-z0-9][a-z0-9:._-]{0,63}$/.test(key)) return fail(422, `invalid scope key: ${key}`, 'mcp_resources.invalid_scope_key');
+    if (keys.has(key)) return fail(422, `duplicate scope key: ${key}`, 'mcp_resources.duplicate_scope_key');
+    keys.add(key);
+    if (!String(s.label ?? '').trim()) return fail(422, `scope ${key} needs a label`, 'mcp_resources.invalid_scope_label');
+  }
+  return null;
+}
+route('GET', '/v1/mcp-resources', () => ok(mcpResources));
+route('POST', '/v1/mcp-resources', async (req) => {
+  const body = await readBody(req);
+  const resourceUrl = String(body.resource_url ?? '');
+  if (!URL.canParse(resourceUrl)) return fail(422, 'resource_url must be an absolute URL', 'mcp_resources.invalid_resource_url');
+  if (mcpResources.some((r) => r.resource_url === resourceUrl)) return fail(409, 'this resource_url is already registered', 'mcp_resources.duplicate_resource_url');
+  const scopeError = mcpScopeError(body.scopes);
+  if (scopeError) return scopeError;
+  const id = nextId('mcp');
+  const now = new Date().toISOString();
+  const list = Array.isArray(body.scopes) && body.scopes.length > 0 ? body.scopes : [{ key: 'account:access', label: 'Acceder a tu cuenta' }];
+  const resource = {
+    id, app_id: APP_ID, name: body.name || new URL(resourceUrl).hostname, resource_url: resourceUrl, login_url: body.login_url,
+    access_ttl_seconds: body.access_ttl_seconds ?? 3600, cimd_enabled: body.cimd_enabled ?? true, dcr_enabled: body.dcr_enabled ?? true,
+    allowed_redirect_domains: body.allowed_redirect_domains ?? [], allowed_client_domains: body.allowed_client_domains ?? [],
+    scopes: mcpScopes(id, list), ...mcpResourceUrls(resourceUrl), verified_at: null, created_at: now, updated_at: now,
+  };
+  mcpResources.push(resource);
+  return ok(resource, 201);
+});
+route('PATCH', '/v1/mcp-resources/:id', async (req, { id }) => {
+  const resource = mcpResources.find((r) => r.id === id);
+  if (!resource) return fail(404, 'MCP resource not found', 'mcp_resources.not_found');
+  Object.assign(resource, await readBody(req), { updated_at: new Date().toISOString() });
+  return ok(resource);
+});
+route('DELETE', '/v1/mcp-resources/:id', (_req, { id }) => {
+  const idx = mcpResources.findIndex((r) => r.id === id);
+  if (idx === -1) return fail(404, 'MCP resource not found', 'mcp_resources.not_found');
+  const [removed] = mcpResources.splice(idx, 1);
+  return ok(removed);
+});
+route('PUT', '/v1/mcp-resources/:id/scopes', async (req, { id }) => {
+  const resource = mcpResources.find((r) => r.id === id);
+  if (!resource) return fail(404, 'MCP resource not found', 'mcp_resources.not_found');
+  const { scopes } = await readBody(req);
+  const scopeError = mcpScopeError(scopes);
+  if (scopeError) return scopeError;
+  resource.scopes = mcpScopes(id, scopes);
+  return ok(resource.scopes);
+});
+route('POST', '/v1/mcp-resources/:id/verify', (_req, { id }) => {
+  const resource = mcpResources.find((r) => r.id === id);
+  if (!resource) return fail(404, 'MCP resource not found', 'mcp_resources.not_found');
+  // A server that has not deployed the two values yet: only the first check passes.
+  const verified = resource.verify_report !== undefined || !String(resource.resource_url).includes('support.');
+  const at = new Date().toISOString();
+  const checks = [
+    { name: 'reachable', status: 'passed' },
+    verified
+      ? { name: 'challenge_401', status: 'passed' }
+      : { name: 'challenge_401', status: 'failed', detail: 'The server answered without asking for a token.', expected: '401', found: '200' },
+    ...['metadata_fetched', 'resource_matches', 'authorization_server_matches'].map((name) => ({ name, status: verified ? 'passed' : 'skipped' })),
+  ];
+  const report = { verified, checks, at };
+  Object.assign(resource, { verify_report: report, verified_at: verified ? at : null });
+  return ok(report);
+});
+route('GET', '/v1/mcp/connections', (_req, _p, url) => {
+  const page = Number(url.searchParams.get('page') ?? '1') || 1;
+  const size = Number(url.searchParams.get('size') ?? '20') || 20;
+  const q = url.searchParams;
+  const rows = mcpConnections.filter((c) => {
+    const person = c.user as { email?: string };
+    return (!q.get('resource_id') || (c.resource as { id: string }).id === q.get('resource_id'))
+      && (!q.get('user_id') || c.user_id === q.get('user_id'))
+      && (!q.get('email') || person.email === q.get('email'))
+      && (!q.get('status') || c.status === q.get('status'));
+  });
+  return ok({ items: rows.slice((page - 1) * size, page * size), total: rows.length, page, size });
+});
+route('GET', '/v1/mcp/connections/summary', (_req, _p, url) => {
+  const ids = [...new Set((url.searchParams.get('user_ids') ?? '').split(',').map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return fail(400, 'user_ids is required', 'mcp_connections.summary.user_ids_required');
+  if (ids.length > 100) return fail(400, 'at most 100 user_ids per call', 'mcp_connections.summary.too_many');
+  return ok(Object.fromEntries(ids.map((id) => [id, mcpConnections.filter((c) => c.user_id === id && c.status === 'active').length])));
+});
+route('DELETE', '/v1/mcp/connections/:id', (_req, { id }) => {
+  const connection = mcpConnections.find((c) => c.id === id);
+  if (!connection) return fail(404, 'MCP connection not found', 'mcp_connections.not_found');
+  if (connection.status === 'active') Object.assign(connection, { status: 'revoked', revoked_at: new Date().toISOString(), revoked_reason: 'owner' });
+  return ok(connection);
+});
+
+// ---- login events (Community and Pro) ----
+function loginEventsInRange(url: URL) {
+  const from = url.searchParams.get('from');
+  const to = url.searchParams.get('to');
+  return loginEvents.filter((e) => {
+    const at = Date.parse(String(e.created_at));
+    return (!from || at >= Date.parse(from)) && (!to || at <= Date.parse(to));
+  });
+}
+route('GET', '/api/v1/login-events', (_req, _p, url) => {
+  const { page } = pageParams(url);
+  const size = Math.min(Number(url.searchParams.get('size') ?? '20') || 20, 100);
+  const filters: [string, string][] = [['user_id', 'user_id'], ['country', 'country_code'], ['type', 'type'], ['method', 'method'], ['geo_source', 'geo_source']];
+  const rows = loginEventsInRange(url).filter((e) =>
+    filters.every(([param, field]) => {
+      const value = url.searchParams.get(param);
+      return !value || e[field] === (param === 'country' ? value.toUpperCase() : value);
+    }),
+  );
+  const { slice, total } = paginate(rows, page, size);
+  return paginatedResponse(slice, page, size, total, '/api/v1/login-events');
+});
+route('GET', '/api/v1/login-events/summary', (_req, _p, url) => {
+  // Like the backend: only sign-ins and blocks count, not IP changes nor failures.
+  const attempts = loginEventsInRange(url).filter((e) => e.type === 'login_succeeded' || e.type === 'login_blocked');
+  const countries = new Map<string, { country_code: string; country_name: string; logins: number; blocked: number; ips: Set<unknown> }>();
+  const sources = { database: 0, headers: 0, none: 0 };
+  for (const e of attempts) {
+    const code = String(e.country_code);
+    const row = countries.get(code) ?? { country_code: code, country_name: String(e.country_name ?? ''), logins: 0, blocked: 0, ips: new Set() };
+    if (e.type === 'login_blocked') row.blocked += 1;
+    else row.logins += 1;
+    row.ips.add(e.ip);
+    countries.set(code, row);
+    sources[e.geo_source as keyof typeof sources] += 1;
+  }
+  return ok({
+    from: url.searchParams.get('from') ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    to: url.searchParams.get('to') ?? new Date().toISOString(),
+    logins: attempts.filter((e) => e.type === 'login_succeeded').length,
+    blocked: attempts.filter((e) => e.type === 'login_blocked').length,
+    unique_ips: new Set(attempts.map((e) => e.ip)).size,
+    unique_users: new Set(attempts.filter((e) => e.type === 'login_succeeded').map((e) => e.user_id)).size,
+    countries: [...countries.values()]
+      .sort((a, b) => b.logins - a.logins)
+      .map(({ ips, ...row }) => ({ ...row, unique_ips: ips.size })),
+    sources,
+  });
 });
 
 // ---- system ----

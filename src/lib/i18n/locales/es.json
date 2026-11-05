@@ -3,14 +3,23 @@
     "edition": "{edition} Edition",
     "dashboard": "Dashboard",
     "users": "Usuarios",
+    "userMetadata": "Metadata de usuario",
     "roles": "Roles",
+    "policies": "Políticas",
     "webhooks": "Webhooks",
     "apiKeys": "API Keys",
     "oauthProviders": "Proveedores OAuth",
+    "mcpConnect": "MCP Connect",
     "behaviors": "Behaviors",
     "emailTemplates": "Templates de Email",
     "emailAccess": "Acceso por email",
     "embeddedAuth": "Embedded Auth",
+    "mfa": "Segundo factor",
+    "sessionSecurity": "Seguridad de sesiones",
+    "securityLimits": "Límites de seguridad",
+    "geoAccess": "Bloqueo regional",
+    "accessLog": "Accesos",
+    "identityLinking": "Unión de identidades",
     "tokens": "Tokens",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
@@ -548,6 +557,938 @@
       "createAccount": "Crear cuenta",
       "unavailable": "El inicio de sesión no está disponible en este momento.",
       "protectedBy": "Protegido por Foundathyon Accounts"
+    }
+  },
+  "securityScreens": {
+    "proBadge": "Pro",
+    "configSecretKey": "Configurar Secret Key",
+    "secretKeyRequired": "Se requiere la Secret Key",
+    "secretKeyRequiredDesc": "Configura la Secret Key de la app en Ajustes para ver y editar esta pantalla.",
+    "proOnlyTitle": "Disponible en Accounts Pro",
+    "backToDashboard": "Volver al dashboard",
+    "dirty": "Hay cambios sin guardar.",
+    "clean": "Sin cambios pendientes.",
+    "discard": "Descartar",
+    "saveChanges": "Guardar cambios",
+    "saved": "Cambios guardados",
+    "networkError": "Error de red",
+    "result": "Resultado"
+  },
+  "mfa": {
+    "modes": {
+      "off": {
+        "label": "Desactivado",
+        "description": "Nunca se pide el segundo factor, aunque la persona haya configurado una app autenticadora."
+      },
+      "optional": {
+        "label": "Opcional",
+        "description": "Se pide solo a quien activó la app autenticadora en su cuenta."
+      },
+      "required": {
+        "label": "Obligatorio",
+        "description": "Todos deben configurar la app autenticadora al iniciar sesión y usarla cada vez."
+      }
+    },
+    "recommendedLabel": "{label} (recomendado)",
+    "flows": {
+      "password": {
+        "label": "Contraseña",
+        "description": "Inicio de sesión con correo y contraseña."
+      },
+      "oauth": {
+        "label": "OAuth web y embebido",
+        "description": "Google, Apple, GitHub… en el navegador o embebido."
+      },
+      "native": {
+        "label": "Login nativo",
+        "description": "Inicio de sesión desde apps nativas (iOS, Android)."
+      },
+      "magic_link": {
+        "label": "Magic link",
+        "description": "Enlace de acceso enviado por correo."
+      },
+      "email_code": {
+        "label": "Código por correo",
+        "description": "Código de un solo uso enviado por correo."
+      },
+      "title": "En qué flujos",
+      "offHint": "Con el segundo factor desactivado no se pide en ningún flujo.",
+      "onHint": "El segundo factor solo se pide en los flujos marcados.",
+      "none": "Elige al menos un flujo o desactiva el segundo factor."
+    },
+    "summary": {
+      "off": "Nadie tendrá que confirmar un segundo factor al iniciar sesión.",
+      "noFlows": "No se pedirá en ningún flujo: elige al menos uno.",
+      "allFlows": "todos los flujos",
+      "someFlows": "{count} de {total} flujos",
+      "required": "Todos los usuarios confirmarán un código de su app autenticadora en {flows}.",
+      "optional": "Quien activó la app autenticadora confirmará un código en {flows}."
+    },
+    "errors": {
+      "invalidMode": "Accounts no reconoce ese modo de segundo factor.",
+      "invalidFlow": "Accounts no reconoce alguno de los flujos elegidos. Actualiza Accounts o quita ese flujo."
+    },
+    "loadFailed": "No se pudo cargar el segundo factor ({status})",
+    "saveFailed": "No se pudo guardar ({status})",
+    "unsupportedInstance": "Esta instancia de Accounts no tiene el segundo factor.",
+    "title": "Segundo factor (MFA)",
+    "description": "Cuándo se pide un código de la app autenticadora (TOTP) además del primer factor, y en qué formas de iniciar sesión.",
+    "upgrade": {
+      "title": "Actualiza Accounts",
+      "body": "Esta instancia de Accounts todavía no permite configurar el segundo factor. Está disponible a partir de la versión que lo incluye."
+    },
+    "when": {
+      "title": "Cuándo se pide",
+      "description": "El segundo factor es un código de 6 dígitos de una app autenticadora (Google Authenticator, 1Password…).",
+      "requiredWarning": "Los usuarios sin segundo factor tendrán que configurarlo en su próximo inicio de sesión. Avisa a tus usuarios antes de guardar."
+    },
+    "notes": {
+      "optional": "«Opcional» no obliga a nadie: cada persona decide si activa la app autenticadora desde su cuenta.",
+      "unchecked": "Desmarcar un flujo lo deja con un solo factor, aunque la persona tenga la app autenticadora activada."
+    }
+  },
+  "sessionSecurity": {
+    "fields": {
+      "oauth_token_delivery": "Entrega de tokens tras OAuth",
+      "refresh_rotation": "Rotación de refresh tokens",
+      "revoke_sessions_on_password_change": "Cerrar las demás sesiones al cambiar la contraseña"
+    },
+    "delivery": {
+      "code": {
+        "label": "Código de un solo uso (recomendado)",
+        "description": "Tras el login, Accounts redirige a tu app con un código que caduca en segundos. Tu backend o tu app lo canjea por los tokens; nunca aparecen en la URL ni en el historial del navegador."
+      },
+      "query": {
+        "label": "Tokens en la URL (heredado)",
+        "description": "Accounts redirige con el access token y el refresh token en la URL. Pueden quedar en el historial, en logs de proxies y en la cabecera Referer."
+      },
+      "description": "Cómo vuelve el usuario a tu app después de entrar con Google, GitHub, Microsoft o Apple."
+    },
+    "errors": {
+      "unknownField": "Accounts no reconoce el campo «{label}». Actualiza Accounts.",
+      "unknownFields": "Accounts no reconoce alguno de los campos. Actualiza Accounts.",
+      "rejectedValue": "Accounts rechazó el valor de «{label}».",
+      "rejectedValues": "Accounts rechazó alguno de los valores."
+    },
+    "legacy": "Heredado",
+    "impactLabel": "Impacto en las apps cliente:",
+    "guide": {
+      "title": "Guía de migración al código de un solo uso",
+      "intro": "Hazlo antes de cambiar la entrega de tokens: las apps que sigan leyendo los tokens de la URL dejarán de iniciar sesión con OAuth.",
+      "step1": "En la página de callback de tu app, lee el parámetro <code>code</code> de la URL en lugar de <code>access_token</code> y <code>refresh_token</code>.",
+      "step2": "Canjéalo de inmediato con <code>{endpoint}</code>, enviando <code>{body}</code> con tu publishable key. La respuesta trae el access token y el refresh token, igual que un login normal.",
+      "step3": "El código vale una sola vez y caduca en segundos: no lo guardes ni lo reintentes. Si el canje falla, vuelve a iniciar el login.",
+      "step4": "Quita el código de la URL (por ejemplo con <code>history.replaceState</code>).",
+      "step5": "Despliega tus apps cliente y, cuando todas canjeen el código, cambia aquí la entrega y guarda."
+    },
+    "loadFailed": "No se pudo cargar la seguridad de sesiones ({status})",
+    "notConfigurable": "Esta instancia de Accounts no tiene seguridad de sesiones configurable.",
+    "saveFailed": "No se pudo guardar ({status})",
+    "title": "Seguridad de sesiones",
+    "subtitle": "Cómo recibe los tokens tu app tras un login OAuth y qué pasa con las sesiones abiertas.",
+    "status": {
+      "recommended": "Configuración recomendada",
+      "noPending": "Sin cambios pendientes",
+      "legacyCountOne": "{count} ajuste heredado",
+      "legacyCountMany": "{count} ajustes heredados"
+    },
+    "unavailable": {
+      "title": "Actualiza Accounts",
+      "body": "Esta instancia de Accounts todavía no permite ajustar la seguridad de sesiones por app. Está disponible a partir de la versión que lo incluye."
+    },
+    "legacyWarning": {
+      "body": "Se conservaron para no romper tus apps cliente; las apps nuevas ya nacen con la configuración recomendada. Migra cuando tus clientes estén listos: {fields}."
+    },
+    "codeWarning": {
+      "title": "Actualiza tus apps cliente antes de guardar",
+      "body": "Recibirán un <code>code</code> en lugar de los tokens y deben canjearlo con <code>{endpoint}</code>; las que lean los tokens de la URL dejarán de iniciar sesión con OAuth.",
+      "viewGuide": "Ver la guía de migración"
+    },
+    "sessions": {
+      "description": "Las sesiones abiertas lo toman en su próximo refresh.",
+      "rotation": {
+        "description": "Cada uso de un refresh token devuelve uno nuevo e invalida el anterior. Si alguien reutiliza uno viejo, Accounts cierra esa sesión.",
+        "impact": "guarda siempre el refresh_token que devuelve cada refresh. Si dos pestañas o procesos refrescan a la vez con el mismo token, uno de ellos perderá la sesión."
+      },
+      "revoke": {
+        "description": "Al cambiar o restablecer la contraseña, Accounts cierra todas las sesiones del usuario salvo la actual.",
+        "impact": "los demás dispositivos del usuario tendrán que volver a iniciar sesión: su refresh token deja de funcionar y el siguiente refresh devuelve 401."
+      }
+    }
+  },
+  "securityLimits": {
+    "sections": {
+      "rate_limit": {
+        "title": "Límite de peticiones",
+        "description": "Frena a quien hace demasiadas peticiones seguidas a los endpoints de autenticación."
+      },
+      "lockout": {
+        "title": "Bloqueo de cuenta",
+        "description": "Tras varios intentos fallidos de contraseña la cuenta se bloquea un tiempo. Cada bloqueo seguido dura más, según la escalera."
+      },
+      "api_keys": {
+        "title": "Secret keys",
+        "description": "Frena a quien prueba secret keys inválidas contra la API."
+      },
+      "mfa": {
+        "title": "Segundo factor",
+        "description": "Cuánto vale el código temporal del segundo factor y cuántos errores se permiten."
+      }
+    },
+    "fields": {
+      "rateLimitIpMax": {
+        "label": "Peticiones por IP",
+        "description": "Cuántas peticiones acepta una misma IP en la ventana."
+      },
+      "rateLimitIpWindow": {
+        "label": "Ventana por IP",
+        "description": "Tiempo en el que se cuentan las peticiones de una IP."
+      },
+      "rateLimitAccountMax": {
+        "label": "Envíos de correo por cuenta",
+        "description": "Cuántos correos (códigos, magic links, recuperación) se envían a una misma cuenta en la ventana."
+      },
+      "rateLimitAccountWindow": {
+        "label": "Ventana por cuenta",
+        "description": "Tiempo en el que se cuentan los envíos de correo a una cuenta."
+      },
+      "lockoutThreshold": {
+        "label": "Intentos fallidos",
+        "description": "Intentos fallidos que bloquean la cuenta."
+      },
+      "lockoutWindow": {
+        "label": "Ventana de intentos",
+        "description": "Tiempo en el que se cuentan los intentos fallidos."
+      },
+      "lockoutReset": {
+        "label": "Reiniciar la escalera tras",
+        "description": "Sin bloqueos durante este tiempo, el siguiente vuelve al primer escalón."
+      },
+      "apiKeysFailureMax": {
+        "label": "Intentos fallidos",
+        "description": "Secret keys inválidas que se aceptan desde un mismo origen antes de bloquearlo."
+      },
+      "apiKeysFailureWindow": {
+        "label": "Ventana",
+        "description": "Tiempo en el que se cuentan los intentos fallidos."
+      },
+      "mfaTokenTtl": {
+        "label": "Vida del código temporal",
+        "description": "Tiempo que tiene la persona para confirmar el segundo factor tras el primer paso."
+      },
+      "mfaMaxAttempts": {
+        "label": "Intentos por código",
+        "description": "Códigos erróneos que se aceptan antes de invalidar el código temporal."
+      },
+      "mfaFailureMax": {
+        "label": "Fallos por usuario",
+        "description": "Fallos de segundo factor de un usuario antes de bloquearlo."
+      },
+      "mfaFailureWindow": {
+        "label": "Ventana de fallos",
+        "description": "Tiempo en el que se cuentan los fallos de un usuario."
+      }
+    },
+    "units": {
+      "s": "segundos",
+      "min": "minutos",
+      "h": "horas",
+      "d": "días"
+    },
+    "format": {
+      "daysOne": "1 día",
+      "daysMany": "{count} días",
+      "hours": "{count} h",
+      "minutes": "{count} min",
+      "seconds": "{count} s"
+    },
+    "range": "Entre {min} y {max}",
+    "validation": {
+      "enterNumber": "Escribe un número.",
+      "wholeSeconds": "Usa segundos enteros.",
+      "wholeNumber": "Usa un número entero.",
+      "outOfRange": "Fuera de rango. {range}.",
+      "ladderLength": "La escalera lleva de 1 a {max} duraciones.",
+      "ladderOrder": "Cada escalón debe durar lo mismo o más que el anterior."
+    },
+    "api": {
+      "outOfRangeWithRange": "Accounts lo rechazó por estar fuera de rango. {range}.",
+      "outOfRange": "Accounts lo rechazó por estar fuera de rango.",
+      "invalidLadder": "Accounts rechazó la escalera: de 1 a {max} duraciones, cada una igual o mayor que la anterior."
+    },
+    "errors": {
+      "unknownField": "Accounts no reconoce el campo «{field}». Actualiza Accounts.",
+      "unknownFields": "Accounts no reconoce alguno de los campos. Actualiza Accounts.",
+      "outOfRange": "Algún valor está fuera del rango permitido.",
+      "invalidLadder": "La escalera de duraciones no es válida."
+    },
+    "unitLabel": "{label} (unidad)",
+    "source": {
+      "custom": "Personalizado"
+    },
+    "reset": {
+      "aria": "Usar el de la instancia: {label}"
+    },
+    "durations": {
+      "title": "Duración de cada bloqueo",
+      "description": "El primer bloqueo dura lo del escalón 1; cada bloqueo seguido sube un escalón y el último se repite. De 1 a {max} duraciones, cada una igual o mayor que la anterior.",
+      "step": "Escalón {n}",
+      "remove": "Quitar el escalón {n}",
+      "add": "Añadir escalón",
+      "eachStep": "Cada escalón: {range}"
+    },
+    "loadFailed": "No se pudieron cargar los límites ({status})",
+    "saveFailed": "No se pudo guardar ({status})",
+    "unsupportedInstance": "Esta instancia de Accounts no tiene límites de seguridad configurables.",
+    "reviewFields": "Revisa los campos marcados.",
+    "title": "Límites de seguridad",
+    "description": "Cuántas peticiones, intentos fallidos y códigos acepta Accounts antes de frenar a alguien en esta app.",
+    "status": {
+      "allDefault": "Todo por defecto",
+      "customOne": "{count} personalizado",
+      "customMany": "{count} personalizados"
+    },
+    "upgrade": {
+      "title": "Actualiza Accounts",
+      "body": "Esta instancia de Accounts todavía no permite ajustar los límites de seguridad por app. Está disponible a partir de la versión que lo incluye."
+    },
+    "help": {
+      "noDisable": "Estos límites no se pueden desactivar por app: solo se ajustan dentro del rango permitido. Solo quien opera Accounts puede apagarlos para toda la instancia.",
+      "defaults": "«Por defecto de la instancia» sigue al valor de la instancia aunque cambie. «Usar el de la instancia» deja de fijarlo para esta app.",
+      "webhooks": "La protección de webhooks no es configurable."
+    },
+    "fixErrors": "Corrige los campos marcados para guardar.",
+    "instance": "De la instancia: {value}"
+  },
+  "geoAccess": {
+    "validation": {
+      "allowlistEmpty": "Agrega al menos un país: con la lista permitida vacía nadie podría iniciar sesión.",
+      "invalidCode": "{code}: no es un código de país ISO 3166-1 válido."
+    },
+    "warnings": {
+      "blocklistEmpty": "La lista está vacía: por ahora no se bloquea ningún país.",
+      "blockAllDenyUnknown": "Bloqueas todos los países y también los desconocidos: nadie podría iniciar sesión.",
+      "blockAll": "Bloqueas todos los países: solo entrarían conexiones sin país identificado.",
+      "denyUnknown": "Bloquear los países desconocidos también deja fuera a quien entre desde una red privada, algunas VPN o una IP sin dato de ubicación."
+    },
+    "summary": {
+      "unknownDenied": "Las conexiones sin país identificado se bloquean.",
+      "unknownAllowed": "Las conexiones sin país identificado se permiten.",
+      "off": "Cualquier persona puede iniciar sesión, desde cualquier país.",
+      "allowlistEmpty": "Nadie podrá iniciar sesión: la lista de países permitidos está vacía.",
+      "allowlist": "Solo usuarios en {countries} podrán iniciar sesión. {unknown}",
+      "blocklistEmpty": "No se bloquea ningún país. {unknown}",
+      "blocklist": "Usuarios en {countries} no podrán iniciar sesión; el resto de países, sí. {unknown}"
+    },
+    "presets": {
+      "mx": "Solo México",
+      "na": "Norteamérica",
+      "latam": "Latinoamérica"
+    },
+    "loadFailed": "No se pudo cargar el Bloqueo regional ({status})",
+    "saveFailed": "No se pudo guardar ({status})",
+    "reviewFields": "Revisa los campos marcados antes de guardar.",
+    "unsupportedInstance": "Esta instancia de Accounts no tiene Bloqueo regional.",
+    "rejected": "Accounts rechazó la configuración: revisa los campos marcados.",
+    "title": "Bloqueo regional",
+    "description": "Decide desde qué países se puede iniciar sesión en tu app. El país se calcula a partir de la IP.",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "rule": {
+      "title": "Regla",
+      "description": "Qué hacer con el país desde el que se conecta cada usuario."
+    },
+    "modes": {
+      "off": {
+        "label": "Desactivado",
+        "description": "No se revisa el país: se puede iniciar sesión desde cualquier lugar."
+      },
+      "allowlist": {
+        "label": "Solo permitir estos países",
+        "description": "Solo entran quienes se conectan desde un país de la lista. El resto recibe un error al iniciar sesión."
+      },
+      "blocklist": {
+        "label": "Bloquear estos países",
+        "description": "Entra todo el mundo salvo quienes se conectan desde un país de la lista."
+      }
+    },
+    "countries": {
+      "blocked": "Países bloqueados",
+      "allowed": "Países permitidos",
+      "offHint": "La lista se guarda, pero no se aplica mientras la regla esté desactivada.",
+      "allowHint": "Solo estos países podrán iniciar sesión.",
+      "blockHint": "Estos países no podrán iniciar sesión."
+    },
+    "unknown": {
+      "title": "País desconocido",
+      "description": "A veces la IP no se puede ubicar: redes privadas o corporativas, algunas VPN y proxies, o IPs que la base de geolocalización no tiene. Accounts las registra como país «Desconocido»."
+    },
+    "unknownOptions": {
+      "allow": {
+        "label": "Permitir",
+        "description": "Recomendado. Quien no se puede ubicar entra como si la regla no existiera."
+      },
+      "deny": {
+        "label": "Bloquear",
+        "description": "Más estricto: también deja fuera a redes privadas, algunas VPN e IPs sin dato."
+      }
+    },
+    "notes": {
+      "loginOnly": "La regla se aplica <strong>solo al iniciar sesión</strong>: las sesiones abiertas siguen funcionando hasta que caduquen o se revoquen.",
+      "testers": "Los testers quedan exentos: pueden entrar desde cualquier país.",
+      "blocked": "Quien queda fuera recibe un 403 con <code>geo_access.country_not_allowed</code> o <code>geo_access.unknown_country</code>. Los intentos bloqueados se ven en <link>Accesos</link>."
+    },
+    "picker": {
+      "none": "Ningún país elegido.",
+      "remove": "Quitar {name}",
+      "removeAll": "Quitar todos",
+      "searchLabel": "Buscar país",
+      "searchPlaceholder": "Buscar país por nombre o código (MX, US…)",
+      "listLabel": "Países",
+      "noResults": "Sin resultados para «{query}»."
+    },
+    "countryList": {
+      "listAnd": "{list} y {last}",
+      "listAndMoreOne": "{list} y {count} país más",
+      "listAndMoreMany": "{list} y {count} países más"
+    },
+    "proOnlyDesc": "Esta instancia de Accounts no tiene Bloqueo regional. Requiere la edición Pro de Accounts en una versión que registre los accesos con su país."
+  },
+  "accessLog": {
+    "title": "Accesos",
+    "subtitle": "Los inicios de sesión de tus usuarios: desde dónde, con qué método y cuáles bloqueó el <link>Bloqueo regional</link>.",
+    "period": "Periodo",
+    "days": "{count} días",
+    "unsupported": {
+      "title": "Esta versión de Accounts no registra accesos",
+      "body": "El historial de accesos y la geolocalización por IP llegan con una versión más reciente de Accounts."
+    },
+    "columns": {
+      "country": "País",
+      "logins": "Inicios de sesión",
+      "blocked": "Bloqueados",
+      "uniqueIps": "IPs únicas"
+    },
+    "stats": {
+      "uniqueUsers": "Usuarios únicos",
+      "lastDays": "Últimos {count} días"
+    },
+    "byCountry": {
+      "title": "Por país",
+      "hint": "Haz clic en un país para ver sus accesos.",
+      "emptyTitle": "Sin accesos en este periodo",
+      "emptyDescription": "Cuando tus usuarios inicien sesión verás aquí de qué países entran.",
+      "entity": "países"
+    },
+    "footer": {
+      "retention": "Accounts guarda los accesos {days} días. La ubicación es aproximada: sale de la IP y puede ser la de una VPN o la del proveedor de internet.",
+      "credit": "Geolocalización por IP: <link>DB-IP (db-ip.com)</link>, bajo licencia CC BY 4.0."
+    },
+    "table": {
+      "columns": {
+        "date": "Fecha",
+        "user": "Usuario",
+        "result": "Resultado",
+        "method": "Método",
+        "place": "País / Ciudad",
+        "device": "Dispositivo",
+        "ip": "IP"
+      },
+      "copyIp": "Copiar IP {ip}",
+      "ipCopied": "IP copiado al portapapeles",
+      "country": "País",
+      "geoSource": "Origen de la ubicación",
+      "userId": "ID de usuario",
+      "clearFilters": "Quitar filtros",
+      "refresh": "Actualizar",
+      "loadFailed": "No se pudieron cargar los accesos",
+      "viewDetail": "Ver detalle",
+      "emptyFilteredTitle": "Sin accesos para esos filtros",
+      "emptyFilteredDescription": "Prueba con otro resultado, método, país, origen de la ubicación o usuario.",
+      "emptyTitle": "Aún no hay accesos en este periodo",
+      "emptyDescription": "Aquí aparece cada inicio de sesión (exitoso, fallido o bloqueado por la regla regional) y cada cambio de IP de una sesión.",
+      "entity": "accesos"
+    },
+    "detail": {
+      "copy": "Copiar {what}",
+      "copied": "{what} copiado al portapapeles",
+      "copyFailed": "No se pudo copiar",
+      "title": "Acceso",
+      "blocked": "Bloqueado: {reason}",
+      "ipChanged": "La sesión siguió usándose desde otra IP. No es un inicio de sesión nuevo: la IP y la ubicación son las nuevas.",
+      "date": "Fecha",
+      "user": "Usuario",
+      "userId": "ID del usuario",
+      "method": "Método",
+      "country": "País",
+      "region": "Región",
+      "city": "Ciudad",
+      "geoSource": "Origen de la ubicación",
+      "device": "Dispositivo",
+      "sessionId": "ID de la sesión",
+      "eventId": "ID del acceso",
+      "viewUser": "Ver usuario",
+      "failed": "Falló: {reason}",
+      "userAgent": "User agent"
+    },
+    "events": {
+      "type": {
+        "login_succeeded": "Exitoso",
+        "login_blocked": "Bloqueado",
+        "ip_changed": "Cambio de IP",
+        "login_failed": "Fallido"
+      },
+      "method": {
+        "password": "Email y contraseña",
+        "email_password_signup": "Registro con contraseña",
+        "activation": "Activación de cuenta",
+        "magic_link": "Magic link",
+        "email_code": "Código por correo",
+        "oauth": "OAuth",
+        "native_oauth": "OAuth nativo (app)"
+      },
+      "reason": {
+        "country_not_allowed": {
+          "title": "País no permitido",
+          "detail": "La IP se ubicó en un país que la regla de Bloqueo regional no deja entrar (fuera de la lista permitida o dentro de la bloqueada). El usuario recibió el error geo_access.country_not_allowed."
+        },
+        "unknown_country": {
+          "title": "País desconocido",
+          "detail": "No se pudo ubicar la IP (IP privada, VPN o sin dato en la base de geolocalización) y la regla bloquea los países desconocidos. El usuario recibió el error geo_access.unknown_country."
+        },
+        "bad_password": {
+          "title": "Contraseña incorrecta",
+          "detail": "La cuenta existe, pero la contraseña no coincide."
+        },
+        "unknown_account": {
+          "title": "Cuenta inexistente",
+          "detail": "No hay ninguna cuenta con ese correo en la app."
+        },
+        "rate_limited": {
+          "title": "Demasiados intentos",
+          "detail": "El inicio de sesión se rechazó por superar el límite de intentos."
+        },
+        "mfa_failed": {
+          "title": "Segundo factor rechazado",
+          "detail": "La contraseña era correcta, pero el código de la app autenticadora o de respaldo se rechazó, o se agotaron los intentos."
+        },
+        "oauth_failed": {
+          "title": "OAuth rechazado",
+          "detail": "El proveedor o el callback rechazaron el inicio de sesión: código o id_token inválido, proveedor caído, state rechazado o configuración."
+        },
+        "link_invalid": {
+          "title": "Enlace no válido",
+          "detail": "El magic link es desconocido, venció, ya se usó o se abrió desde otra IP o navegador."
+        },
+        "code_invalid": {
+          "title": "Código no válido",
+          "detail": "El código por correo es incorrecto, venció, ya se usó o fue reemplazado por otro más nuevo."
+        },
+        "account_not_verified": {
+          "title": "Correo sin verificar",
+          "detail": "La contraseña era correcta, pero el correo aún no se verificó."
+        },
+        "reportedByAccounts": "Motivo informado por Accounts."
+      },
+      "geoSource": {
+        "database": {
+          "label": "Base de datos",
+          "detail": "Coincidencia en la base DB-IP sincronizada en Accounts."
+        },
+        "headers": {
+          "label": "Headers de Cloudflare",
+          "detail": "No hubo coincidencia en la base y se usaron los headers de Cloudflare."
+        },
+        "none": {
+          "label": "Sin datos",
+          "detail": "Sin datos de ubicación: el país queda como desconocido."
+        }
+      },
+      "geoSourceShort": {
+        "database": "base de datos",
+        "headers": "headers",
+        "none": "sin datos"
+      },
+      "locationLabel": "Ubicación:",
+      "sourceTooltipOne": "{detail} {count} acceso.",
+      "sourceTooltipMany": "{detail} {count} accesos.",
+      "unknownCountry": "Desconocido",
+      "loadFailed": "No se pudieron cargar los accesos",
+      "summaryLoadFailed": "No se pudo cargar el resumen de accesos"
+    }
+  },
+  "userMetadata": {
+    "title": "Metadata de usuario",
+    "subtitle": "Define qué campos puede incluir <code>user_metadata</code> al firmar usuarios. Marca individualmente cuáles se inyectan en el <code>access_token</code>.",
+    "previewButton": "Probar JWT",
+    "errors": {
+      "behaviors": "Error de behaviors {status}",
+      "behaviorDetail": "Error en el detalle del behavior {status}",
+      "duplicateName": "Nombre duplicado: {name}",
+      "reservedClaim": "\"{name}\" es un claim reservado y no puede incluirse en el JWT.",
+      "needField": "Añade al menos un campo o desactiva el schema antes de guardar.",
+      "noEmailAuth": "Esta app no tiene el login por email configurado: no hay dónde guardar los campos.",
+      "schemaSave": "No se pudo guardar el schema ({status})",
+      "policySave": "No se pudo guardar la política JWT ({status})",
+      "generic": "Error {status}"
+    },
+    "toasts": {
+      "schemaActivated": "Schema activado: signup validará los campos que definas",
+      "policyActivated": "Política JWT activada para incluir el campo en el access_token"
+    },
+    "schema": {
+      "title": "Configuración del schema",
+      "active": "Schema activo",
+      "activeHint": "Cuando está activo, signup valida <code>user_metadata</code> contra los campos definidos.",
+      "allowExtra": "Permitir campos extra",
+      "allowExtraHint": "Si se desactiva, signup rechaza cualquier clave que no esté en la lista de abajo.",
+      "offWarning": "El schema está apagado: los campos se guardan, pero signup no los valida y el formulario de Registrar usuario no los exige."
+    },
+    "policy": {
+      "title": "Política JWT",
+      "description": "Maestro de la inclusión en el access_token. Si está apagada, ningún campo se inyecta sin importar lo marcado abajo. Los tokens ya emitidos no cambian: los campos aparecen a partir del siguiente login o refresh.",
+      "userWritable": "Incluir en el token las claves que escribe el propio usuario (heredado)",
+      "userWritableHint": "Apagado, solo se inyectan las claves que escribe tu backend o el admin. Las que el usuario edita desde su perfil se quedan en <code>/me</code>.",
+      "userWritableRisk": "Un usuario puede escribir lo que quiera en esas claves (por ejemplo <code>{example}</code>) y aparecerá firmado en su access_token. Si tu backend confía en esos claims para autorizar, desactívalo y lee esos datos de <code>/me</code>.",
+      "offWithFieldsOne": "Hay 1 campo marcado para el access_token, pero la Política JWT está apagada: no se incluirá hasta que la actives.",
+      "offWithFieldsMany": "Hay {count} campos marcados para el access_token, pero la Política JWT está apagada: no se incluirán hasta que la actives.",
+      "userWritableRiskTitle": "Riesgo: el usuario controla esas claves"
+    },
+    "pro": {
+      "title": "Feature Pro",
+      "body": "La inclusión granular en el access_token requiere la edición Pro de Accounts. El schema sigue siendo editable."
+    },
+    "sensitive": {
+      "title": "Estás exponiendo datos sensibles en el JWT:",
+      "hint": "El access_token suele viajar como bearer y vivir en logs/cache de clientes. Considera dejarlos solo en <code>/me</code>."
+    },
+    "fields": {
+      "hint": "Los campos que define el schema y cuáles viajan en el access_token.",
+      "empty": "Añade el primero para permitir <code>user_metadata</code> en signup.",
+      "namePlaceholder": "ej: plan",
+      "inToken": "En access_token",
+      "hideAdvanced": "Ocultar avanzado",
+      "showAdvanced": "Mostrar avanzado",
+      "noAdvanced": "Los campos booleanos no tienen reglas avanzadas.",
+      "format": "Formato (regex)",
+      "formatPlaceholder": "ej: [0-9]{10}",
+      "enumPlaceholder": "MX, US, ES"
+    },
+    "footer": "Guarda para aplicar tanto el schema de validación como la política de claims.",
+    "confirm": {
+      "title": "Confirmar dato sensible",
+      "description": "Vas a incluir un campo cuyo nombre sugiere información sensible en el access_token. Será visible donde sea que el token quede persistido o logueado.",
+      "include": "Incluir igualmente"
+    },
+    "preview": {
+      "notObject": "El payload debe ser un objeto JSON",
+      "invalidJson": "JSON inválido",
+      "title": "Probar payload",
+      "description": "Simula la evaluación contra la política guardada. Devuelve exactamente los claims que se inyectarían en el access_token para este <code>user_metadata</code>.",
+      "claimsAdded": "Claims que se añadirán",
+      "noClaims": "No se añaden claims",
+      "reason": "Razón: {reason}",
+      "dropped": "Configuradas pero descartadas: <code>{keys}</code>",
+      "evaluate": "Evaluar",
+      "inputLabel": "user_metadata"
+    }
+  },
+  "policies": {
+    "withStatus": "{message} ({status})",
+    "effect": {
+      "allow": "Permitir",
+      "deny": "Denegar"
+    },
+    "columns": {
+      "name": "Nombre",
+      "target": "Recurso : acción",
+      "effect": "Efecto",
+      "description": "Descripción"
+    },
+    "loadFailed": "No se pudieron cargar las políticas",
+    "roleLoadFailed": "No se pudieron cargar las políticas del rol",
+    "saveFailed": "No se pudo guardar la política",
+    "createFailed": "No se pudo crear la política",
+    "updated": "Política actualizada",
+    "created": "Política creada",
+    "deleteFailed": "No se pudo borrar la política",
+    "deleted": "Política borrada",
+    "assignFailed": "No se pudo asignar la política",
+    "assigned": "Política asignada",
+    "unassignFailed": "No se pudo quitar la política",
+    "unassigned": "Política quitada del rol",
+    "title": "Permisos",
+    "subtitle": "Políticas de autorización (qué acción se permite o deniega sobre qué recurso) y qué políticas tiene cada rol.",
+    "newPolicy": "Nueva política",
+    "rules": {
+      "what": "Cada política permite o deniega una <strong>acción</strong> sobre un <strong>recurso</strong> (por ejemplo <code>users:read</code>). Un usuario tiene las políticas de sus roles.",
+      "denyWins": "<strong>Deny gana sobre allow</strong>: si una política que coincide deniega, se deniega aunque otra lo permita.",
+      "noMatchDenies": "<strong>Sin coincidencia se deniega</strong>: lo que ninguna política permite está prohibido."
+    },
+    "section": {
+      "policies": "Políticas"
+    },
+    "searchPlaceholder": "Buscar por nombre, recurso o acción...",
+    "actions": {
+      "edit": "Editar política",
+      "delete": "Borrar política"
+    },
+    "empty": {
+      "title": "Aún no hay políticas",
+      "description": "Sin políticas, cualquier comprobación de permisos se deniega. Crea la primera."
+    },
+    "noResults": {
+      "title": "Sin coincidencias",
+      "description": "Ninguna política coincide con la búsqueda."
+    },
+    "byRole": {
+      "title": "Políticas por rol",
+      "description": "Asigna políticas a un rol; todos los usuarios con ese rol las reciben.",
+      "noRoles": "Aún no hay roles. <link>Crea un rol</link> para asignarle políticas.",
+      "roleAria": "Rol",
+      "loading": "Cargando políticas del rol…",
+      "noPolicies": "{name} no tiene políticas: se le deniega todo.",
+      "thisRole": "Este rol",
+      "remove": "Quitar {name}",
+      "assignAria": "Política para asignar",
+      "noneLeft": "No quedan políticas por asignar",
+      "choose": "Elige una política",
+      "assign": "Asignar"
+    },
+    "dialog": {
+      "editTitle": "Editar política",
+      "newTitle": "Nueva política",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. read_users",
+      "resource": "Recurso",
+      "resourcePlaceholder": "p. ej. users",
+      "action": "Acción",
+      "actionPlaceholder": "p. ej. read",
+      "effect": "Efecto",
+      "effectOption": {
+        "allow": {
+          "label": "Permitir (allow)",
+          "description": "Permite la acción salvo que otra política la deniegue."
+        },
+        "deny": {
+          "label": "Denegar (deny)",
+          "description": "Gana sobre cualquier allow que coincida."
+        }
+      },
+      "description": "Descripción",
+      "descriptionPlaceholder": "¿Qué permite o deniega?"
+    },
+    "create": "Crear",
+    "deleteDialog": {
+      "title": "Borrar política",
+      "body": "¿Borrar la política <strong>{name}</strong>? Se quitará de todos los roles que la tengan. Esta acción no se puede deshacer.",
+      "confirm": "Borrar"
+    },
+    "duplicate": "Ya existe una política con ese recurso, acción y efecto.",
+    "entity": "políticas",
+    "nameRequired": "El nombre es obligatorio",
+    "resourceRequired": "El recurso es obligatorio",
+    "actionRequired": "La acción es obligatoria"
+  },
+  "mcpConnect": {
+    "title": "MCP Connect",
+    "subtitle": "Deja que tus usuarios conecten Claude, ChatGPT y otros asistentes a tu servidor MCP con el login de tu app, sin copiar tokens. Registra la URL de tu servidor y los permisos que ofrece.",
+    "entity": "servidores MCP",
+    "checks": {
+      "reachable": "El servidor responde",
+      "challenge_401": "Sin llave responde 401 y apunta a su documento",
+      "metadata_fetched": "Publica su documento de metadata",
+      "resource_matches": "El documento nombra esta misma URL",
+      "authorization_server_matches": "El documento nombra a Accounts como emisor"
+    },
+    "columns": {
+      "name": "Nombre",
+      "url": "URL del servidor MCP",
+      "status": "Estado",
+      "scopes": "Permisos",
+      "created": "Creado"
+    },
+    "verified": "Verificado",
+    "unverified": "Sin verificar",
+    "loadFailed": "No se pudieron cargar los servidores MCP ({status})",
+    "exported": "Permisos exportados",
+    "copied": "{label} copiado",
+    "copyFailed": "No se pudo copiar",
+    "register": "Registrar servidor MCP",
+    "searchPlaceholder": "Buscar por nombre o URL...",
+    "actions": {
+      "view": "Ver detalle y conexiones"
+    },
+    "empty": {
+      "title": "Aún no hay servidores MCP",
+      "description": "Registra la URL de tu servidor MCP para que tus usuarios lo conecten desde su asistente."
+    },
+    "noResults": {
+      "title": "Sin coincidencias",
+      "description": "Ningún servidor MCP coincide con la búsqueda."
+    },
+    "import": {
+      "readFailed": "No se pudo leer el archivo.",
+      "button": "Importar",
+      "hint": "Pega el JSON de permisos (el mismo que exporta el detalle de un servidor), sube el archivo o copia los de otro servidor. Reemplaza las filas de abajo.",
+      "jsonLabel": "JSON de permisos",
+      "apply": "Aplicar JSON",
+      "upload": "Subir archivo",
+      "fileLabel": "Archivo JSON de permisos",
+      "copyFromLabel": "Copiar permisos de otro servidor",
+      "copyFromPlaceholder": "Copiar de otro servidor…",
+      "loadedOne": "1 permiso cargado en el formulario",
+      "loadedMany": "{count} permisos cargados en el formulario",
+      "copiedOne": "1 permiso copiado de {source}",
+      "copiedMany": "{count} permisos copiados de {source}",
+      "jsonPlaceholder": "{ \"scopes\": [ { \"key\": \"pedidos:leer\", \"label\": \"Ver tus pedidos\", \"is_write\": false } ] }"
+    },
+    "form": {
+      "urlsRequired": "La URL del servidor MCP y la de tu página de conexión son obligatorias",
+      "ttlRange": "La vida de la llave va de 300 a 86400 segundos",
+      "scopeRequired": "Cada permiso necesita una clave y el texto que verá la persona",
+      "updateFailed": "No se pudo actualizar el servidor MCP",
+      "scopesSaveFailed": "No se pudieron guardar los permisos",
+      "updated": "Servidor MCP actualizado",
+      "registerFailed": "No se pudo registrar el servidor MCP",
+      "registered": "Servidor MCP registrado",
+      "titleEdit": "Editar servidor MCP",
+      "description": "Accounts publica estos datos para que los asistentes se configuren solos. No necesitas dominio propio.",
+      "url": "URL de tu servidor MCP",
+      "urlHint": "Es la que tus usuarios pegan en su asistente. Las llaves solo sirven para ella.",
+      "loginUrl": "URL de tu página de conexión",
+      "loginUrlHint": "Accounts manda ahí a la persona. Tu app la identifica con su login de siempre y le pide aprobar.",
+      "displayName": "Nombre visible",
+      "optional": "Opcional",
+      "ttl": "Vida de la llave (segundos)",
+      "scopesTitle": "Permisos que ofrece",
+      "scopesHint": "Los declaras tú: Accounts no puede leerlos de la URL. Sin ninguno se crea uno solo, «Acceder a tu cuenta».",
+      "addScope": "Agregar permiso",
+      "scopeKey": "Clave del permiso {n}",
+      "scopeText": "Texto del permiso {n}",
+      "scopeTextPlaceholder": "Lo que verá la persona",
+      "scopeRemove": "Quitar permiso {n}",
+      "scopeDescription": "Descripción del permiso {n}",
+      "scopeDescriptionPlaceholder": "Descripción (opcional): qué incluye exactamente",
+      "scopeRoles": "Roles del permiso {n}",
+      "scopeRolesPlaceholder": "Roles que pueden recibirlo (vacío = cualquiera)",
+      "writes": "Modifica datos",
+      "clientsTitle": "Cómo se presentan los asistentes",
+      "cimd": "Ficha pública del asistente (CIMD), recomendado",
+      "dcr": "Registro automático (DCR), por compatibilidad",
+      "domains": "Dominios a los que puede regresar",
+      "domainsHint": "Separados por coma. localhost siempre se permite (Claude Code, Codex).",
+      "submitRegister": "Registrar",
+      "urlPlaceholder": "https://api.tuapp.com/mcp",
+      "loginUrlPlaceholder": "https://app.tuapp.com/conectar",
+      "scopeKeyPlaceholder": "pedidos:leer"
+    },
+    "detail": {
+      "verifyFailed": "No se pudo verificar el servidor MCP",
+      "verifyOk": "Tu servidor MCP ya apunta a Accounts",
+      "verifyMissing": "A tu servidor MCP todavía le falta algo",
+      "revokeFailed": "No se pudo revocar la conexión",
+      "revoked": "Conexión revocada",
+      "fallbackTitle": "Servidor MCP",
+      "description": "Tu servidor es quien le dice a los asistentes que vengan a Accounts. Para eso necesita estos dos valores.",
+      "values": "Valores para tu servidor",
+      "issuer": "Emisor (issuer)",
+      "issuerShort": "Emisor",
+      "resource": "Recurso",
+      "valuesHint": "Con ellos tu servidor responde 401 a quien llega sin llave, publica su documento en <code>{url}</code> y valida cada llave con las llaves públicas de Accounts.",
+      "checks": "Comprobaciones",
+      "verify": "Verificar",
+      "notVerified": "Aún no se ha verificado. Despliega tu servidor con los dos valores y pulsa Verificar.",
+      "found": "Encontrado: {value}",
+      "scopes": "Permisos",
+      "exportJson": "Exportar JSON",
+      "connections": "Conexiones",
+      "searchLabel": "Buscar conexiones por correo",
+      "searchPlaceholder": "Correo de la persona",
+      "statusLabel": "Estado de las conexiones",
+      "filterAll": "Todas",
+      "filterActive": "Activas",
+      "filterRevoked": "Revocadas",
+      "search": "Buscar",
+      "loadingConnections": "Cargando conexiones…",
+      "noConnections": "Nadie ha conectado un asistente a este servidor todavía.",
+      "testUser": "Prueba",
+      "connectionMeta": "{client} · {scopes} · conectado {granted} · último uso {lastUsed}",
+      "viewUser": "Ver usuario",
+      "active": "Activa",
+      "revokedDefault": "Revocada",
+      "revokedReasons": {
+        "owner": "Revocada desde el panel",
+        "user": "La cerró la persona",
+        "client": "La cerró el asistente",
+        "code_replay": "Código reutilizado",
+        "refresh_reuse": "Llave de renovación reutilizada",
+        "session_revoked": "Sesión cerrada"
+      },
+      "revoke": "Revocar",
+      "check": {
+        "passed": "Bien",
+        "failed": "Falla",
+        "skipped": "Sin probar"
+      }
+    },
+    "delete": {
+      "failed": "No se pudo eliminar el servidor MCP",
+      "deleted": "Servidor MCP eliminado",
+      "title": "Eliminar servidor MCP",
+      "body": "¿Eliminar <strong>{name}</strong>? Los asistentes ya no podrán pedir llaves nuevas para <code>{url}</code>. Esta acción no se puede deshacer."
+    },
+    "copy": "Copiar {label}",
+    "unavailable": {
+      "title": "MCP Connect no está habilitado",
+      "body": "Esta instancia de Accounts no monta sus rutas: hace falta configurar OAUTH_PUBLIC_URL."
+    },
+    "scopes": {
+      "invalidJson": "No es un JSON válido.",
+      "expectedShape": "Se esperaba { \"scopes\": [ … ] } o un arreglo de permisos.",
+      "empty": "El documento no trae ningún permiso.",
+      "tooMany": "Como máximo 50 permisos por servidor.",
+      "notObject": "Permiso {row}: no es un objeto.",
+      "missingKey": "Permiso {row}: falta \"key\".",
+      "invalidKey": "Permiso {row}: la clave \"{key}\" solo admite minúsculas, dígitos y : . _ - (hasta 64).",
+      "duplicateKey": "Permiso {row}: la clave \"{key}\" está repetida.",
+      "missingLabel": "Permiso {row}: falta \"label\", el texto que verá la persona.",
+      "invalidRoles": "Permiso {row}: \"roles\" debe ser una lista de nombres.",
+      "invalidBoolean": "Permiso {row}: \"{field}\" debe ser true o false."
+    }
+  },
+  "identityLinking": {
+    "recommendedLabel": "{label} (recomendado)",
+    "modes": {
+      "link_with_proof": {
+        "label": "Unir con prueba",
+        "description": "Si ya existe un usuario con el mismo correo, se une a él solo cuando el proveedor verificó el correo o la persona confirma un código que le enviamos a ese correo."
+      },
+      "separate": {
+        "label": "Separados",
+        "description": "Quien entra con OAuth y quien usa correo y contraseña son siempre usuarios distintos, aunque compartan correo."
+      }
+    },
+    "summary": {
+      "separate": "Una misma persona puede acabar con dos cuentas: una por OAuth y otra por correo y contraseña.",
+      "linkWithProof": "Una persona que ya tiene cuenta con correo y contraseña puede entrar también con OAuth y sigue siendo el mismo usuario, sin que nadie se apropie de una cuenta ajena."
+    },
+    "loadFailed": "No se pudo cargar la unión de identidades ({status})",
+    "saveFailed": "No se pudo guardar ({status})",
+    "unsupportedInstance": "Esta instancia de Accounts no tiene la unión de identidades.",
+    "title": "Unión de identidades",
+    "description": "Qué pasa cuando alguien entra con un proveedor OAuth (Google, Apple, GitHub…) y ya existe un usuario con el mismo correo.",
+    "upgrade": {
+      "title": "Actualiza Accounts",
+      "body": "Esta instancia de Accounts todavía no permite elegir cómo se unen las identidades. Está disponible en Community y Pro a partir de la versión que la incluye."
+    },
+    "mode": {
+      "title": "Mismo correo, distinto método",
+      "description": "Se aplica al iniciar sesión o registrarse con OAuth. No cambia a los usuarios que ya existen."
+    },
+    "notes": {
+      "proof": "La prueba evita que alguien cree una cuenta OAuth con tu correo y se quede con tu usuario: sin correo verificado por el proveedor ni código confirmado, no hay unión.",
+      "separate": "Con «Separados», la persona tendrá que entrar siempre con el mismo método para ver los mismos datos."
     }
   },
   "settings": {
@@ -1270,14 +2211,23 @@
   "tooltips": {
     "dashboard": "Estadísticas de la aplicación y vista rápida",
     "users": "Gestiona usuarios registrados, identidades y métodos de acceso",
+    "usermetadata": "Campos de user_metadata y qué entra en el access_token",
     "rolespolicies": "Define roles de acceso y políticas de permisos",
+    "policies": "Reglas de recurso y acción, y qué tiene cada rol",
     "webhooks": "Configura notificaciones de eventos en tiempo real",
     "apikeys": "Gestiona claves públicas y secretas para integraciones",
     "oauthproviders": "Configura Google, Apple, Microsoft y otros proveedores",
+    "mcpconnect": "Conecta asistentes a tu servidor MCP con el login de tu app",
     "behaviors": "Personaliza flujos de autenticación y lógica de negocio",
     "emailtemplates": "Diseña y gestiona emails de sistema localizados",
     "emailaccess": "Controla qué emails y dominios pueden registrarse (allowlist/blocklist)",
     "embeddedauth": "Componentes de login embebidos para tu web (Pro)",
+    "mfa": "Cuándo se pide la app autenticadora y en qué flujos",
+    "sessionsecurity": "Entrega de tokens tras OAuth, rotación y cierre de sesiones",
+    "securitylimits": "Límites de peticiones, bloqueo de cuenta y segundo factor",
+    "geoaccess": "Decide desde qué países se puede iniciar sesión (Pro)",
+    "accesslog": "Quién inició sesión, desde dónde y con qué método",
+    "identitylinking": "Qué pasa cuando OAuth y correo comparten dirección",
     "tokens": "Depura, valida y refresca tokens de autenticación",
     "settings": "Configuración del sistema y variables de entorno",
     "registerUser": "Crea una nueva cuenta de usuario manualmente",

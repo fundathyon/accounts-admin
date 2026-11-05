@@ -73,7 +73,7 @@ accounts-admin/
 ├── .github/workflows/                 ← CI (build+push Docker image only, no tests)
 ├── docker_images/app/Dockerfile.app   ← the Dockerfile CI actually uses
 │
-├── mock-server/                       ← Bun HTTP server, 71 routes, port 8099
+├── mock-server/                       ← Bun HTTP server, 98 routes, port 8099
 │   ├── server.ts · data.ts
 │   └── AGENTS.md                      ← how to add/edit a mocked endpoint
 │
@@ -105,6 +105,10 @@ accounts-admin/
     │   │   ├── behaviors/ · behaviors/[id]/
     │   │   ├── email-templates/ · email-access/
     │   │   ├── embedded-auth/         ← Pro only (shown when GET /health says "pro")
+    │   │   ├── mfa/ · session-security/ · security-limits/ · identity-linking/
+    │   │   ├── geo-access/            ← Pro only, like embedded-auth
+    │   │   ├── access-log/ · policies/ · mcp-connect/
+    │   │   ├── user-metadata/         ← the token policy part is Pro only
     │   │   ├── tokens/ · notifications/ · release-notes/
     │   │   └── settings/
     │   │

@@ -4,7 +4,7 @@ Bun HTTP server that mirrors the Go accounts API. Runs on `http://localhost:8099
 
 ## Layout
 
-- [`server.ts`](server.ts) — request router (uses `URLPattern`), 71 registered routes (some only in Pro, see below).
+- [`server.ts`](server.ts) — request router (uses `URLPattern`), 98 registered routes (some only in Pro, see below).
 - [`data.ts`](data.ts) — in-memory arrays (`APP_ID`, users, roles, webhooks, oauth-configs, etc.) and helpers (`nextId`, `paginate`). **State resets on restart.**
 - [`urlpattern.d.ts`](urlpattern.d.ts) — ambient types for `URLPattern`.
 - [`tsconfig.json`](tsconfig.json) — Bun-typed, separate from root (`../tsconfig.json` excludes this folder on purpose).
@@ -28,7 +28,7 @@ Bun HTTP server that mirrors the Go accounts API. Runs on `http://localhost:8099
 - `make mock` — mock only.
 - `make dev-mock` — mock + Next.js together, `ENVIRONMENT=mock` set for Next. Kill both with Ctrl-C (the Makefile traps the signal).
 - `MOCK_NO_APPS=1 make dev-mock` — start with zero apps to walk through onboarding.
-- `MOCK_EDITION=community make dev-mock` — `GET /health` reports `community`; the Pro-only routes (`/api/v1/app-behaviors/embedded-auth`, `/ui/v1/*`) are not registered, so the admin looks exactly like a Community install. Default: `pro`.
+- `MOCK_EDITION=community make dev-mock` — `GET /health` reports `community`; the Pro-only routes (`/api/v1/app-behaviors/embedded-auth`, `/api/v1/app-behaviors/geo-access`, `/api/v1/user-metadata-policy`, `/ui/v1/*`) are not registered, so the admin looks exactly like a Community install. Default: `pro`.
 - `MOCK_UI_DIR=../accounts/internal/ui/static make dev-mock` — also serves the built Embedded Auth bundle at `/ui/v1/*`, so the Embedded Auth preview renders the real `<accounts-sign-in>` instead of the static approximation.
 
 ## Edition and Embedded Auth
