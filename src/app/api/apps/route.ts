@@ -19,7 +19,13 @@ export async function GET(request: Request) {
     });
 }
 
+// Pro requires the Admin API Key to create apps (AppCreateAdminMiddleware) and
+// answers 401 without it. Community treats it as optional, so always sending
+// it works for both editions.
 export async function POST(request: Request) {
+    const auth = requireAdminKey();
+    if (auth.error) return auth.error;
+
     try {
         const body = await request.json();
         return await proxyToAccounts('/v1/apps', {
@@ -27,6 +33,7 @@ export async function POST(request: Request) {
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-Admin-API-Key': auth.key,
             },
             body: JSON.stringify(body),
             errorMessage: 'Failed to create app',
