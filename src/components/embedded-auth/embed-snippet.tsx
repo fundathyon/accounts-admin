@@ -73,7 +73,7 @@ export function buildEmbedSnippets({
 interface EmbedSnippetProps {
   /** Browser-reachable Accounts base URL (with ROOT_PATH), or '' while unknown. */
   baseUrl: string;
-  /** The URL that came from the server (INTERNAL_API_URL), to offer a reset. */
+  /** The URL that came from the server (ACCOUNTS_PUBLIC_URL), to offer a reset. */
   defaultBaseUrl: string;
   onBaseUrlChange: (value: string) => void;
   publishableKey: string;

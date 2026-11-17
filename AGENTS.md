@@ -214,6 +214,7 @@ Full documentation lives in [`.envs/.env.example`](.envs/.env.example). Summary:
 |---|---|---|---|
 | `ENVIRONMENT` | server | `local` | picks which `.envs/.env.<x>` file to load (via [`load-envs.ts`](load-envs.ts)) |
 | `INTERNAL_API_URL` | server | `http://localhost:8000/accounts` | accounts backend base URL |
+| `ACCOUNTS_PUBLIC_URL` | server | `INTERNAL_API_URL` only if it is loopback, else none | browser-facing base of the same API: OAuth Callback URI and Embedded Auth snippet ([`src/lib/public-base.ts`](src/lib/public-base.ts)) |
 | `ADMIN_API_KEY` | server | `secret` | forwarded as `X-Admin-API-Key` |
 | `ADMIN_USER` / `ADMIN_PASSWORD` | server | `admin` / `changeme` | login credentials |
 | `ADMIN_SESSION_SECRET` | server | falls back to `ADMIN_PASSWORD` | HMAC secret for `admin_session` |

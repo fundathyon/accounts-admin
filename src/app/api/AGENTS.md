@@ -61,7 +61,7 @@ Use `fetchAccountsJson(path, init)` instead — it returns `{ status, ok, data }
 
 - `health/route.ts` — the backend's public `GET /health` (the admin reads `data.edition`). No key: the backend route is public.
 - `embedded-auth/bundle/route.ts` — the public Embedded Auth bundle (`/ui/v1/accounts.js`, Pro only) as text, for the preview iframe. Uses `fetchAccountsText` because the body is JavaScript, not JSON.
-- `oauth-configs/callback-base/route.ts` — local: returns `INTERNAL_API_URL` as the browser-facing base.
+- `oauth-configs/callback-base/route.ts` — local: returns the browser-facing base (`ACCOUNTS_PUBLIC_URL`, see `src/lib/public-base.ts`); 503 `public_url_missing` when it is not set outside a loopback setup.
 
 ## Extending
 

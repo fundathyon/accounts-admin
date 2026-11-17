@@ -98,7 +98,7 @@ La generación de pares publishable/secret suele requerir flujos del backend; co
 Con API Key secreta:
 
 - Tabla de configuraciones OAuth: proveedor, nombre, client ID, estado, callback URI.
-- **Nuevo proveedor** / edición: Google, Microsoft, Apple, GitHub; client ID/secret; **callback** generado automáticamente o regenerado; **scopes**; lista de **redirects** por plataforma (web, Android, iOS, desktop); interruptor activado/desactivado.
+- **Nuevo proveedor** / edición: Google, Microsoft, Apple, GitHub; client ID/secret; **callback** generado automáticamente o regenerado sobre `ACCOUNTS_PUBLIC_URL` (al editar uno guardado con otra base, un aviso ofrece pasarlo a la URL pública sin cambiar la Callback Key); **scopes**; lista de **redirects** por plataforma (web, Android, iOS, desktop); interruptor activado/desactivado.
 - **Detalle** al hacer clic en fila: IDs, URIs copiables, **obtener enlace OAuth** (plataforma, rol, URL de redirect), opciones para editar, deshabilitar/habilitar o eliminar.
 - **Banner de migración** si el backend indica redirects legacy pendientes; acción para **aplicar migración**.
 
@@ -130,7 +130,7 @@ Configura los **componentes de login embebidos** (`<accounts-sign-in>`, `<accoun
 - **Orígenes**: orígenes permitidos (`esquema://host[:puerto]`, https salvo localhost/127.0.0.1/[::1], máx. 20, sin ruta ni comodines) y URLs de retorno del magic link (su origen debe estar permitido). Validación en vivo con las mismas reglas que el backend.
 - **Métodos de acceso**: contraseña, código por correo, magic link y proveedores OAuth; lo que la app no tiene activo aparece deshabilitado con el motivo y un enlace a Behaviors / Proveedores OAuth.
 - **Apariencia**: nombre, logo, acento (neutro, presets o personalizado OKLCH), tema, diseño, idioma y ocultar la marca.
-- **Instalación**: snippet con la **publishable key** guardada en Ajustes (nunca la secret) y la URL pública de Accounts (por defecto `INTERNAL_API_URL`, editable solo para el snippet).
+- **Instalación**: snippet con la **publishable key** guardada en Ajustes (nunca la secret) y la URL pública de Accounts (por defecto `ACCOUNTS_PUBLIC_URL`, editable solo para el snippet).
 - **Vista previa** del componente real (el `/ui/v1/accounts.js` del backend, cargado por el BFF y aislado en un iframe con sandbox) alimentada con el borrador; si el backend no sirve el bundle, una vista aproximada.
 - Guardar con la barra de cambios (`PUT /api/v1/app-behaviors/embedded-auth`); los 422 `app_behaviors.embedded_auth.invalid_config` se muestran campo por campo.
 

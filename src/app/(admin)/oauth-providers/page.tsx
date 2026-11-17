@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { LogIn, Plus, Key, ShieldCheck, RefreshCw, Copy, Link2, Pencil, Trash2, Power, PowerOff, MoreVertical, SearchX, MinusCircle, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
+  Alert,
   Card,
   Dialog,
   DialogContent,
@@ -582,25 +583,51 @@ function OAuthProvidersPageContent() {
     return Array.from(array, (b) => chars[b % chars.length]).join('');
   };
 
+  // Browser-facing base of Accounts (ACCOUNTS_PUBLIC_URL on the server). The
+  // Callback URI is `{base}/api/v1/oauth/{key}`; an internal base would send
+  // the provider's redirect to a host browsers cannot resolve.
+  const [publicBase, setPublicBase] = useState('');
+
+  const fetchPublicBase = useCallback(async (): Promise<string> => {
+    try {
+      const res = await fetch(apiUrl('/api/oauth-configs/callback-base'), { cache: 'no-store' });
+      const data = await res.json().catch(() => null);
+      const baseUrl = data?.data?.base_url;
+      if (res.ok && typeof baseUrl === 'string' && baseUrl) return baseUrl.replace(/\/+$/, '');
+      showNotification(
+        data?.error?.code === 'public_url_missing' ? t('oauth.errorPublicUrlMissing') : t('oauth.errorBaseUrlApi'),
+        'error',
+      );
+    } catch {
+      showNotification(t('oauth.errorBaseUrl'), 'error');
+    }
+    return '';
+  }, [apiUrl, showNotification, t]);
+
   useEffect(() => {
-    if (!isModalOpen || !savedSecretKey || editingProvider) return;
-    const autoGenerateCallback = async () => {
-      try {
-        const res = await fetch(apiUrl('/api/oauth-configs/callback-base'), {
-          headers: { 'X-Secret-API-Key': savedSecretKey },
-        });
-        const data = await res.json();
-        const baseUrl = data.data?.base_url || data.base_url;
-        if (!baseUrl) return;
-        const key = generateRandomCallbackKey();
-        const callbackUri = `${baseUrl.replace(/\/$/, '')}/api/v1/oauth/${key}`;
-        setFormData((p) => ({ ...p, callback_key: key, callback_uri: callbackUri }));
-      } catch {
-        showNotification(t('oauth.errorBaseUrl'), 'error');
-      }
+    if (!isModalOpen) return;
+    let cancelled = false;
+    void (async () => {
+      const base = await fetchPublicBase();
+      if (cancelled) return;
+      setPublicBase(base);
+      // A new provider starts with a fresh key on the public base.
+      if (!base || editingProvider || !savedSecretKey) return;
+      const key = generateRandomCallbackKey();
+      setFormData((p) => ({ ...p, callback_key: key, callback_uri: `${base}/api/v1/oauth/${key}` }));
+    })();
+    return () => {
+      cancelled = true;
     };
-    autoGenerateCallback();
-  }, [isModalOpen, savedSecretKey, editingProvider, apiUrl, showNotification]);
+  }, [isModalOpen, savedSecretKey, editingProvider, fetchPublicBase]);
+
+  // Editing a provider whose stored URI is not on the public base (e.g. one
+  // created when the admin used the internal address): offer to move it,
+  // keeping the callback key so only the host changes.
+  const publicCallbackUri =
+    publicBase && formData.callback_key ? `${publicBase}/api/v1/oauth/${formData.callback_key}` : '';
+  const callbackUriOffPublicBase =
+    Boolean(editingProvider) && publicCallbackUri !== '' && formData.callback_uri !== publicCallbackUri;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -738,21 +765,12 @@ function OAuthProvidersPageContent() {
   };
 
   const handleGenerateCallback = async () => {
-    try {
-      const res = await fetch(apiUrl('/api/oauth-configs/callback-base'));
-      const data = await res.json();
-      const baseUrl = data.data?.base_url || data.base_url;
-      if (!baseUrl) {
-        showNotification(t('oauth.errorBaseUrlApi'), 'error');
-        return;
-      }
-      const key = generateRandomCallbackKey();
-      const callbackUri = `${baseUrl.replace(/\/$/, '')}/api/v1/oauth/${key}`;
-      setFormData((p) => ({ ...p, callback_key: key, callback_uri: callbackUri }));
-      showNotification(t('oauth.callbackGenerated'), 'success');
-    } catch {
-      showNotification(t('oauth.errorBaseUrl'), 'error');
-    }
+    const base = await fetchPublicBase();
+    if (!base) return;
+    setPublicBase(base);
+    const key = generateRandomCallbackKey();
+    setFormData((p) => ({ ...p, callback_key: key, callback_uri: `${base}/api/v1/oauth/${key}` }));
+    showNotification(t('oauth.callbackGenerated'), 'success');
   };
 
   const handleOpenLinkDialog = (e: React.MouseEvent, provider: OAuthConfig) => {
@@ -1269,6 +1287,25 @@ function OAuthProvidersPageContent() {
                 />
               </div>
             </FormField>
+
+            {callbackUriOffPublicBase && (
+              <Alert
+                tone="warning"
+                title={t('oauth.callbackOffPublicTitle')}
+                action={
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setFormData((p) => ({ ...p, callback_uri: publicCallbackUri }))}
+                  >
+                    {t('oauth.callbackUsePublic')}
+                  </Button>
+                }
+              >
+                {t('oauth.callbackOffPublicBody', { uri: publicCallbackUri })}
+              </Alert>
+            )}
 
             <FormField
               label={

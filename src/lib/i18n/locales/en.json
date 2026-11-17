@@ -469,7 +469,7 @@
       "publishableKeyMissingDesc": "Save it in Settings so the snippet includes it; until then you will see a placeholder.",
       "publishableKeyPlaceholder": "YOUR_PUBLISHABLE_KEY",
       "baseUrl": "Public Accounts URL",
-      "baseUrlHint": "Comes from the admin's INTERNAL_API_URL (the same one the OAuth Callback URI uses). If browsers reach Accounts through another URL, change it here: it only affects the snippet.",
+      "baseUrlHint": "Comes from the admin's ACCOUNTS_PUBLIC_URL (the same base the OAuth Callback URI uses). If browsers reach Accounts through another URL, change it here: it only affects the snippet.",
       "resetBaseUrl": "Reset URL",
       "tabHtml": "HTML",
       "tabJs": "JavaScript",
@@ -2000,7 +2000,11 @@
       "errorDelete": "Could not delete the audience",
       "platformReady": "{platform}: has audiences — native login active",
       "platformMissing": "{platform}: no audiences — native login will fail with invalid_audience"
-    }
+    },
+    "errorPublicUrlMissing": "ACCOUNTS_PUBLIC_URL is missing in the admin: without it the Callback URI cannot point to an address browsers reach.",
+    "callbackOffPublicTitle": "The Callback URI does not use Accounts' public URL",
+    "callbackOffPublicBody": "Google and the other providers send the user to this address. With the public URL it becomes {uri}; the Callback Key stays the same. Register the same URI with the provider.",
+    "callbackUsePublic": "Use the public URL"
   },
   "behaviors": {
     "title": "Behaviors",
