@@ -13,6 +13,7 @@ Small, purpose-clear modules. If a new file here would need more than a paragrap
 | `mfa.ts`, `session-security.ts`, `security-limits.ts`, `geo-access.ts`, `countries.ts`, `identity-linking.ts` | anywhere (`countries.ts` also imported by `mock-server/`) | Models of the security screens: normalization, drafts, validation and error mapping. |
 | `login-events.ts`, `user-metadata.ts`, `policies.ts`, `mcp-connect.ts`, `mcp-scopes.ts` | anywhere (`user-metadata.ts` also imported by `mock-server/`) | Models of the Access, User metadata, Policies and MCP Connect screens. |
 | [`api-envelope.ts`](api-envelope.ts) | anywhere | Accounts' response envelope type and `apiError()`. |
+| [`public-base.ts`](public-base.ts) | server | `resolvePublicBase()`: browser-facing Accounts base (`ACCOUNTS_PUBLIC_URL`, loopback-only fallback to `INTERNAL_API_URL`) for the OAuth Callback URI and the Embedded Auth snippet. |
 | [`utils.ts`](utils.ts) | anywhere | `cn()`, `apiUrl()`, `buildAdminHref()`, `BASE_PATH`, `INTERNAL_API_URL`, `ADMIN_API_KEY`, `ENVIRONMENT`, `IS_PRODUCTION`. Do not turn this into a general dumping ground — one purpose per export. |
 | [`i18n/index.ts`](i18n/index.ts) | anywhere | Barrel — the only sanctioned barrel in the repo. |
 | [`i18n/messages.ts`](i18n/messages.ts) | anywhere | `getMessages(locale)`. |
